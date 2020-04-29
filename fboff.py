@@ -128,6 +128,8 @@ def html_records(url):
 
 
 def fix_photo_names(args):
+    os.makedirs(args.output, exist_ok=True)
+
     date = '2000-01-01'
     numimg = 0
     with open(os.path.join(args.output, 'index.htm'), 'wt', encoding='utf-8') as f:
