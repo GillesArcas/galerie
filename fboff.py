@@ -18,6 +18,7 @@ import shutil
 import re
 import io
 import pprint
+from collections import defaultdict
 from datetime import datetime
 from urllib.request import urlopen
 from lxml import objectify
@@ -28,10 +29,10 @@ import clipboard
 
 
 USAGE = """
-fboff.py --import_fb      --input <json fb export directory> --output <reference html directory>
-fboff.py --fixnum         --input <html directory> --output <html directory>
-fboff.py --import_blogger --input <blogger post url> --output <reference html directory>
-fboff.py --export_blogger --input <reference html directory>
+fboff.py --import_fb      --input <json directory> --output <html directory> [--rename_img]
+fboff.py --import_blogger --input <blogger  url>   --output <html directory> [--rename_img]
+fboff.py --rename_img     --input <html directory> --output <html directory>
+fboff.py --export_blogger --input <html directory>
     Copy blogger ready html into clipboard
 """
 
@@ -70,6 +71,7 @@ BEGIN = '<html><head><meta http-equiv="Content-Type" content="text/html; charset
 END = '</body></end>'
 SEP = '<hr color="#C0C0C0" size="1" />'
 IMGPAT = '<a href="%s"><img src=%s width="400"/></a>'
+IMGPAT2 = '<a href="file:///%s"><img src=file:///%s width="300"/></a>'
 TITLEIMGPAT = '<a href="%s"><img src=%s width="400" title="%s"/></a>'
 JOURS = 'lundi mardi mercredi jeudi vendredi samedi dimanche'.split()
 MOIS = 'janvier février mars avril mai juin juillet août septembre octobre novembre décembre'.split()
@@ -106,13 +108,14 @@ class Post:
             timestamp = fbpost[timestamp]
             title     = first line of fbpost[data][post] if dedicated syntax
             text      = rest of fbpost[data][post]
-            photos     = list of tuples (fbpost[attachments][data][media][uri],
-                                         fbpost[attachments][data][media][description])
+            images    = list of Image objects
+            dcim      = list of Image objects
         """
         self.timestamp = timestamp
         self.title = title
         self.text = text
         self.images = photos
+        self.dcim = []
         if self.timestamp is not None:
             # timestamp peut être None si lu dans html
             self.timestamp_str = datetime.utcfromtimestamp(self.timestamp).strftime('%Y-%m-%d %H:%M:%S')
@@ -155,7 +158,7 @@ class Post:
             if m:
                 title = m.group(1)
                 continue
-            m = re.match('<a href="[^"]+"><img src=([^ ]+) width="400"(?: title="([^"]+)")?/></a>', line)
+            m = re.search('<img [^<>]*src="?([^ "]+)"? width="\d+"(?: title="([^"]+)")?\s*/>', line)
             if m:
                 images.append(Image(m.group(2), m.group(1), None))
                 continue
@@ -190,6 +193,10 @@ class Post:
                 html.append(IMGPAT % (image.uri, image.uri))
             else:
                 html.append(TITLEIMGPAT % (image.uri, image.uri, image.caption))
+        if self.dcim:
+            html.append(SEP)
+        for image in self.dcim:
+            html.append(IMGPAT2 % (image.uri, image.uri))
         return html
 
     def to_html_blogger(self):
@@ -238,7 +245,13 @@ def date_from_title(title, year):
         return f'{year}-{month:02}-{day:02}'
 
 
-def set_year_in_posts(posts):
+def set_year_in_posts(posts, year):
+    # nécessite un paramètre si on ne peut pas trouver l'année (blogger)
+    if year is not None:
+        for post in posts:
+            post.year = year
+        return
+
     # première passe pour donner une année aux posts avec photo (prend l'année
     # de la première photo)
     for post in posts:
@@ -328,7 +341,9 @@ def parse_json(args, json_export_dir):
         set_year_in_posts(ordered_posts)
         set_date_in_posts(ordered_posts)
         set_sequential_image_names(ordered_posts)
-        rename_images(ordered_posts, args.input, args.output)
+
+        if args.rename_img:
+            rename_images(ordered_posts, args.input, args.output)
 
         return ordered_posts
 
@@ -418,17 +433,42 @@ def compose_blogger_html(args):
     return print_html(posts, '', target='blogger').splitlines()
 
 
-# -- Commands -----------------------------------------------------------------
+# -- Import/export for blogger-------------------------------------------------
 
 
-def import_fb(args):
-    os.makedirs(args.output, exist_ok=True)
-    print_html(parse_json(args, args.input), os.path.join(args.output, 'index.htm'))
+def import_blogger(args):
+    """
+    Import html and photos from blogger and make the simplified page.
+    """
+    with urlopen(args.input) as u:
+        buffer = u.read()
+        buffer = buffer.decode('utf-8')
 
+    tmp_name = os.path.join(args.output, 'tmp.htm')
+    with open(tmp_name, 'wt', encoding='utf-8') as f:
+        f.write(buffer)
 
-def test(args):
-    posts = (post for post in parse_html(os.path.join(args.input, 'index.htm')))
-    print_html(posts, 'tmp.htm')
+    posts = list(parse_html(tmp_name))
+    os.remove(tmp_name)
+
+    for post in posts:
+        for image in post.images:
+            print(image.uri)
+            with urlopen(image.uri) as u, open(os.path.join(args.output, os.path.basename(image.uri)), 'wb') as fimg:
+                fimg.write(u.read())
+            image.uri = os.path.basename(image.uri)
+
+    # posts are chronologicaly ordered in blogger
+    ordered_posts = posts
+
+    set_year_in_posts(ordered_posts, args.year)
+    set_date_in_posts(ordered_posts)
+    set_sequential_image_names(ordered_posts)
+
+    if args.rename_img:
+        rename_images(ordered_posts, args.output, args.output)
+
+    print_html(ordered_posts, os.path.join(args.output, 'index.htm'))
 
 
 def prepare_for_blogger(args):
@@ -444,6 +484,39 @@ def prepare_for_blogger(args):
         html = [line for line in html if not any(_ in line for _ in tags)]
 
     clipboard.copy('\n'.join(html))
+
+
+# -- Commands -----------------------------------------------------------------
+
+
+def import_fb(args):
+    os.makedirs(args.output, exist_ok=True)
+    print_html(parse_json(args, args.input), os.path.join(args.output, 'index.htm'))
+
+
+def test(args):
+    posts = (post for post in parse_html(os.path.join(args.input, 'index.htm')))
+    print_html(posts, 'tmp.htm')
+
+
+def extend_index(args):
+    bydate = defaultdict(list)
+    for image in glob.glob(os.path.join(args.imgsource, '*.jpg')):
+        # IMG_20190221_065509.jpg
+        name = os.path.basename(image)
+        date = name.split('_')[1]
+        bydate[date].append(Image(None, image, None))
+    for date, liste in bydate.items():
+        bydate[date] = liste  # sorted(liste)
+
+    posts = list(parse_html(os.path.join(args.input, 'index.htm')))
+    for post in posts:
+        if post.title:
+            date = date_from_title(post.title, year='2019')
+            if date:
+                date = date.replace('-', '')
+                post.dcim = bydate[date]
+    print_html(posts, os.path.join(args.input, 'index-x.htm'))
 
 
 # -- OBSOLETE -----------------------------------------------------------------
@@ -498,63 +571,6 @@ def fix_photo_names(args):
         print(END, file=f)
 
 
-def import_blogger(args):
-    """
-    OBSOLETE
-
-    Import html and photos from blogger and make the simplified page.
-    """
-    with urlopen(args.input) as u:
-        buffer = u.read()
-        buffer = buffer.decode('utf-8')
-
-    tmp_name = os.path.join(args.output, 'tmp.htm')
-    with open(tmp_name, 'wt', encoding='utf-8') as f:
-        f.write(buffer)
-
-    date = '2000-01-01'
-    numimg = 0
-    with open(os.path.join(args.output, 'index.htm'), 'wt', encoding='utf-8') as f:
-        print(BEGIN, file=f)
-        print(file=f)
-        br = False
-
-        for record in html_records(tmp_name):
-            if is_title(record[1]):
-                date = date_from_title(record[1], 2019)  # TODO: paramétrer année
-                numimg = 0
-            for line in record:
-                m = re.search(r'img [^<>]*src="([^ ]+)"', line)
-                if m:
-                    numimg += 1
-                    name = m.group(1)
-                    newname = date + '-' + str(numimg) + os.path.splitext(name)[1]
-                    line = IMGPAT % (newname, newname)
-                    with urlopen(name) as u, open(os.path.join(args.output, newname), 'wb') as fimg:
-                        fimg.write(u.read())
-
-                # remove some tags
-                tags = ('div', 'table', 'tbody', 'tr')
-                pattern = '^<(' + '|'.join(tags) + '|/' + '|/'.join(tags) + ')'
-                m = re.search(pattern, line)
-                if m:
-                    continue
-
-                # remove consecutive br
-                if line == '<br />\n':
-                    if br:
-                        continue
-                    br = True
-                else:
-                    br = False
-
-                print(line.strip(), file=f)
-            print(file=f)
-
-        print(END, file=f)
-    os.remove(tmp_name)
-
-
 # -- Main ---------------------------------------------------------------------
 
 
@@ -562,20 +578,26 @@ def parse_command_line():
     parser = argparse.ArgumentParser(description=None, usage=USAGE)
     parser.add_argument('--import_fb', help='input json export, output html reference',
                         action='store_true', default=None)
-    parser.add_argument('--fixnum', help='fix photo names renaming as date+index',
+    parser.add_argument('--import_blogger', help='blogger post url, output html reference',
+                        action='store_true', default=False)
+    parser.add_argument('--rename_img', help='fix photo names renaming as date+index',
                         action='store_true', default=None)
     parser.add_argument('--export_blogger', help='input html reference, html extract blogger ready in clipboard',
                         action='store_true', default=False)
-    parser.add_argument('--import_blogger', help='blogger post url, output html reference',
+    parser.add_argument('--extend', help='extend image set, source in --imgsource',
                         action='store_true', default=False)
     parser.add_argument('--test', help='',
                         action='store_true', default=False)
     parser.add_argument('-i', '--input', help='input parameter',
                         action='store', default=None)
+    parser.add_argument('--year', help='year',
+                        action='store', default=None)
     parser.add_argument('-o', '--output', help='output parameter',
                         action='store', default=None)
     parser.add_argument('--full', help='full html (versus blogger ready html)',
                         action='store_true', default=False)
+    parser.add_argument('--imgsource', help='image source for extended index',
+                        action='store', default=None)
     args = parser.parse_args()
     return args
 
@@ -586,17 +608,20 @@ def main():
     if args.import_fb:
         import_fb(args)
 
-    elif args.fixnum:
+    elif args.import_blogger:
+        import_blogger(args)
+
+    elif args.rename_img:
         fix_photo_names(args)
 
     elif args.export_blogger:
         prepare_for_blogger(args)
 
-    elif args.import_blogger:
-        import_blogger(args)
-
     elif args.test:
         test(args)
+
+    elif args.extend:
+        extend_index(args)
 
 
 if __name__ == '__main__':
