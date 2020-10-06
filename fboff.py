@@ -351,7 +351,7 @@ def parse_json(args, json_export_dir):
 # -- html parser --------------------------------------------------------------
 
 
-def parse_html(url):
+def parse_html(args, url):
     """
     Generate Post objects from html (local or blogger). Posts are in
     chronological order.
@@ -422,7 +422,7 @@ def parse_images_url(args):
 
 def compose_blogger_html(args):
     imgdata = parse_images_url(args)
-    posts = parse_html(os.path.join(args.input, 'index.htm'))
+    posts = parse_html(args, os.path.join(args.input, 'index.htm'))
 
     for post in posts:
         for image in post.images:
@@ -450,7 +450,7 @@ def import_blogger(args):
     with open(tmp_name, 'wt', encoding='utf-8') as f:
         f.write(buffer)
 
-    posts = parse_html(tmp_name)
+    posts = parse_html(args, tmp_name)
     os.remove(tmp_name)
 
     for post in posts:
@@ -497,7 +497,7 @@ def import_fb(args):
 
 
 def test(args):
-    posts = parse_html(os.path.join(args.input, 'index.htm'))
+    posts = parse_html(args, os.path.join(args.input, 'index.htm'))
     print_html(posts, 'tmp.htm')
 
 
@@ -511,7 +511,7 @@ def extend_index(args):
     for date, liste in bydate.items():
         bydate[date] = liste  # sorted(liste)
 
-    posts = parse_html(os.path.join(args.input, 'index.htm'))
+    posts = parse_html(args, os.path.join(args.input, 'index.htm'))
     for post in posts:
         if post.title:
             date = date_from_title(post.title, year='2019')
@@ -522,7 +522,7 @@ def extend_index(args):
 
 
 def rename_images(args):
-    posts = parse_html(os.path.join(args.input, 'index.htm'))
+    posts = parse_html(args, os.path.join(args.input, 'index.htm'))
     rename_images(posts, args.input, args.output)
     print_html(posts, os.path.join(args.output, 'index.htm'))
 
