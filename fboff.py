@@ -519,6 +519,12 @@ def extend_index(args):
     print_html(posts, os.path.join(args.input, 'index-x.htm'))
 
 
+def rename_images(args):
+    posts = list(parse_html(os.path.join(args.input, 'index.htm')))
+    rename_images(posts, args.input, args.output)
+    print_html(posts, os.path.join(args.output, 'index.htm'))
+
+
 # -- OBSOLETE -----------------------------------------------------------------
 
 
@@ -612,7 +618,7 @@ def main():
         import_blogger(args)
 
     elif args.rename_img:
-        fix_photo_names(args)
+        rename_images(args)
 
     elif args.export_blogger:
         prepare_for_blogger(args)
