@@ -31,9 +31,8 @@ import clipboard
 USAGE = """
 fboff.py --import_fb      --input <json directory> --output <html directory> [--rename_img]
 fboff.py --import_blogger --input <blogger  url>   --output <html directory> [--rename_img]
-fboff.py --rename_img     --input <html directory> --output <html directory>
 fboff.py --export_blogger --input <html directory>
-    Copy blogger ready html into clipboard
+fboff.py --rename_img     --input <html directory>
 """
 
 
@@ -216,33 +215,7 @@ class Post:
         return html
 
 
-# -- Facebook json parser -----------------------------------------------------
-
-
-def parse_json_text(text):
-    text = ftfy.ftfy(text)
-    text = text.splitlines()
-    if is_title(text[0]):
-        return text[0], text[1:]
-    else:
-        return None, text
-
-
-def is_title(line):
-    # dubious. any line with a date is considered a title when in first line
-    pattern = r'(?:%s )?(1er|\d|\d\d) (%s)\b' % ('|'.join(JOURS), '|'.join(MOIS))
-    return re.search(pattern, line)
-
-
-def date_from_title(title, year):
-    pattern = r'(?:%s )?(1er|\d|\d\d) (%s)\b' % ('|'.join(JOURS), '|'.join(MOIS))
-    m = re.search(pattern, title)
-    if not m:
-        return None
-    else:
-        day = 1 if m.group(1) == '1er' else int(m.group(1))
-        month = MOIS.index(m.group(2)) + 1
-        return f'{year}-{month:02}-{day:02}'
+# -- Handling of dates and sequential image names -----------------------------
 
 
 def set_year_in_posts(posts, year):
@@ -317,6 +290,35 @@ def rename_images(posts, input_path, output_path):
         for image in post.images:
             shutil.copy2(os.path.join(input_path, image.uri), os.path.join(output_path, image.newname))
             image.uri = image.newname
+
+
+# -- Facebook json parser -----------------------------------------------------
+
+
+def parse_json_text(text):
+    text = ftfy.ftfy(text)
+    text = text.splitlines()
+    if is_title(text[0]):
+        return text[0], text[1:]
+    else:
+        return None, text
+
+
+def is_title(line):
+    # dubious. any line with a date is considered a title when in first line
+    pattern = r'(?:%s )?(1er|\d|\d\d) (%s)\b' % ('|'.join(JOURS), '|'.join(MOIS))
+    return re.search(pattern, line)
+
+
+def date_from_title(title, year):
+    pattern = r'(?:%s )?(1er|\d|\d\d) (%s)\b' % ('|'.join(JOURS), '|'.join(MOIS))
+    m = re.search(pattern, title)
+    if not m:
+        return None
+    else:
+        day = 1 if m.group(1) == '1er' else int(m.group(1))
+        month = MOIS.index(m.group(2)) + 1
+        return f'{year}-{month:02}-{day:02}'
 
 
 def parse_json(args, json_export_dir):
