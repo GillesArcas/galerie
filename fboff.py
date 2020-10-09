@@ -30,9 +30,10 @@ import clipboard
 
 USAGE = """
 fboff.py --import_fb      --input <json directory> --output <html directory> [--rename_img]
-fboff.py --import_blogger --input <blogger  url>   --output <html directory> [--rename_img]
+fboff.py --import_blogger --input <blogger url>    --output <html directory> [--rename_img]
 fboff.py --export_blogger --input <html directory>
-fboff.py --rename_img     --input <html directory>
+fboff.py --rename_img     --input <html directory> [--year yyyy]
+fboff.py --extend         --input <blogger url>    --imgsource <source directory>
 """
 
 
@@ -282,14 +283,21 @@ def set_sequential_image_names(posts):
             last_image[post.date] = 0
         for image in post.images:
             last_image[post.date] += 1
-            image.newname = post.date + '-' + str(last_image[post.date]) + os.path.splitext(image.uri)[1]
+            image.seqname = post.date + '-' + str(last_image[post.date]) + os.path.splitext(image.uri)[1]
 
 
-def rename_images(posts, input_path, output_path):
+def set_sequential_images(posts, year):
+    if posts:
+        set_year_in_posts(posts, year)
+        set_date_in_posts(posts)
+        set_sequential_image_names(posts)
+        
+        
+def rename_images(posts, path):
     for post in posts:
         for image in post.images:
-            shutil.copy2(os.path.join(input_path, image.uri), os.path.join(output_path, image.newname))
-            image.uri = image.newname
+            os.rename(os.path.join(path, image.uri), os.path.join(path, image.seqname))
+            image.uri = image.seqname
 
 
 # -- Facebook json parser -----------------------------------------------------
@@ -334,19 +342,10 @@ def parse_json(args, json_export_dir):
             for json_post in json.load(f):
                 post = Post.from_fb_json(json_post)
                 posts[post.timestamp] = post
-
-    if not posts:
-        print('Warning: No posts found in', json_dir)
-    else:
+    
+    if posts:
         ordered_posts = [post for ts, post in sorted(posts.items())]
-
-        set_year_in_posts(ordered_posts)
-        set_date_in_posts(ordered_posts)
-        set_sequential_image_names(ordered_posts)
-
-        if args.rename_img:
-            rename_images(ordered_posts, args.input, args.output)
-
+        set_sequential_images(ordered_posts, args.year)
         return ordered_posts
 
 
@@ -370,6 +369,7 @@ def parse_html(args, url):
             else:
                 posts.append(Post.from_html(record))
                 record = [line]
+    set_sequential_images(posts, args.year)
     return posts
 
 
@@ -398,7 +398,27 @@ def print_html(posts, html_name, target='local'):
             return f.getvalue()
 
 
-# -- Compose html with blogger image urls -------------------------------------
+# -- Import from fb -----------------------------------------------------------
+
+
+def import_fb(args):
+    os.makedirs(args.output, exist_ok=True)
+    posts = parse_json(args, args.input)
+    for post in posts:
+        for image in post.images:
+            print(image.uri)
+            shutil.copy(os.path.join(args.input, image.uri), os.path.join(args.output, os.path.basename(image.uri)))
+            image.uri = os.path.basename(image.uri)
+            
+    if not posts:
+        print('Warning: No posts found in', args.input)
+    else:
+        if args.rename_img:
+            rename_images(posts, args.output)
+        print_html(posts, os.path.join(args.output, 'index.htm'))
+
+
+# -- Import/export from/to blogger---------------------------------------------
 
 
 def parse_images_url(args):
@@ -423,6 +443,8 @@ def parse_images_url(args):
 
 
 def compose_blogger_html(args):
+    """ Compose html with blogger image urls
+    """
     imgdata = parse_images_url(args)
     posts = parse_html(args, os.path.join(args.input, 'index.htm'))
 
@@ -435,9 +457,6 @@ def compose_blogger_html(args):
                 image.uri = img_url
 
     return print_html(posts, '', target='blogger').splitlines()
-
-
-# -- Import/export for blogger-------------------------------------------------
 
 
 def import_blogger(args):
@@ -464,14 +483,8 @@ def import_blogger(args):
 
     # posts are chronologicaly ordered in blogger
     ordered_posts = posts
-
-    set_year_in_posts(ordered_posts, args.year)
-    set_date_in_posts(ordered_posts)
-    set_sequential_image_names(ordered_posts)
-
     if args.rename_img:
         rename_images(ordered_posts, args.output, args.output)
-
     print_html(ordered_posts, os.path.join(args.output, 'index.htm'))
 
 
@@ -493,11 +506,6 @@ def prepare_for_blogger(args):
 # -- Commands -----------------------------------------------------------------
 
 
-def import_fb(args):
-    os.makedirs(args.output, exist_ok=True)
-    print_html(parse_json(args, args.input), os.path.join(args.output, 'index.htm'))
-
-
 def test(args):
     posts = parse_html(args, os.path.join(args.input, 'index.htm'))
     print_html(posts, 'tmp.htm')
@@ -515,70 +523,18 @@ def extend_index(args):
 
     posts = parse_html(args, os.path.join(args.input, 'index.htm'))
     for post in posts:
-        if post.title:
-            date = date_from_title(post.title, year='2019')
+        if post.date:
+            date = post.date
             if date:
                 date = date.replace('-', '')
                 post.dcim = bydate[date]
     print_html(posts, os.path.join(args.input, 'index-x.htm'))
 
 
-def rename_images(args):
+def rename_images_cmd(args):
     posts = parse_html(args, os.path.join(args.input, 'index.htm'))
-    rename_images(posts, args.input, args.output)
-    print_html(posts, os.path.join(args.output, 'index.htm'))
-
-
-# -- OBSOLETE -----------------------------------------------------------------
-
-
-def html_records(url):
-    """
-    OBSOLETE
-
-    relecture html local
-    """
-    with open(url, encoding='utf-8') as f:
-        line = next(f)
-        while SEP not in line:
-            line = next(f)
-        record = [line]
-        for line in f:
-            if SEP not in line and END not in line:
-                record.append(line)
-            else:
-                yield record
-                record = [line]
-
-
-def fix_photo_names(args):
-    """
-    OBSOLETE
-    """
-    os.makedirs(args.output, exist_ok=True)
-
-    date = '2000-01-01'
-    numimg = 0
-    with open(os.path.join(args.output, 'index.htm'), 'wt', encoding='utf-8') as f:
-        print(BEGIN, file=f)
-        print(file=f)
-
-        for record in html_records(os.path.join(args.input, 'index.htm')):
-            if is_title(record[1]):
-                date = date_from_title(record[1], 2019)  # TODO: paramétrer année
-                numimg = 0
-            for line in record:
-                m = re.search(r'img src=([^ ]+)', line)
-                if m:
-                    numimg += 1
-                    name = m.group(1)
-                    newname = date + '-' + str(numimg) + os.path.splitext(name)[1]
-                    line = IMGPAT % (newname, newname)
-                    shutil.copy2(os.path.join(args.input, name), os.path.join(args.output, newname))
-
-                print(line.strip(), file=f)
-
-        print(END, file=f)
+    rename_images(posts, args.input)
+    print_html(posts, os.path.join(args.input, 'index.htm'))
 
 
 # -- Main ---------------------------------------------------------------------
@@ -621,11 +577,11 @@ def main():
     elif args.import_blogger:
         import_blogger(args)
 
-    elif args.rename_img:
-        rename_images(args)
-
     elif args.export_blogger:
         prepare_for_blogger(args)
+
+    elif args.rename_img:
+        rename_images_cmd(args)
 
     elif args.test:
         test(args)
