@@ -210,7 +210,10 @@ class Post:
         if self.text:
             html.append('<br />')
         for image in self.images:
-            html.append(BIMGPAT % (image.uri, image.uri))
+            try:
+                html.append(BIMGPAT % (image.uri, image.resized_url))
+            except:
+                pass
             if image.caption:
                 html.append(CAPTION_PAT % image.caption)
         return html
@@ -418,12 +421,44 @@ def import_fb(args):
         print_html(posts, os.path.join(args.output, 'index.htm'))
 
 
-# -- Import/export from/to blogger---------------------------------------------
+# -- Import from blogger-------------------------------------------------------
+
+
+def import_blogger(args):
+    """
+    Import html and photos from blogger and make the simplified page.
+    """
+    with urlopen(args.input) as u:
+        buffer = u.read()
+        buffer = buffer.decode('utf-8')
+
+    tmp_name = os.path.join(args.output, 'tmp.htm')
+    with open(tmp_name, 'wt', encoding='utf-8') as f:
+        f.write(buffer)
+
+    posts = parse_html(args, tmp_name)
+    os.remove(tmp_name)
+
+    for post in posts:
+        for image in post.images:
+            print(image.uri)
+            with urlopen(image.uri) as u, open(os.path.join(args.output, os.path.basename(image.uri)), 'wb') as fimg:
+                fimg.write(u.read())
+            image.uri = os.path.basename(image.uri)
+
+    # posts are chronologicaly ordered in blogger
+    ordered_posts = posts
+    if args.rename_img:
+        rename_images(ordered_posts, args.output, args.output)
+    print_html(ordered_posts, os.path.join(args.output, 'index.htm'))
+
+
+# -- Export to blogger---------------------------------------------------------
 
 
 def parse_images_url(args):
     imgdata = dict()
-    with open(os.path.join(args.input, 'uploaded-images.html'), encoding='utf-8') as f:
+    with open(os.path.join(args.input, 'uploaded-images.htm'), encoding='utf-8') as f:
         s = f.read()
 
         # XML is required to have exactly one top-level element (Stackoverflow)
@@ -455,37 +490,9 @@ def compose_blogger_html(args):
             else:
                 img_url, resized_url, original_height, original_width = imgdata[image.uri]
                 image.uri = img_url
+                image.resized_url = resized_url
 
     return print_html(posts, '', target='blogger').splitlines()
-
-
-def import_blogger(args):
-    """
-    Import html and photos from blogger and make the simplified page.
-    """
-    with urlopen(args.input) as u:
-        buffer = u.read()
-        buffer = buffer.decode('utf-8')
-
-    tmp_name = os.path.join(args.output, 'tmp.htm')
-    with open(tmp_name, 'wt', encoding='utf-8') as f:
-        f.write(buffer)
-
-    posts = parse_html(args, tmp_name)
-    os.remove(tmp_name)
-
-    for post in posts:
-        for image in post.images:
-            print(image.uri)
-            with urlopen(image.uri) as u, open(os.path.join(args.output, os.path.basename(image.uri)), 'wb') as fimg:
-                fimg.write(u.read())
-            image.uri = os.path.basename(image.uri)
-
-    # posts are chronologicaly ordered in blogger
-    ordered_posts = posts
-    if args.rename_img:
-        rename_images(ordered_posts, args.output, args.output)
-    print_html(ordered_posts, os.path.join(args.output, 'index.htm'))
 
 
 def prepare_for_blogger(args):
