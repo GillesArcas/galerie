@@ -10,6 +10,7 @@ index.htm
         repésentation externe, éditable, relu en objets Post
 """
 
+import sys
 import os
 import argparse
 import json
@@ -23,9 +24,9 @@ from datetime import datetime
 from urllib.request import urlopen
 from lxml import objectify
 
-
 import ftfy
 import clipboard
+from PIL import Image
 
 
 USAGE = """
@@ -33,7 +34,7 @@ fboff.py --import_fb      --input <json directory> --output <html directory> [--
 fboff.py --import_blogger --input <blogger url>    --output <html directory> [--rename_img]
 fboff.py --export_blogger --input <html directory>
 fboff.py --rename_img     --input <html directory> [--year yyyy]
-fboff.py --extend         --input <blogger url>    --imgsource <source directory>
+fboff.py --extend         --input <blogger url>    --imgsource <source directory> [--year yyyy]
 """
 
 
@@ -68,7 +69,7 @@ Problème de l'année ...
 
 
 START ='''\
-'<html>
+<html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 </head>
@@ -100,11 +101,12 @@ CAPTION_PAT = '''\
 '''
 
 
-class Image:
+class PostImage:
     def __init__(self, caption, uri, creation):
         self.caption = caption
         self.uri = uri
         self.creation = creation
+        self.thumb = None
 
 class Post:
     def __init__(self, timestamp, title, text, photos):
@@ -114,8 +116,8 @@ class Post:
             timestamp = fbpost[timestamp]
             title     = first line of fbpost[data][post] if dedicated syntax
             text      = rest of fbpost[data][post]
-            images    = list of Image objects
-            dcim      = list of Image objects
+            images    = list of PostImage objects
+            dcim      = list of PostImage objects
         """
         self.timestamp = timestamp
         self.title = title
@@ -150,7 +152,7 @@ class Post:
                                     caption = None
                             except:
                                 caption = None
-                            images.append(Image(caption, uri, creation))
+                            images.append(PostImage(caption, uri, creation))
         return cls(timestamp, title, text, images)
 
     @classmethod
@@ -164,9 +166,9 @@ class Post:
             if m:
                 title = m.group(1)
                 continue
-            m = re.search('<img [^<>]*src="?([^ "]+)"? width="\d+"(?: title="([^"]+)")?\s*/>', line)
+            m = re.search(r'<img [^<>]*src="?([^ "]+)"? width="\d+"(?: title="([^"]+)")?\s*/>', line)
             if m:
-                images.append(Image(m.group(2), m.group(1), None))
+                images.append(PostImage(m.group(2), m.group(1), None))
                 continue
             m = re.match('<[^<>]+>', line)
             if m:
@@ -199,10 +201,14 @@ class Post:
                 html.append(IMGPAT % (image.uri, image.uri))
             else:
                 html.append(TITLEIMGPAT % (image.uri, image.uri, image.caption))
+
         if self.dcim:
             html.append(SEP)
         for image in self.dcim:
-            html.append(IMGPAT2 % (image.uri, image.uri))
+            imagename = image.uri
+            thumbname = os.path.join(os.path.dirname(imagename), '.thumbnails', os.path.basename(imagename))
+            html.append(IMGPAT2 % (imagename, thumbname))
+
         return html
 
     def to_html_blogger(self):
@@ -300,8 +306,8 @@ def set_sequential_images(posts, year):
         set_year_in_posts(posts, year)
         set_date_in_posts(posts)
         set_sequential_image_names(posts)
-        
-        
+
+
 def rename_images(posts, path):
     for post in posts:
         for image in post.images:
@@ -351,7 +357,7 @@ def parse_json(args, json_export_dir):
             for json_post in json.load(f):
                 post = Post.from_fb_json(json_post)
                 posts[post.timestamp] = post
-    
+
     if posts:
         ordered_posts = [post for ts, post in sorted(posts.items())]
         set_sequential_images(ordered_posts, args.year)
@@ -418,7 +424,7 @@ def import_fb(args):
             print(image.uri)
             shutil.copy(os.path.join(args.input, image.uri), os.path.join(args.output, os.path.basename(image.uri)))
             image.uri = os.path.basename(image.uri)
-            
+
     if not posts:
         print('Warning: No posts found in', args.input)
     else:
@@ -523,6 +529,89 @@ def remove_head(html):
     return str.splitlines()
 
 
+# -- Thumbnails ---------------------------------------------------------------
+
+
+def is_image_file(filename):
+    ext = os.path.splitext(filename)[1]
+    ext = ext.lower()
+    return ext in ('.jpg',)
+
+
+def openImageSafely(imgpath):
+    """
+    --------------------------------------------------------------------------
+    Work around a Pillow image-file auto-close bug, that can lead to
+    too-many-files-open errors in some contexts (most commonly when
+    running source code on Mac OS, due to its low #files ulimit).  The
+    fix is to simply take manual control of file opens and saves.  For
+    more details, see this module's top docstring.  This does not appear
+    to be required when opening existing thumb files, but is harmless.
+    --------------------------------------------------------------------------
+    """
+    fileobj = open(imgpath, mode='rb')          # was Image.open(imgpath)
+    filedat = fileobj.read()
+    fileobj.close()                             # force file to close now
+    imgobj = Image.open(io.BytesIO(filedat))    # file bytes => pillow obj
+    return imgobj
+
+
+def printexc():
+    print('Exception:', sys.exc_info()[1])   # just the instance/message
+
+
+def create_thumbnail(image_name, thumb_name, size):
+    imgobj = Image.open(image_name)
+
+    # fix for downscaled images and some GIFs per above [1.7]
+    if (imgobj.mode != 'RGBA' and image_name.endswith('jpg')
+                              and not (image_name.endswith('gif') and imgobj.info.get('transparency'))):
+        imgobj = imgobj.convert('RGBA')
+
+    if hasattr(Image, 'LANCZOS'):                 # best downsize filter [2018]
+        imgobj.thumbnail(size, Image.LANCZOS)     # but newer Pillows only
+    else:
+        imgobj.thumbnail(size, Image.ANTIALIAS)   # original filter
+
+    # if mimeType(thumbpath) != 'image/tiff':       # mimeType(), not ext [1.7]
+        # imgobj.save(thumbpath)                    # type via ext or passed
+    # else:
+        # work around C lib crash: see PyPhoto's code [2018]
+        # imgobj.save(thumbpath, compression='raw')
+    imgobj = imgobj.convert('RGB')
+    imgobj.save(thumb_name, compression='raw')
+
+
+def make_thumbnail(image_name, thumb_name, size):
+    if os.path.exists(thumb_name):
+        pass
+    else:
+        print('Making thumbnail:', thumb_name)
+        try:
+            create_thumbnail(image_name, thumb_name, size)
+        except Exception:                                 # skip ctrl-c, not always IOError
+            print('Failed:', image_name)
+            printexc()
+
+
+def makeThumbs(imgdir,               # path to the folder of source-image files
+               size=(100, 100),      # (x, y) max size for generated thumbnails
+               subdir='thumbs' ):    # path to folder to store thumbnail files
+
+    thumbdir = os.path.join(imgdir, subdir)
+    if not os.path.exists(thumbdir):
+        os.mkdir(thumbdir)
+
+    for imgfile in os.listdir(imgdir):
+        if not is_image_file(imgfile):                      # avoid exceptions [2018]
+            print('Skipping:', imgfile)
+            continue
+
+        thumbpath = os.path.join(thumbdir, imgfile)           # thumb name == image name
+        imgpath = os.path.join(imgdir, imgfile)
+        make_thumbnail(imgpath, thumbpath, size)
+
+
 # -- Commands -----------------------------------------------------------------
 
 
@@ -537,7 +626,7 @@ def extend_index(args):
         # IMG_20190221_065509.jpg
         name = os.path.basename(image)
         date = name.split('_')[1]
-        bydate[date].append(Image(None, image, None))
+        bydate[date].append(PostImage(None, image, None))
     for date, liste in bydate.items():
         bydate[date] = liste  # sorted(liste)
 
@@ -548,6 +637,9 @@ def extend_index(args):
             if date:
                 date = date.replace('-', '')
                 post.dcim = bydate[date]
+
+    makeThumbs(args.input, size=(100, 100), subdir='.thumbnails')
+
     print_html(posts, os.path.join(args.input, 'index-x.htm'))
 
 
