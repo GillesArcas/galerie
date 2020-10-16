@@ -67,8 +67,14 @@ Problème de l'année ...
 """
 
 
-BEGIN = '<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /></head><body>'
-END = '</body></end>'
+START ='''\
+'<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+</head>
+<body>
+'''
+END = '</body></html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
 IMGPAT = '<a href="%s"><img src=%s width="400"/></a>'
 IMGPAT2 = '<a href="file:///%s"><img src=file:///%s width="300"/></a>'
@@ -380,7 +386,7 @@ def parse_html(args, url):
 
 
 def print_html_to_stream(posts, stream, target='local'):
-    print(BEGIN, file=stream)
+    print(START, file=stream)
 
     for post in posts:
         for line in post.to_html(target):
@@ -504,10 +510,17 @@ def prepare_for_blogger(args):
     html = compose_blogger_html(args)
 
     if args.full is False:
-        tags = ('html', 'head', 'body')
+        html = remove_head(html)
+        tags = ('html', 'body')
         html = [line for line in html if not any(_ in line for _ in tags)]
 
     clipboard.copy('\n'.join(html))
+
+
+def remove_head(html):
+    str = '\n'.join(html)
+    str = re.sub(r'<head>.*</head>\n*', '', str)
+    return str.splitlines()
 
 
 # -- Commands -----------------------------------------------------------------
