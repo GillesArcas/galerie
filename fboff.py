@@ -72,10 +72,28 @@ Problème de l'année ...
 START ='''\
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<title>%s</title>
 </head>
 <body>
 '''
+
+STARTEX ='''\
+<html>
+<head>
+	<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"><![endif]-->
+	<meta charset="utf-8">
+	<title>%s</title>
+	<meta name="viewport" content="width=device-width">
+	<link rel="stylesheet" href="photobox/photobox.css">
+	<!--[if lt IE 9]><link rel="stylesheet" href="photobox/photobox.ie.css"><![endif]-->
+	<!--[if lt IE 9]><script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+	<script src="photobox/jquery.photobox.js"></script>
+</head>
+<body>
+'''
+
 END = '</body></html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
 IMGPAT = '<a href="%s"><img src=%s width="400"/></a>'
@@ -205,10 +223,12 @@ class Post:
 
         if self.dcim:
             html.append(SEP)
-        for image in self.dcim:
-            imagename = image.uri
-            thumbname = image.thumb
-            html.append(IMGPAT2 % (imagename, thumbname))
+            html.append(f'<div id="gallery-{self.date}-dcim">')
+            for image in self.dcim:
+                imagename = image.uri
+                thumbname = image.thumb
+                html.append(IMGPAT2 % (imagename, thumbname))
+            html.append('</div>')
 
         return html
 
@@ -392,25 +412,55 @@ def parse_html(args, url):
 # -- html printer -------------------------------------------------------------
 
 
-def print_html_to_stream(posts, stream, target='local'):
-    print(START, file=stream)
+def compose_html(posts, title, target):
+    html = list()
+    html.append(START % title)
 
     for post in posts:
         for line in post.to_html(target):
-            print(line.strip(), file=stream)
-        print(file=stream)
+            html.append(line.strip())
+        html.append('')
 
-    print(END, file=stream)
+    html.append(END)
+    return html
 
 
-def print_html(posts, html_name, target='local'):
+def compose_html_extended(posts, title, target):
+    html = list()
+    html.append(STARTEX % title)
+
+    for post in posts:
+        for line in post.to_html(target):
+            html.append(line.strip())
+        html.append('')
+
+    html.append('<script>')
+    for post in posts:
+        html.append(f"$('#gallery-{post.date}-dcim').photobox('a', {{ thumbs:true, time:0, history:false, loop:false }});")
+    html.append('</script>')
+
+    html.append(END)
+    return html
+
+
+def print_html_to_stream(posts, title, stream, target):
+    if target ==  'extended':
+        for line in compose_html_extended(posts, title, 'local'):
+            print(line, file=stream)
+    else:
+        for line in compose_html(posts, title, target):
+            print(line, file=stream)
+
+
+def print_html(posts, title, html_name, target='local'):
+    assert target in ('local', 'extended', 'blogger')
     if html_name:
         with open(html_name, 'wt', encoding='utf-8') as f:
-            print_html_to_stream(posts, f, target)
+            print_html_to_stream(posts, title, f, target)
             return None
     else:
         with io.StringIO() as f:
-            print_html_to_stream(posts, f, target)
+            print_html_to_stream(posts, title, f, target)
             return f.getvalue()
 
 
@@ -431,7 +481,7 @@ def import_fb(args):
     else:
         if args.rename_img:
             rename_images(posts, args.output)
-        print_html(posts, os.path.join(args.output, 'index.htm'))
+        print_html(posts, 'TITLE', os.path.join(args.output, 'index.htm'))
 
 
 # -- Import from blogger-------------------------------------------------------
@@ -466,7 +516,7 @@ def import_blogger(args):
     ordered_posts = posts
     if args.rename_img:
         rename_images(ordered_posts, args.output, args.output)
-    print_html(ordered_posts, os.path.join(args.output, 'index.htm'))
+    print_html(ordered_posts, 'TITLE', os.path.join(args.output, 'index.htm'))
 
 
 # -- Export to blogger---------------------------------------------------------
@@ -508,7 +558,7 @@ def compose_blogger_html(args):
                 image.uri = img_url
                 image.resized_url = resized_url
 
-    return print_html(posts, '', target='blogger').splitlines()
+    return print_html(posts, 'TITLE', '', target='blogger').splitlines()
 
 
 def prepare_for_blogger(args):
@@ -601,7 +651,17 @@ def extend_index(args):
                     post.dcim = bydate[date]
                     date_already_seen.add(date)
 
-    print_html(posts, os.path.join(args.input, 'index-x.htm'))
+    title = retrieve_title(os.path.join(args.input, 'index.htm'))
+    print_html(posts, title, os.path.join(args.input, 'index-x.htm'), 'extended')
+
+
+def retrieve_title(filename):
+    with open(filename, encoding='utf-8' ) as fsrc:
+        for line in fsrc:
+            if (match := re.search('<title>(.*)</title>', line)):
+                return match.group(1)
+        else:
+            return ''
 
 
 # -- Other commands -----------------------------------------------------------
@@ -609,13 +669,13 @@ def extend_index(args):
 
 def test(args):
     posts = parse_html(args, os.path.join(args.input, 'index.htm'))
-    print_html(posts, 'tmp.htm')
+    print_html(posts, 'TITLE', 'tmp.htm')
 
 
 def rename_images_cmd(args):
     posts = parse_html(args, os.path.join(args.input, 'index.htm'))
     rename_images(posts, args.input)
-    print_html(posts, os.path.join(args.input, 'index.htm'))
+    print_html(posts, 'TITLE', os.path.join(args.input, 'index.htm'))
 
 
 # -- Main ---------------------------------------------------------------------
