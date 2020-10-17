@@ -44,8 +44,9 @@ fboff.py --extend         --input <blogger url>    --imgsource <source directory
 Date des posts.
 
 Les posts sont l'unité de publication. A l'export json, ce sont les éléments de
-premiers niveaux. Dans mon use case, un post peut ne pas avoir de titre et/ou un
-post peut ne pas avoir de photos.
+premiers niveaux. Ils sont ordonnés par l'ordre des time stamps de publication
+(ordre chronologique). Dans mon use case, un post peut ne pas avoir de titre
+et/ou un post peut ne pas avoir de photos.
 On veut donner une date à chaque post avec les contraintes suivantes :
 - si le post a un titre, sa date est la date du titre (donc le timestamp du post
   ne convient pas)
@@ -102,11 +103,11 @@ CAPTION_PAT = '''\
 
 
 class PostImage:
-    def __init__(self, caption, uri, creation):
+    def __init__(self, caption, uri, creation, thumb=None):
         self.caption = caption
         self.uri = uri
         self.creation = creation
-        self.thumb = None
+        self.thumb = thumb
 
 class Post:
     def __init__(self, timestamp, title, text, photos):
@@ -206,7 +207,7 @@ class Post:
             html.append(SEP)
         for image in self.dcim:
             imagename = image.uri
-            thumbname = os.path.join(os.path.dirname(imagename), '.thumbnails', os.path.basename(imagename))
+            thumbname = image.thumb
             html.append(IMGPAT2 % (imagename, thumbname))
 
         return html
@@ -440,6 +441,9 @@ def import_blogger(args):
     """
     Import html and photos from blogger and make the simplified page.
     """
+    if not os.path.exists(args.output):
+        os.mkdir(args.output)
+
     with urlopen(args.input) as u:
         buffer = u.read()
         buffer = buffer.decode('utf-8')
@@ -532,30 +536,6 @@ def remove_head(html):
 # -- Thumbnails ---------------------------------------------------------------
 
 
-def is_image_file(filename):
-    ext = os.path.splitext(filename)[1]
-    ext = ext.lower()
-    return ext in ('.jpg',)
-
-
-def openImageSafely(imgpath):
-    """
-    --------------------------------------------------------------------------
-    Work around a Pillow image-file auto-close bug, that can lead to
-    too-many-files-open errors in some contexts (most commonly when
-    running source code on Mac OS, due to its low #files ulimit).  The
-    fix is to simply take manual control of file opens and saves.  For
-    more details, see this module's top docstring.  This does not appear
-    to be required when opening existing thumb files, but is harmless.
-    --------------------------------------------------------------------------
-    """
-    fileobj = open(imgpath, mode='rb')          # was Image.open(imgpath)
-    filedat = fileobj.read()
-    fileobj.close()                             # force file to close now
-    imgobj = Image.open(io.BytesIO(filedat))    # file bytes => pillow obj
-    return imgobj
-
-
 def printexc():
     print('Exception:', sys.exc_info()[1])   # just the instance/message
 
@@ -573,13 +553,8 @@ def create_thumbnail(image_name, thumb_name, size):
     else:
         imgobj.thumbnail(size, Image.ANTIALIAS)   # original filter
 
-    # if mimeType(thumbpath) != 'image/tiff':       # mimeType(), not ext [1.7]
-        # imgobj.save(thumbpath)                    # type via ext or passed
-    # else:
-        # work around C lib crash: see PyPhoto's code [2018]
-        # imgobj.save(thumbpath, compression='raw')
     imgobj = imgobj.convert('RGB')
-    imgobj.save(thumb_name, compression='raw')
+    imgobj.save(thumb_name)
 
 
 def make_thumbnail(image_name, thumb_name, size):
@@ -594,41 +569,27 @@ def make_thumbnail(image_name, thumb_name, size):
             printexc()
 
 
-def makeThumbs(imgdir,               # path to the folder of source-image files
-               size=(100, 100),      # (x, y) max size for generated thumbnails
-               subdir='thumbs' ):    # path to folder to store thumbnail files
-
-    thumbdir = os.path.join(imgdir, subdir)
-    if not os.path.exists(thumbdir):
-        os.mkdir(thumbdir)
-
-    for imgfile in os.listdir(imgdir):
-        if not is_image_file(imgfile):                      # avoid exceptions [2018]
-            print('Skipping:', imgfile)
-            continue
-
-        thumbpath = os.path.join(thumbdir, imgfile)           # thumb name == image name
-        imgpath = os.path.join(imgdir, imgfile)
-        make_thumbnail(imgpath, thumbpath, size)
-
-
-# -- Commands -----------------------------------------------------------------
-
-
-def test(args):
-    posts = parse_html(args, os.path.join(args.input, 'index.htm'))
-    print_html(posts, 'tmp.htm')
+# -- Addition of DCIM images  -------------------------------------------------
 
 
 def extend_index(args):
+    thumbdir = os.path.join(args.input, '.thumbnails')
+    if not os.path.exists(thumbdir):
+        os.mkdir(thumbdir)
+
     bydate = defaultdict(list)
     for image in glob.glob(os.path.join(args.imgsource, '*.jpg')):
         # IMG_20190221_065509.jpg
         name = os.path.basename(image)
         date = name.split('_')[1]
-        bydate[date].append(PostImage(None, image, None))
-    for date, liste in bydate.items():
-        bydate[date] = liste  # sorted(liste)
+        make_thumbnail(os.path.join(args.imgsource, name), os.path.join(thumbdir, name), (300, 300))
+        bydate[date].append(PostImage(None, image, None, os.path.join(thumbdir, name)))
+
+    for date, liste in bydate.items():          # ???
+        bydate[date] = liste  # sorted(liste)   # ???
+
+    # several posts can hav the same date, only the first one is completed with dcim images
+    date_already_seen = set()
 
     posts = parse_html(args, os.path.join(args.input, 'index.htm'))
     for post in posts:
@@ -636,11 +597,19 @@ def extend_index(args):
             date = post.date
             if date:
                 date = date.replace('-', '')
-                post.dcim = bydate[date]
-
-    makeThumbs(args.input, size=(100, 100), subdir='.thumbnails')
+                if date not in date_already_seen:
+                    post.dcim = bydate[date]
+                    date_already_seen.add(date)
 
     print_html(posts, os.path.join(args.input, 'index-x.htm'))
+
+
+# -- Other commands -----------------------------------------------------------
+
+
+def test(args):
+    posts = parse_html(args, os.path.join(args.input, 'index.htm'))
+    print_html(posts, 'tmp.htm')
 
 
 def rename_images_cmd(args):
