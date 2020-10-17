@@ -68,22 +68,29 @@ pas de problème de cohérence).
 Problème de l'année ...
 """
 
+FAVICON_BASE64 = '''\
+iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAAAAAA6mKC9AAAArUlEQVR42mP8z4AKmBjIF/ix7jhCYG
+rrdSC5FigKFdC8xnH/OYMRAwMHAwPjf5BIyX0rhnM/1oKYjP+X7ROwun99DkOKouaxD05RzHqvW8ym
+ykr+ffNFdd8Ev0NPGIt7GFKKP3xfx+DEILCvhaGEBWiw19IPHMeCGQScJEH2rF36////Kf+/f/+eDG
+QsXcv4f+p1gRfZhkDzz0+V+KCZzQAUfv8fCr4DMcQdSAAA+dJRILrFW04AAAAASUVORK5CYII='''
 
-START ='''\
+START = f'''\
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<link rel="icon" href="data:image/png;base64,{FAVICON_BASE64}" />
 	<title>%s</title>
 </head>
 <body>
 '''
 
-STARTEX ='''\
+STARTEX = f'''\
 <html>
 <head>
 	<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"><![endif]-->
 	<meta charset="utf-8">
 	<title>%s</title>
+	<link rel="icon" href="data:image/png;base64,{FAVICON_BASE64}" />
 	<meta name="viewport" content="width=device-width">
 	<link rel="stylesheet" href="photobox/photobox.css">
 	<!--[if lt IE 9]><link rel="stylesheet" href="photobox/photobox.ie.css"><![endif]-->
@@ -627,29 +634,43 @@ def extend_index(args):
     if not os.path.exists(thumbdir):
         os.mkdir(thumbdir)
 
+    photoboxdir = os.path.join(args.input, 'photobox')
+    if not os.path.exists(photoboxdir):
+        shutil.copytree(os.path.join(os.path.dirname(sys.argv[0]), 'photobox'), photoboxdir)
+
+    posts = parse_html(args, os.path.join(args.input, 'index.htm'))
+
+    # list of required dates (the DCIM directory can contain images not related with the current
+    # page (e.g. two pages for the same image directory)
+    required_dates = set()
+    for post in posts:
+        if post.date:
+            date = post.date
+            date = date.replace('-', '')
+            required_dates.add(date)
+
     bydate = defaultdict(list)
     for image in glob.glob(os.path.join(args.imgsource, '*.jpg')):
         # IMG_20190221_065509.jpg
         name = os.path.basename(image)
         date = name.split('_')[1]
-        make_thumbnail(os.path.join(args.imgsource, name), os.path.join(thumbdir, name), (300, 300))
-        bydate[date].append(PostImage(None, image, None, os.path.join(thumbdir, name)))
+        if date in required_dates:
+            make_thumbnail(os.path.join(args.imgsource, name), os.path.join(thumbdir, name), (300, 300))
+            bydate[date].append(PostImage(None, image, None, os.path.join(thumbdir, name)))
 
     for date, liste in bydate.items():          # ???
         bydate[date] = liste  # sorted(liste)   # ???
 
-    # several posts can hav the same date, only the first one is completed with dcim images
+    # several posts can have the same date, only the first one is completed with dcim images
     date_already_seen = set()
 
-    posts = parse_html(args, os.path.join(args.input, 'index.htm'))
     for post in posts:
         if post.date:
             date = post.date
-            if date:
-                date = date.replace('-', '')
-                if date not in date_already_seen:
-                    post.dcim = bydate[date]
-                    date_already_seen.add(date)
+            date = date.replace('-', '')
+            if date not in date_already_seen:
+                post.dcim = bydate[date]
+                date_already_seen.add(date)
 
     title = retrieve_title(os.path.join(args.input, 'index.htm'))
     print_html(posts, title, os.path.join(args.input, 'index-x.htm'), 'extended')
