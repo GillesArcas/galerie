@@ -344,8 +344,11 @@ def set_sequential_images(posts, year):
 def rename_images(posts, path):
     for post in posts:
         for image in post.images:
-            os.rename(os.path.join(path, image.uri), os.path.join(path, image.seqname))
-            image.uri = image.seqname
+            try:
+                os.rename(os.path.join(path, image.uri), os.path.join(path, image.seqname))
+                image.uri = image.seqname
+            except IOError:
+                print('Unable to rename:', os.path.join(path, image.uri), '-->', os.path.join(path, image.seqname))
 
 
 # -- Facebook json parser -----------------------------------------------------
