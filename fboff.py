@@ -18,6 +18,8 @@ import glob
 import shutil
 import re
 import io
+import time
+import bisect
 import pprint
 from collections import defaultdict
 from datetime import datetime
@@ -153,6 +155,9 @@ class Post:
         if self.timestamp is not None:
             # timestamp peut être None si lu dans html
             self.timestamp_str = datetime.utcfromtimestamp(self.timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+    def __lt__(self, other):
+        return self.date < other.date
 
     @classmethod
     def from_fb_json(cls, json_post):
@@ -496,7 +501,7 @@ def import_fb(args):
 
 def import_blogger(args):
     """
-    Import html and photos from blogger and make the simplified page.
+    Import html and photos from blogger and make the reference page.
     """
     if not os.path.exists(args.output):
         os.mkdir(args.output)
@@ -510,6 +515,7 @@ def import_blogger(args):
         f.write(buffer)
 
     posts = parse_html(args, tmp_name)
+    title = retrieve_title(tmp_name)
     os.remove(tmp_name)
 
     for post in posts:
@@ -522,8 +528,8 @@ def import_blogger(args):
     # posts are chronologicaly ordered in blogger
     ordered_posts = posts
     if args.rename_img:
-        rename_images(ordered_posts, args.output, args.output)
-    print_html(ordered_posts, 'TITLE', os.path.join(args.output, 'index.htm'))
+        rename_images(ordered_posts, args.output)
+    print_html(ordered_posts, title, os.path.join(args.output, 'index.htm'))
 
 
 # -- Export to blogger---------------------------------------------------------
@@ -626,7 +632,7 @@ def make_thumbnail(image_name, thumb_name, size):
             printexc()
 
 
-# -- Addition of DCIM images  -------------------------------------------------
+# -- Addition of DCIM images --------------------------------------------------
 
 
 def extend_index(args):
@@ -642,12 +648,22 @@ def extend_index(args):
 
     # list of required dates (the DCIM directory can contain images not related with the current
     # page (e.g. two pages for the same image directory)
-    required_dates = set()
-    for post in posts:
-        if post.date:
-            date = post.date
-            date = date.replace('-', '')
-            required_dates.add(date)
+    if args.dates:
+        date1, date2 = args.dates.split('-')
+        required_dates = set()
+        for image in glob.glob(os.path.join(args.imgsource, '*.jpg')):
+            # IMG_20190221_065509.jpg
+            name = os.path.basename(image)
+            date = name.split('_')[1]
+            if date1 <= date <= date2:
+                required_dates.add(date)
+    else:
+        required_dates = set()
+        for post in posts:
+            if post.date:
+                date = post.date
+                date = date.replace('-', '')
+                required_dates.add(date)
 
     bydate = defaultdict(list)
     for image in glob.glob(os.path.join(args.imgsource, '*.jpg')):
@@ -658,8 +674,19 @@ def extend_index(args):
             make_thumbnail(os.path.join(args.imgsource, name), os.path.join(thumbdir, name), (300, 300))
             bydate[date].append(PostImage(None, image, None, os.path.join(thumbdir, name)))
 
-    for date, liste in bydate.items():          # ???
+    for date, liste in bydate.items():          # ??? TODO
         bydate[date] = liste  # sorted(liste)   # ???
+
+    # make list of extra dates (not in posts)
+    extradates = required_dates - {post.date.replace('-', '') for post in posts}
+
+    # complete posts with extra dates from args.dates
+    for date in extradates:
+        timestamp = time.mktime(time.strptime(date, '%Y%m%d'))
+        newpost = Post(timestamp, title=None, text='Extra' + date, photos=[])
+        newpost.date = f'{date[0:4]}-{date[4:6]}-{date[6:8]}'
+        newpost.dcim = bydate[date]
+        bisect.insort(posts, newpost)
 
     # several posts can have the same date, only the first one is completed with dcim images
     date_already_seen = set()
@@ -725,6 +752,8 @@ def parse_command_line():
     parser.add_argument('--full', help='full html (versus blogger ready html)',
                         action='store_true', default=False)
     parser.add_argument('--imgsource', help='image source for extended index',
+                        action='store', default=None)
+    parser.add_argument('--dates', help='dates interval for extended index',
                         action='store', default=None)
     args = parser.parse_args()
     return args
