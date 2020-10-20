@@ -21,6 +21,7 @@ import io
 import time
 import bisect
 import pprint
+import locale
 from collections import defaultdict
 from datetime import datetime
 from urllib.request import urlopen
@@ -739,8 +740,11 @@ def extend_index(args):
     # complete posts with extra dates from args.dates
     for date in extradates:
         timestamp = time.mktime(time.strptime(date, '%Y%m%d'))
-        newpost = Post(timestamp, title=None, text='Extra' + date, photos=[])
-        newpost.date = f'{date[0:4]}-{date[4:6]}-{date[6:8]}'
+        year, month, day = date[0:4], date[4:6], date[6:8]
+        x = datetime(int(year), int(month), int(day))
+        datetext = x.strftime("%A %d %B %Y")
+        newpost = Post(timestamp, title=None, text=[datetext], photos=[])
+        newpost.date = f'{year}-{month}-{day}'
         newpost.dcim = bydate[date]
         bisect.insort(posts, newpost)
 
@@ -816,6 +820,7 @@ def parse_command_line():
 
 
 def main():
+    locale.setlocale(locale.LC_TIME, '')
     args = parse_command_line()
 
     if args.import_fb:
