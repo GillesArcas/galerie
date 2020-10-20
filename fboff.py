@@ -80,8 +80,8 @@ START = f'''\
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-	<link rel="icon" href="data:image/png;base64,{FAVICON_BASE64}" />
 	<title>%s</title>
+	<link rel="icon" href="data:image/png;base64,{FAVICON_BASE64}" />
 </head>
 <body>
 '''
@@ -135,7 +135,23 @@ class PostImage:
         self.uri = uri
         self.creation = creation
         self.thumb = thumb
+        
+    def to_html_post(self):
+        if not self.caption:
+            return IMGPAT % (self.uri, self.uri)
+        else:
+            return TITLEIMGPAT % (self.uri, self.uri, self.caption)
+        
+    def to_html_dcim(self):
+        return IMGPAT2 % (self.uri, self.thumb)
 
+    def to_html_blogger(self):
+        if not self.caption:
+            return BIMGPAT % (self.uri, self.resized_url)
+        else:
+            return f'{BIMGPAT}\n{CAPTION_PAT}' % (self.uri, self.resized_url, self.caption)
+
+            
 class Post:
     def __init__(self, timestamp, title, text, photos):
         """
@@ -228,18 +244,13 @@ class Post:
         if self.text:
             html.append('<br />')
         for image in self.images:
-            if not image.caption:
-                html.append(IMGPAT % (image.uri, image.uri))
-            else:
-                html.append(TITLEIMGPAT % (image.uri, image.uri, image.caption))
+            html.append(image.to_html_post())
 
         if self.dcim:
             html.append(SEP)
             html.append(f'<div id="gallery-{self.date}-dcim">')
             for image in self.dcim:
-                imagename = image.uri
-                thumbname = image.thumb
-                html.append(IMGPAT2 % (imagename, thumbname))
+                html.append(image.to_html_dcim())
             html.append('</div>')
 
         return html
@@ -255,12 +266,7 @@ class Post:
         if self.text:
             html.append('<br />')
         for image in self.images:
-            try:
-                html.append(BIMGPAT % (image.uri, image.resized_url))
-            except:
-                pass
-            if image.caption:
-                html.append(CAPTION_PAT % image.caption)
+            html.append(image.to_html_blogger())
         return html
 
 
@@ -409,18 +415,21 @@ def parse_html(args, url):
     chronological order.
     """
     posts = list()
-    with open(url, encoding='utf-8') as f:
-        line = next(f)
-        while SEP not in line:
+    if not os.path.exists(url):
+        print('/!\\', 'File not found:', url)
+    else:
+        with open(url, encoding='utf-8') as f:
             line = next(f)
-        record = [line]
-        for line in f:
-            if SEP not in line and END not in line:
-                record.append(line)
-            else:
-                posts.append(Post.from_html(record))
-                record = [line]
-    set_sequential_images(posts, args.year)
+            while SEP not in line:
+                line = next(f)
+            record = [line]
+            for line in f:
+                if SEP not in line and END not in line:
+                    record.append(line)
+                else:
+                    posts.append(Post.from_html(record))
+                    record = [line]
+        set_sequential_images(posts, args.year)
     return posts
 
 
@@ -540,22 +549,24 @@ def import_blogger(args):
 
 def parse_images_url(args):
     imgdata = dict()
-    with open(os.path.join(args.input, 'uploaded-images.htm'), encoding='utf-8') as f:
-        s = f.read()
+    uploaded_images = os.path.join(args.input, 'uploaded-images.htm')
+    if os.path.exists(uploaded_images):
+        with open(uploaded_images, encoding='utf-8') as f:
+            s = f.read()
 
-        # XML is required to have exactly one top-level element (Stackoverflow)
-        s = f'<tmp>{s}</tmp>'
+            # XML is required to have exactly one top-level element (Stackoverflow)
+            s = f'<tmp>{s}</tmp>'
 
-        x = objectify.fromstring(s)
-        for elem_div in x.iterchildren(tag='div'):
-            elem_a = next(elem_div.iterchildren(tag='a'))
-            href = elem_a.get("href")
-            imgdata[os.path.basename(href)] = (
-                href,
-                elem_a.img.get("src"),
-                elem_a.img.get("data-original-height"),
-                elem_a.img.get("data-original-width")
-            )
+            x = objectify.fromstring(s)
+            for elem_div in x.iterchildren(tag='div'):
+                elem_a = next(elem_div.iterchildren(tag='a'))
+                href = elem_a.get("href")
+                imgdata[os.path.basename(href)] = (
+                    href,
+                    elem_a.img.get("src"),
+                    elem_a.img.get("data-original-height"),
+                    elem_a.img.get("data-original-width")
+                )
     return imgdata
 
 
@@ -702,6 +713,24 @@ def extend_index(args):
                 post.dcim = bydate[date]
                 date_already_seen.add(date)
 
+    if 1:
+        # add test post with videos
+        videos = list()
+        for video in glob.glob(os.path.join(args.imgsource, '*.mp4')):
+            # IMG_20190221_065509.mp4
+            name = os.path.basename(video)
+            print('---', name)
+            date = name.split('_')[1]
+            if date in required_dates:
+                make_thumbnail_video(os.path.join(args.imgsource, name), os.path.join(thumbdir, name), (300, 300))
+                videos.append(PostImage(None, video, None, os.path.join(thumbdir, name)))
+        date = '21000101'
+        timestamp = time.mktime(time.strptime(date, '%Y%m%d'))
+        newpost = Post(timestamp, title=None, text='Extra' + date, photos=[])
+        newpost.date = f'{date[0:4]}-{date[4:6]}-{date[6:8]}'
+        newpost.dcim = videos
+        posts.append(newpost)
+
     title = retrieve_title(os.path.join(args.input, 'index.htm'))
     print_html(posts, title, os.path.join(args.input, 'index-x.htm'), 'extended')
 
@@ -713,6 +742,28 @@ def retrieve_title(filename):
                 return match.group(1)
         else:
             return ''
+
+
+def make_thumbnail_video(image_name, thumb_name, size):
+    if os.path.exists(thumb_name):
+        pass
+    else:
+        print('Making thumbnail:', thumb_name)
+        try:
+            create_thumbnail_video(image_name, thumb_name, size)
+        except Exception:                                 # skip ctrl-c, not always IOError
+            print('Failed:', image_name)
+            printexc()
+
+
+def create_thumbnail_video(filename, thumbname, size):
+    # ffmpeg must be in path
+    ffmpeg = 'ffmpeg.exe'
+    command = '%s -itsoffset -4 -i "%s" -vcodec mjpeg -vframes 1 -an -f rawvideo -s 240x180 "%s"'
+    command = command % (ffmpeg, filename, thumbname)
+    print(command)
+    result = os.system(command)
+    print(result)
 
 
 # -- Other commands -----------------------------------------------------------
