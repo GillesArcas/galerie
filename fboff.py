@@ -107,6 +107,7 @@ END = '</body></html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
 IMGPAT = '<a href="%s"><img src=%s width="400"/></a>'
 IMGPAT2 = '<a href="file:///%s"><img src=file:///%s width="300"/></a>'
+VIDPAT2 = '<a href="file:///%s" rel="video"><img src=file:///%s width="300"/></a>'
 TITLEIMGPAT = '<a href="%s"><img src=%s width="400" title="%s"/></a>'
 JOURS = 'lundi mardi mercredi jeudi vendredi samedi dimanche'.split()
 MOIS = 'janvier février mars avril mai juin juillet août septembre octobre novembre décembre'.split()
@@ -152,6 +153,11 @@ class PostImage:
             return f'{BIMGPAT}\n{CAPTION_PAT}' % (self.uri, self.resized_url, self.caption)
 
             
+class PostVideo(PostImage):
+    def to_html_dcim(self):
+        return VIDPAT2 % (self.uri, self.thumb)
+
+
 class Post:
     def __init__(self, timestamp, title, text, photos):
         """
@@ -610,7 +616,7 @@ def remove_head(html):
     return str.splitlines()
 
 
-# -- Thumbnails ---------------------------------------------------------------
+# -- Thumbnails (image and video) ---------------------------------------------
 
 
 def printexc():
@@ -644,6 +650,34 @@ def make_thumbnail(image_name, thumb_name, size):
         except Exception:                                 # skip ctrl-c, not always IOError
             print('Failed:', image_name)
             printexc()
+
+
+def make_thumbnail_video(video_name, thumb_name, size):
+    if os.path.exists(thumb_name):
+        pass
+    else:
+        print('Making thumbnail:', thumb_name)
+        try:
+            create_thumbnail_video(video_name, thumb_name, size)
+        except Exception:                                 # skip ctrl-c, not always IOError
+            print('Failed:', video_name)
+            printexc()
+
+
+def create_thumbnail_video(filename, thumbname, size):
+    # ffmpeg must be in path
+    ffmpeg = 'ffmpeg.exe'
+    command = '%s -itsoffset -4 -i "%s" -vcodec mjpeg -vframes 1 -an -f rawvideo -s 240x180 "%s"'
+    command = command % (ffmpeg, filename, thumbname)
+    print(command)
+    result = os.system(command)
+    
+    # add an arrow to the thumbnail to identify videos
+    img1 = Image.open(thumbname)
+    img2 = Image.open('video.png')
+    width, height = img1.size
+    img1.paste(img2, (4, height - 24 - 4), img2)
+    img1.save(thumbname)
 
 
 # -- Addition of DCIM images --------------------------------------------------
@@ -680,13 +714,21 @@ def extend_index(args):
                 required_dates.add(date)
 
     bydate = defaultdict(list)
-    for image in glob.glob(os.path.join(args.imgsource, '*.jpg')):
+    jpg = list(glob.glob(os.path.join(args.imgsource, '*.jpg')))
+    mp4 = list(glob.glob(os.path.join(args.imgsource, '*.mp4')))
+    all = sorted([*jpg, *mp4])
+    for item in all:
         # IMG_20190221_065509.jpg
-        name = os.path.basename(image)
+        name = os.path.basename(item).lower()
         date = name.split('_')[1]
         if date in required_dates:
-            make_thumbnail(os.path.join(args.imgsource, name), os.path.join(thumbdir, name), (300, 300))
-            bydate[date].append(PostImage(None, image, None, os.path.join(thumbdir, name)))
+            if name.endswith('.jpg'):
+                make_thumbnail(os.path.join(args.imgsource, name), os.path.join(thumbdir, name), (300, 300))
+                bydate[date].append(PostImage(None, item, None, os.path.join(thumbdir, name)))
+            else:
+                thumb_name = name.replace('.mp4', '.jpg')
+                make_thumbnail_video(os.path.join(args.imgsource, name), os.path.join(thumbdir, thumb_name), (300, 300))
+                bydate[date].append(PostVideo(None, item, None, os.path.join(thumbdir, thumb_name)))
 
     for date, liste in bydate.items():          # ??? TODO
         bydate[date] = liste  # sorted(liste)   # ???
@@ -713,24 +755,6 @@ def extend_index(args):
                 post.dcim = bydate[date]
                 date_already_seen.add(date)
 
-    if 1:
-        # add test post with videos
-        videos = list()
-        for video in glob.glob(os.path.join(args.imgsource, '*.mp4')):
-            # IMG_20190221_065509.mp4
-            name = os.path.basename(video)
-            print('---', name)
-            date = name.split('_')[1]
-            if date in required_dates:
-                make_thumbnail_video(os.path.join(args.imgsource, name), os.path.join(thumbdir, name), (300, 300))
-                videos.append(PostImage(None, video, None, os.path.join(thumbdir, name)))
-        date = '21000101'
-        timestamp = time.mktime(time.strptime(date, '%Y%m%d'))
-        newpost = Post(timestamp, title=None, text='Extra' + date, photos=[])
-        newpost.date = f'{date[0:4]}-{date[4:6]}-{date[6:8]}'
-        newpost.dcim = videos
-        posts.append(newpost)
-
     title = retrieve_title(os.path.join(args.input, 'index.htm'))
     print_html(posts, title, os.path.join(args.input, 'index-x.htm'), 'extended')
 
@@ -742,28 +766,6 @@ def retrieve_title(filename):
                 return match.group(1)
         else:
             return ''
-
-
-def make_thumbnail_video(image_name, thumb_name, size):
-    if os.path.exists(thumb_name):
-        pass
-    else:
-        print('Making thumbnail:', thumb_name)
-        try:
-            create_thumbnail_video(image_name, thumb_name, size)
-        except Exception:                                 # skip ctrl-c, not always IOError
-            print('Failed:', image_name)
-            printexc()
-
-
-def create_thumbnail_video(filename, thumbname, size):
-    # ffmpeg must be in path
-    ffmpeg = 'ffmpeg.exe'
-    command = '%s -itsoffset -4 -i "%s" -vcodec mjpeg -vframes 1 -an -f rawvideo -s 240x180 "%s"'
-    command = command % (ffmpeg, filename, thumbname)
-    print(command)
-    result = os.system(command)
-    print(result)
 
 
 # -- Other commands -----------------------------------------------------------
