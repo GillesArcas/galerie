@@ -693,17 +693,20 @@ def extend_index(args):
     if not os.path.exists(photoboxdir):
         shutil.copytree(os.path.join(os.path.dirname(sys.argv[0]), 'photobox'), photoboxdir)
 
-    posts = parse_html(args, os.path.join(args.input, 'index.htm'))
+    if os.path.exists(os.path.join(args.input, 'index.htm')):
+        title = retrieve_title(os.path.join(args.input, 'index.htm'))
+        posts = parse_html(args, os.path.join(args.input, 'index.htm'))
+    else:
+        title = os.path.basename(args.input)
+        posts = list()
 
     # list of required dates (the DCIM directory can contain images not related with the current
     # page (e.g. two pages for the same image directory)
     if args.dates:
         date1, date2 = args.dates.split('-')
         required_dates = set()
-        for image in glob.glob(os.path.join(args.imgsource, '*.jpg')):
-            # IMG_20190221_065509.jpg
-            name = os.path.basename(image)
-            date = name.split('_')[1]
+        for image in glob.glob(os.path.join(args.imgsource, '*.jpg')):  # TODO + mp4
+            date =  date_from_item(image)
             if date1 <= date <= date2:
                 required_dates.add(date)
     else:
@@ -720,10 +723,9 @@ def extend_index(args):
     mp4 = list(glob.glob(os.path.join(args.imgsource, '*.mp4')))
     all = sorted([*jpg, *mp4])
     for item in all:
-        # IMG_20190221_065509.jpg
-        name = os.path.basename(item)
-        date = name.split('_')[1]
+        date =  date_from_item(item)
         if date in required_dates:
+            name = os.path.basename(item)
             if name.lower().endswith('.jpg'):
                 thumb_name = name
                 thumb_name = os.path.join(thumbdir, thumb_name)
@@ -753,7 +755,7 @@ def extend_index(args):
         timestamp = time.mktime(time.strptime(date, '%Y%m%d'))
         year, month, day = date[0:4], date[4:6], date[6:8]
         x = datetime(int(year), int(month), int(day))
-        datetext = x.strftime("%A %d %B %Y")
+        datetext = x.strftime("%A %d %B %Y").capitalize()
         newpost = Post(timestamp, title=None, text=[datetext], photos=[])
         newpost.date = f'{year}-{month}-{day}'
         newpost.dcim = bydate[date]
@@ -770,7 +772,6 @@ def extend_index(args):
                 post.dcim = bydate[date]
                 date_already_seen.add(date)
 
-    title = retrieve_title(os.path.join(args.input, 'index.htm'))
     print_html(posts, title, os.path.join(args.input, 'index-x.htm'), 'extended')
 
 
@@ -781,6 +782,15 @@ def retrieve_title(filename):
                 return match.group(1)
         else:
             return ''
+
+
+def date_from_item(filename):
+    if (match := re.match(r'(?:IMG|VID)_(\d{8})_\d{6}', os.path.basename(filename))):
+        # IMG_20190221_065509.jpg
+        return match.group(1)
+    else:
+        timestamp =  os.path.getmtime(filename)
+        return datetime.fromtimestamp(timestamp).strftime('%Y%m%d')
 
 
 # -- Other commands -----------------------------------------------------------
