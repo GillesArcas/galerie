@@ -816,9 +816,9 @@ def parse_command_line():
                         action='store_true', default=False)
     parser.add_argument('-i', '--input', help='input parameter',
                         action='store', default=None)
-    parser.add_argument('--year', help='year',
-                        action='store', default=None)
     parser.add_argument('-o', '--output', help='output parameter',
+                        action='store', default=None)
+    parser.add_argument('--year', help='year',
                         action='store', default=None)
     parser.add_argument('--full', help='full html (versus blogger ready html)',
                         action='store_true', default=False)
@@ -827,6 +827,15 @@ def parse_command_line():
     parser.add_argument('--dates', help='dates interval for extended index',
                         action='store', default=None)
     args = parser.parse_args()
+    
+    # normalize paths
+    if args.input:
+        args.input = os.path.abspath(args.input)
+    if args.output:
+        args.output = os.path.abspath(args.output)
+    if args.imgsource:
+        args.imgsource = os.path.abspath(args.imgsource)
+    
     return args
 
 
