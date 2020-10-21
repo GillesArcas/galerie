@@ -715,21 +715,32 @@ def extend_index(args):
                 required_dates.add(date)
 
     bydate = defaultdict(list)
+    thumbnails = list()
     jpg = list(glob.glob(os.path.join(args.imgsource, '*.jpg')))
     mp4 = list(glob.glob(os.path.join(args.imgsource, '*.mp4')))
     all = sorted([*jpg, *mp4])
     for item in all:
         # IMG_20190221_065509.jpg
-        name = os.path.basename(item).lower()
+        name = os.path.basename(item)
         date = name.split('_')[1]
         if date in required_dates:
-            if name.endswith('.jpg'):
-                make_thumbnail(os.path.join(args.imgsource, name), os.path.join(thumbdir, name), (300, 300))
+            if name.lower().endswith('.jpg'):
+                thumb_name = name
+                thumb_name = os.path.join(thumbdir, thumb_name)
+                make_thumbnail(os.path.join(args.imgsource, name), thumb_name, (300, 300))
                 bydate[date].append(PostImage(None, item, None, os.path.join(thumbdir, name)))
             else:
                 thumb_name = name.replace('.mp4', '.jpg')
-                make_thumbnail_video(os.path.join(args.imgsource, name), os.path.join(thumbdir, thumb_name), (300, 300))
+                thumb_name = os.path.join(thumbdir, thumb_name)
+                make_thumbnail_video(os.path.join(args.imgsource, name), thumb_name, (300, 300))
                 bydate[date].append(PostVideo(None, item, None, os.path.join(thumbdir, thumb_name)))
+            thumbnails.append(thumb_name)
+            
+    # purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
+    for basename in glob.glob(os.path.join(thumbdir, '*.jpg')):
+        filename = os.path.join(thumbdir, basename)
+        if filename not in thumbnails:
+            os.remove(filename)
 
     for date, liste in bydate.items():          # ??? TODO
         bydate[date] = liste  # sorted(liste)   # ???
