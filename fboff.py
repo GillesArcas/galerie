@@ -22,6 +22,7 @@ import time
 import bisect
 import pprint
 import locale
+import textwrap
 from collections import defaultdict
 from datetime import datetime
 from urllib.request import urlopen
@@ -79,37 +80,52 @@ QsXcv4f+p1gRfZhkDzz0+V+KCZzQAUfv8fCr4DMcQdSAAA+dJRILrFW04AAAAASUVORK5CYII='''
 
 START = f'''\
 <html>
+
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-	<title>%s</title>
-	<link rel="icon" href="data:image/png;base64,{FAVICON_BASE64}" />
+    <title>%s</title>
+    <link rel="icon" href="data:image/png;base64,\n{FAVICON_BASE64}" />
+    <style type="text/css">
+        span {{ display:inline-table; }}
+        p {{ margin-top:0px; }}
+     </style>
 </head>
-<body>
+
+<body>\
 '''
 
 STARTEX = f'''\
 <html>
+
 <head>
-	<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"><![endif]-->
-	<meta charset="utf-8">
-	<title>%s</title>
-	<link rel="icon" href="data:image/png;base64,{FAVICON_BASE64}" />
-	<meta name="viewport" content="width=device-width">
-	<link rel="stylesheet" href="photobox/photobox.css">
-	<!--[if lt IE 9]><link rel="stylesheet" href="photobox/photobox.ie.css"><![endif]-->
-	<!--[if lt IE 9]><script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
-	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
-	<script src="photobox/jquery.photobox.js"></script>
+    <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"><![endif]-->
+    <meta charset="utf-8">
+    <title>%s</title>
+    <link rel="icon" href="data:image/png;base64,\n{FAVICON_BASE64}" />
+    <meta name="viewport" content="width=device-width">
+    <link rel="stylesheet" href="photobox/photobox.css">
+    <!--[if lt IE 9]><link rel="stylesheet" href="photobox/photobox.ie.css"><![endif]-->
+    <!--[if lt IE 9]><script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="photobox/jquery.photobox.js"></script>
 </head>
-<body>
+
+<body>\
 '''
 
-END = '</body></html>'
+END = '</body>\n</html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
 IMGPAT = '<a href="%s"><img src=%s width="400"/></a>'
 IMGPAT2 = '<a href="file:///%s"><img src=file:///%s width="300"/></a>'
 VIDPAT2 = '<a href="file:///%s" rel="video"><img src=file:///%s width="300"/></a>'
 TITLEIMGPAT = '<a href="%s"><img src=%s width="400" title="%s"/></a>'
+TITLEIMGPAT2 = '''\
+<span>
+<a href="%s"><img src=%s width="400"/></a>
+<p>%s</p>
+</span>
+'''
+
 JOURS = 'lundi mardi mercredi jeudi vendredi samedi dimanche'.split()
 MOIS = 'janvier février mars avril mai juin juillet août septembre octobre novembre décembre'.split()
 
@@ -131,19 +147,26 @@ CAPTION_PAT = '''\
 '''
 
 
+def group(match, n):
+    try:
+        return match.group(n)
+    except:
+        return None
+
+
 class PostImage:
     def __init__(self, caption, uri, creation, thumb=None):
         self.caption = caption
         self.uri = uri
         self.creation = creation
         self.thumb = thumb
-        
+
     def to_html_post(self):
         if not self.caption:
             return IMGPAT % (self.uri, self.uri)
         else:
-            return TITLEIMGPAT % (self.uri, self.uri, self.caption)
-        
+            return TITLEIMGPAT2 % (self.uri, self.uri, self.caption)
+
     def to_html_dcim(self):
         return IMGPAT2 % (self.uri, self.thumb)
 
@@ -153,7 +176,7 @@ class PostImage:
         else:
             return f'{BIMGPAT}\n{CAPTION_PAT}' % (self.uri, self.resized_url, self.caption)
 
-            
+
 class PostVideo(PostImage):
     def to_html_dcim(self):
         return VIDPAT2 % (self.uri, self.thumb)
@@ -181,6 +204,31 @@ class Post:
 
     def __lt__(self, other):
         return self.date < other.date
+
+    @classmethod
+    def from_markdown(cls, md_post):
+        timestamp = None  # pour le moment
+        post = ''.join(md_post)
+
+        m = re.match(r'###### *([^\n]+)\n*', post)
+        if m:
+            title = m.group(1)
+            post = post[m.end():]
+        else:
+            title = None
+
+        text = list()
+        while (m := re.match(r'(([^\n]+\n)+)\n', post)):
+            para = m.group(1).replace('\n', ' ')
+            text.append(para)
+            post = post[m.end():]
+
+        images = list()
+        while (m := re.match(r'!\[\]\(([^\n]+)\)\n(([^!][^[][^]][^\n]+)\n)?', post)):
+            images.append(PostImage(group(m, 3), m.group(1), None))
+            post = post[m.end():]
+
+        return cls(timestamp, title, text, images)
 
     @classmethod
     def from_fb_json(cls, json_post):
@@ -364,6 +412,38 @@ def rename_images(posts, path):
                 print('Unable to rename:', os.path.join(path, image.uri), '-->', os.path.join(path, image.seqname))
 
 
+# -- Markdown parser ----------------------------------------------------------
+
+
+def parse_markdown(args, filename):
+    """
+    Generate Post objects from markdown. Posts are in chronological order.
+    """
+    title = None
+    posts = list()
+    if not os.path.exists(filename):
+        print('/!\\', 'File not found:', filename)
+    else:
+        with open(filename, encoding='utf-8') as f:
+            line = next(f)
+            if line.startswith('# '):
+                title = line[2:].strip()
+                record = []
+                next(f)
+            else:
+                title = None
+                record = [line]
+            for line in f:
+                if '___' not in line:
+                    record.append(line)
+                else:
+                    posts.append(Post.from_markdown(record))
+                    record = []
+        set_sequential_images(posts, args.year)
+
+    return title, posts
+
+
 # -- Facebook json parser -----------------------------------------------------
 
 
@@ -493,6 +573,35 @@ def print_html(posts, title, html_name, target='local'):
         with io.StringIO() as f:
             print_html_to_stream(posts, title, f, target)
             return f.getvalue()
+
+
+# -- Raw format ---------------------------------------------------------------
+
+
+def raw_to_html(args):
+    title, posts = parse_markdown(args, os.path.join(args.input, 'index.txt'))
+    print_html(posts, title, os.path.join(args.input, 'index.htm'))
+
+
+def html_to_raw(args):
+    posts = parse_html(args, os.path.join(args.input, 'index.htm'))
+    title = 'TITLE'
+
+    with open(os.path.join(args.input, 'index.txt'), 'wt', encoding='utf-8') as fdst:
+        for post in posts:
+            if post.title:
+                # print(f'*{post.title}*', file=fdst)
+                print(f'###### {post.title}', file=fdst)
+                print(file=fdst)
+            for line in post.text:
+                for chunk in textwrap.wrap(line, width=78):
+                    print(chunk, file=fdst)
+            print(file=fdst)
+            for media in post.images:
+                print(f'![]({media.uri})', file=fdst)
+                if media.caption:
+                    print(media.caption, file=fdst)
+            print('______', file=fdst)
 
 
 # -- Import from fb -----------------------------------------------------------
@@ -672,7 +781,7 @@ def create_thumbnail_video(filename, thumbname, size):
     command = command % (ffmpeg, filename, thumbname)
     print(command)
     result = os.system(command)
-    
+
     # add an arrow to the thumbnail to identify videos
     img1 = Image.open(thumbname)
     img2 = Image.open('video.png')
@@ -737,7 +846,7 @@ def extend_index(args):
                 make_thumbnail_video(os.path.join(args.imgsource, name), thumb_name, (300, 300))
                 bydate[date].append(PostVideo(None, item, None, os.path.join(thumbdir, thumb_name)))
             thumbnails.append(thumb_name)
-            
+
     # purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
     for basename in glob.glob(os.path.join(thumbdir, '*.jpg')):
         filename = os.path.join(thumbdir, basename)
@@ -812,6 +921,10 @@ def rename_images_cmd(args):
 
 def parse_command_line():
     parser = argparse.ArgumentParser(description=None, usage=USAGE)
+    parser.add_argument('--raw_to_html', help='input raw, output html',
+                        action='store_true', default=None)
+    parser.add_argument('--html_to_raw', help='input html, output raw',
+                        action='store_true', default=None)
     parser.add_argument('--import_fb', help='input json export, output html reference',
                         action='store_true', default=None)
     parser.add_argument('--import_blogger', help='blogger post url, output html reference',
@@ -822,6 +935,7 @@ def parse_command_line():
                         action='store_true', default=False)
     parser.add_argument('--extend', help='extend image set, source in --imgsource',
                         action='store_true', default=False)
+
     parser.add_argument('--test', help='',
                         action='store_true', default=False)
     parser.add_argument('-i', '--input', help='input parameter',
@@ -837,7 +951,7 @@ def parse_command_line():
     parser.add_argument('--dates', help='dates interval for extended index',
                         action='store', default=None)
     args = parser.parse_args()
-    
+
     # normalize paths
     if args.input:
         args.input = os.path.abspath(args.input)
@@ -845,7 +959,7 @@ def parse_command_line():
         args.output = os.path.abspath(args.output)
     if args.imgsource:
         args.imgsource = os.path.abspath(args.imgsource)
-    
+
     return args
 
 
@@ -853,7 +967,14 @@ def main():
     locale.setlocale(locale.LC_TIME, '')
     args = parse_command_line()
 
-    if args.import_fb:
+
+    if args.raw_to_html:
+        raw_to_html(args)
+
+    elif args.html_to_raw:
+        html_to_raw(args)
+
+    elif args.import_fb:
         import_fb(args)
 
     elif args.import_blogger:
