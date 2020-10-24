@@ -23,6 +23,7 @@ import bisect
 import pprint
 import locale
 import textwrap
+import html
 from collections import defaultdict
 from datetime import datetime
 from urllib.request import urlopen
@@ -152,13 +153,6 @@ CAPTION_PAT = '''\
 '''
 
 
-def group(match, n):
-    try:
-        return match.group(n)
-    except:
-        return None
-
-
 class PostImage:
     def __init__(self, caption, uri, creation, thumb=None):
         self.caption = caption
@@ -228,6 +222,9 @@ class Post:
             text.append(para)
             post = post[m.end():]
 
+        if (m := re.match(r'(\n+)', post)):
+            post = post[m.end():]
+
         images = list()
         while (m := re.match(r'!\[\]\(([^\n]+)\)\n(([^!][^[][^]][^\n]+)\n)?', post)):
             images.append(PostImage(group(m, 3), m.group(1), None))
@@ -264,6 +261,9 @@ class Post:
 
     @classmethod
     def from_html(cls, html_post):
+        # méthode temporaire utilisée maintenant (2020/10/24) à convertir les
+        # html locaux en md. à supprimer quand ça sera fait, en attendant on
+        # n'hésite pas à éditer manuellement les md générés.
         timestamp = None  # pour le moment
         title = None
         text = ''
@@ -299,9 +299,12 @@ class Post:
         if self.title:
             html.append(f'<b>{self.title}</b>')
             html.append('<br />')
-        for line in self.text:
+        text = [md_links_to_html(line) for line in self.text]
+        if text:
+            line = text[0]
             html.append(line)
-        if self.text:
+            for line in text[1:]:
+                html.append(f'<br />{line}')
             html.append('<br />')
         for image in self.images:
             html.append(image.to_html_post())
@@ -328,6 +331,19 @@ class Post:
         for image in self.images:
             html.append(image.to_html_blogger())
         return html
+
+
+def md_links_to_html(line):
+    line = html.escape(line, quote=False)
+    line = re.sub(r'(?<!\!)\[([^]]*)\]\(([^)]*)\)', r'<a href=\2>\1</a>', line)
+    return line
+
+
+def group(match, n):
+    try:
+        return match.group(n)
+    except:
+        return None
 
 
 # -- Handling of dates and sequential image names -----------------------------
@@ -516,7 +532,7 @@ def parse_html(args, url):
                 line = next(f)
             record = [line]
             for line in f:
-                if SEP not in line and END not in line:
+                if SEP not in line and '</body>' not in line:
                     record.append(line)
                 else:
                     posts.append(Post.from_html(record))
@@ -590,10 +606,11 @@ def raw_to_html(args):
 
 
 def html_to_raw(args):
+    title = retrieve_title(os.path.join(args.input, 'index.htm'))
     posts = parse_html(args, os.path.join(args.input, 'index.htm'))
-    title = 'TITLE'
 
     with open(os.path.join(args.input, 'index.md'), 'wt', encoding='utf-8') as fdst:
+        print(f'# {title}\n', file=fdst)
         for post in posts:
             if post.title:
                 print(f'###### {post.title}', file=fdst)
