@@ -78,6 +78,13 @@ rrdSC5FigKFdC8xnH/OYMRAwMHAwPjf5BIyX0rhnM/1oKYjP+X7ROwun99DkOKouaxD05RzHqvW8ym
 ykr+ffNFdd8Ev0NPGIt7GFKKP3xfx+DEILCvhaGEBWiw19IPHMeCGQScJEH2rF36////Kf+/f/+eDG
 QsXcv4f+p1gRfZhkDzz0+V+KCZzQAUfv8fCr4DMcQdSAAA+dJRILrFW04AAAAASUVORK5CYII='''
 
+CAPTION_IMAGE_STYLE = '''\
+    <style type="text/css">
+        span { display:inline-table; }
+        p { margin-top:0px; margin-bottom:0px; }
+     </style>\
+'''
+
 START = f'''\
 <html>
 
@@ -85,10 +92,7 @@ START = f'''\
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>%s</title>
     <link rel="icon" href="data:image/png;base64,\n{FAVICON_BASE64}" />
-    <style type="text/css">
-        span {{ display:inline-table; }}
-        p {{ margin-top:0px; }}
-     </style>
+{CAPTION_IMAGE_STYLE}
 </head>
 
 <body>\
@@ -108,6 +112,7 @@ STARTEX = f'''\
     <!--[if lt IE 9]><script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <script src="photobox/jquery.photobox.js"></script>
+{CAPTION_IMAGE_STYLE}
 </head>
 
 <body>\
@@ -547,7 +552,8 @@ def compose_html_extended(posts, title, target):
 
     html.append('<script>')
     for post in posts:
-        html.append(f"$('#gallery-{post.date}-dcim').photobox('a', {{ thumbs:true, time:0, history:false, loop:false }});")
+        if post.dcim:
+            html.append(f"$('#gallery-{post.date}-dcim').photobox('a', {{ thumbs:true, time:0, history:false, loop:false }});")
     html.append('</script>')
 
     html.append(END)
@@ -579,7 +585,7 @@ def print_html(posts, title, html_name, target='local'):
 
 
 def raw_to_html(args):
-    title, posts = parse_markdown(args, os.path.join(args.input, 'index.txt'))
+    title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
     print_html(posts, title, os.path.join(args.input, 'index.htm'))
 
 
@@ -587,10 +593,9 @@ def html_to_raw(args):
     posts = parse_html(args, os.path.join(args.input, 'index.htm'))
     title = 'TITLE'
 
-    with open(os.path.join(args.input, 'index.txt'), 'wt', encoding='utf-8') as fdst:
+    with open(os.path.join(args.input, 'index.md'), 'wt', encoding='utf-8') as fdst:
         for post in posts:
             if post.title:
-                # print(f'*{post.title}*', file=fdst)
                 print(f'###### {post.title}', file=fdst)
                 print(file=fdst)
             for line in post.text:
@@ -802,9 +807,8 @@ def extend_index(args):
     if not os.path.exists(photoboxdir):
         shutil.copytree(os.path.join(os.path.dirname(sys.argv[0]), 'photobox'), photoboxdir)
 
-    if os.path.exists(os.path.join(args.input, 'index.htm')):
-        title = retrieve_title(os.path.join(args.input, 'index.htm'))
-        posts = parse_html(args, os.path.join(args.input, 'index.htm'))
+    if os.path.exists(os.path.join(args.input, 'index.md')):
+        title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
     else:
         title = os.path.basename(args.input)
         posts = list()
@@ -921,7 +925,7 @@ def rename_images_cmd(args):
 
 def parse_command_line():
     parser = argparse.ArgumentParser(description=None, usage=USAGE)
-    parser.add_argument('--raw_to_html', help='input raw, output html',
+    parser.add_argument('--html', help='input md, output html',
                         action='store_true', default=None)
     parser.add_argument('--html_to_raw', help='input html, output raw',
                         action='store_true', default=None)
@@ -968,7 +972,7 @@ def main():
     args = parse_command_line()
 
 
-    if args.raw_to_html:
+    if args.html:
         raw_to_html(args)
 
     elif args.html_to_raw:
