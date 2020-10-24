@@ -1,14 +1,8 @@
-# fboff
-An offliner of facebook photos using fb json export
+# journal
+An utility to format a basic markdown diary into various html forms. The markdown is basic enough to be edited on a smartphone when travelling (see example in example directory). 
 
+The html pages generated are:
 
-
-##### How to export photos from facebook (2020/04/29)
-
-Open Paramètres, then Vos informations facebook, then Télécharger vos informations.
-
-Select only Photos et vidéos
-
-Select period, format and quality
-
-Press "Create file". A mail and a facebook notification are given when file ready.
+* A page with the same information as in the markdown reference,
+* an extended page including all photos from a DCIM directory,
+* a page ready to export to Blogger.
