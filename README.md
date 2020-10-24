@@ -1,5 +1,5 @@
 # journal
-An utility to format a basic markdown diary into various html forms. The markdown is basic enough to be edited on a smartphone when travelling (see example in example directory). 
+A utility to format a basic markdown diary into various html forms. The markdown is basic enough to be edited on a smartphone when travelling (see example in example directory). 
 
 The html pages generated are:
 
