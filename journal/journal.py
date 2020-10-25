@@ -96,26 +96,12 @@ START = f'''\
     <title>%s</title>
     <link rel="icon" href="data:image/png;base64,\n{FAVICON_BASE64}" />
 {CAPTION_IMAGE_STYLE}
-</head>
-
-<body>\
-'''
-
-STARTEX = f'''\
-<html>
-
-<head>
-    <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"><![endif]-->
-    <meta charset="utf-8">
-    <title>%s</title>
-    <link rel="icon" href="data:image/png;base64,\n{FAVICON_BASE64}" />
     <meta name="viewport" content="width=device-width">
     <link rel="stylesheet" href="photobox/photobox.css">
     <!--[if lt IE 9]><link rel="stylesheet" href="photobox/photobox.ie.css"><![endif]-->
     <!--[if lt IE 9]><script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <script src="photobox/jquery.photobox.js"></script>
-{CAPTION_IMAGE_STYLE}
 </head>
 
 <body>\
@@ -309,6 +295,7 @@ class Post:
             for line in text[1:]:
                 html.append(f'<br />{line}')
             html.append('<br />')
+
         html.append(f'<div id="gallery-{self.date}-blog">')
         for image in self.images:
             html.append(image.to_html_post())
@@ -558,13 +545,19 @@ def compose_html(posts, title, target):
             html.append(line.strip())
         html.append('')
 
+    html.append('<script>')
+    for post in posts:
+        if post.images:
+            html.append(f"$('#gallery-{post.date}-blog').photobox('a', {{ thumbs:true, time:0, history:false, loop:false }});")
+    html.append('</script>')
+
     html.append(END)
     return html
 
 
 def compose_html_extended(posts, title, target):
     html = list()
-    html.append(STARTEX % title)
+    html.append(START % title)
 
     for post in posts:
         for line in post.to_html(target):
