@@ -843,13 +843,18 @@ def extend_index(args):
         title = os.path.basename(args.input)
         posts = list()
 
+    # list of all pictures and movies
+    jpg = list(glob.glob(os.path.join(args.imgsource, '*.jpg')))
+    mp4 = list(glob.glob(os.path.join(args.imgsource, '*.mp4')))
+    medias = sorted([*jpg, *mp4])
+
     # list of required dates (the DCIM directory can contain images not related with the current
     # page (e.g. two pages for the same image directory)
     if args.dates:
         date1, date2 = args.dates.split('-')
         required_dates = set()
-        for image in glob.glob(os.path.join(args.imgsource, '*.jpg')):  # TODO + mp4
-            date =  date_from_item(image)
+        for media in medias:
+            date =  date_from_item(media)
             if date1 <= date <= date2:
                 required_dates.add(date)
     else:
@@ -862,23 +867,20 @@ def extend_index(args):
 
     bydate = defaultdict(list)
     thumbnails = list()
-    jpg = list(glob.glob(os.path.join(args.imgsource, '*.jpg')))
-    mp4 = list(glob.glob(os.path.join(args.imgsource, '*.mp4')))
-    all = sorted([*jpg, *mp4])
-    for item in all:
-        date =  date_from_item(item)
+    for media in medias:
+        date =  date_from_item(media)
         if date in required_dates:
-            name = os.path.basename(item)
+            name = os.path.basename(media)
             if name.lower().endswith('.jpg'):
                 thumb_name = name
                 thumb_name = os.path.join(thumbdir, thumb_name)
                 make_thumbnail(os.path.join(args.imgsource, name), thumb_name, (300, 300))
-                bydate[date].append(PostImage(None, item, None, os.path.join(thumbdir, name)))
+                bydate[date].append(PostImage(None, media, None, os.path.join(thumbdir, name)))
             else:
                 thumb_name = name.replace('.mp4', '.jpg')
                 thumb_name = os.path.join(thumbdir, thumb_name)
                 make_thumbnail_video(os.path.join(args.imgsource, name), thumb_name, (300, 300))
-                bydate[date].append(PostVideo(None, item, None, os.path.join(thumbdir, thumb_name)))
+                bydate[date].append(PostVideo(None, media, None, os.path.join(thumbdir, thumb_name)))
             thumbnails.append(thumb_name)
 
     # purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
