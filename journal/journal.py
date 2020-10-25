@@ -309,8 +309,10 @@ class Post:
             for line in text[1:]:
                 html.append(f'<br />{line}')
             html.append('<br />')
+        html.append(f'<div id="gallery-{self.date}-blog">')
         for image in self.images:
             html.append(image.to_html_post())
+        html.append('</div>')
 
         if self.dcim:
             html.append(SEP)
@@ -571,6 +573,8 @@ def compose_html_extended(posts, title, target):
 
     html.append('<script>')
     for post in posts:
+        if post.images:
+            html.append(f"$('#gallery-{post.date}-blog').photobox('a', {{ thumbs:true, time:0, history:false, loop:false }});")
         if post.dcim:
             html.append(f"$('#gallery-{post.date}-dcim').photobox('a', {{ thumbs:true, time:0, history:false, loop:false }});")
     html.append('</script>')
@@ -878,14 +882,14 @@ def extend_index(args):
                 thumb_fullname = os.path.join(thumbdir, thumb_basename)
                 info = media_basename + ': ' + get_image_info(media_fullname)
                 make_thumbnail(media_fullname, thumb_fullname, (300, 300))
-                bydate[date].append(PostImage(None, media, None, thumb_fullname, info))
+                item = PostImage(None, media, None, thumb_fullname, info)
             else:
                 thumb_basename = media_basename.replace('.mp4', '.jpg')
                 thumb_fullname = os.path.join(thumbdir, thumb_basename)
                 info = media_basename + ': ' + get_video_info(media_fullname)
                 make_thumbnail_video(media_fullname, thumb_fullname, (300, 300))
-                video = PostVideo(None, media, None, thumb_fullname, info)
-                bydate[date].append(video)
+                item = PostVideo(None, media, None, thumb_fullname, info)
+            bydate[date].append(item)
             thumbnails.append(thumb_fullname)
 
     # purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
