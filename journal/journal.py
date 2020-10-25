@@ -29,6 +29,7 @@ from collections import defaultdict
 from datetime import datetime
 from urllib.request import urlopen
 from lxml import objectify
+from subprocess import check_output, CalledProcessError, STDOUT
 
 import ftfy
 import clipboard
@@ -123,8 +124,8 @@ STARTEX = f'''\
 END = '</body>\n</html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
 IMGPAT = '<a href="%s"><img src=%s width="400"/></a>'
-IMGPAT2 = '<a href="file:///%s"><img src=file:///%s width="300"/></a>'
-VIDPAT2 = '<a href="file:///%s" rel="video"><img src=file:///%s width="300"/></a>'
+IMGPAT2 = '<a href="file:///%s"><img src=file:///%s width="300" title="%s"/></a>'
+VIDPAT2 = '<a href="file:///%s" rel="video"><img src=file:///%s width="300" title="%s"/></a>'
 TITLEIMGPAT = '<a href="%s"><img src=%s width="400" title="%s"/></a>'
 TITLEIMGPAT2 = '''\
 <span>
@@ -155,11 +156,12 @@ CAPTION_PAT = '''\
 
 
 class PostImage:
-    def __init__(self, caption, uri, creation, thumb=None):
+    def __init__(self, caption, uri, creation, thumb=None, descr=''):
         self.caption = caption
         self.uri = uri
         self.creation = creation
         self.thumb = thumb
+        self.descr = descr
 
     def to_html_post(self):
         if not self.caption:
@@ -168,7 +170,7 @@ class PostImage:
             return TITLEIMGPAT2 % (self.uri, self.uri, self.caption)
 
     def to_html_dcim(self):
-        return IMGPAT2 % (self.uri, self.thumb)
+        return IMGPAT2 % (self.uri, self.thumb, self.descr)
 
     def to_html_blogger(self):
         if not self.caption:
@@ -179,7 +181,7 @@ class PostImage:
 
 class PostVideo(PostImage):
     def to_html_dcim(self):
-        return VIDPAT2 % (self.uri, self.thumb)
+        return VIDPAT2 % (self.uri, self.thumb, self.descr)
 
 
 class Post:
@@ -814,7 +816,6 @@ def create_thumbnail_video(filename, thumbname, size):
     ffmpeg = 'ffmpeg.exe'
     command = '%s -i "%s" -vcodec mjpeg -vframes 1 -an -f rawvideo -s 240x180 "%s"'
     command = command % (ffmpeg, filename, thumbname)
-    print(command)
     result = os.system(command)
 
     # add an arrow to the thumbnail to identify videos
@@ -870,18 +871,22 @@ def extend_index(args):
     for media in medias:
         date =  date_from_item(media)
         if date in required_dates:
-            name = os.path.basename(media)
-            if name.lower().endswith('.jpg'):
-                thumb_name = name
-                thumb_name = os.path.join(thumbdir, thumb_name)
-                make_thumbnail(os.path.join(args.imgsource, name), thumb_name, (300, 300))
-                bydate[date].append(PostImage(None, media, None, os.path.join(thumbdir, name)))
+            media_basename = os.path.basename(media)
+            media_fullname = os.path.join(args.imgsource, media_basename)
+            if media_basename.lower().endswith('.jpg'):
+                thumb_basename = media_basename
+                thumb_fullname = os.path.join(thumbdir, thumb_basename)
+                info = media_basename + ': ' + get_image_info(media_fullname)
+                make_thumbnail(media_fullname, thumb_fullname, (300, 300))
+                bydate[date].append(PostImage(None, media, None, thumb_fullname, info))
             else:
-                thumb_name = name.replace('.mp4', '.jpg')
-                thumb_name = os.path.join(thumbdir, thumb_name)
-                make_thumbnail_video(os.path.join(args.imgsource, name), thumb_name, (300, 300))
-                bydate[date].append(PostVideo(None, media, None, os.path.join(thumbdir, thumb_name)))
-            thumbnails.append(thumb_name)
+                thumb_basename = media_basename.replace('.mp4', '.jpg')
+                thumb_fullname = os.path.join(thumbdir, thumb_basename)
+                info = media_basename + ': ' + get_video_info(media_fullname)
+                make_thumbnail_video(media_fullname, thumb_fullname, (300, 300))
+                video = PostVideo(None, media, None, thumb_fullname, info)
+                bydate[date].append(video)
+            thumbnails.append(thumb_fullname)
 
     # purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
     for basename in glob.glob(os.path.join(thumbdir, '*.jpg')):
@@ -936,6 +941,38 @@ def date_from_item(filename):
     else:
         timestamp =  os.path.getmtime(filename)
         return datetime.fromtimestamp(timestamp).strftime('%Y%m%d')
+
+
+COMMAND = '''\
+    ffprobe -v error
+            -select_streams v:0
+            -show_entries stream=width,height,avg_frame_rate,r_frame_rate:format=duration
+            -of csv=p=0
+'''
+
+
+def get_image_info(filename):
+    img = Image.open(filename)
+    width, height = img.size
+    size = round(os.path.getsize(filename) / 1e6, 1)
+    return f'dim={width}x{height}, {size} MB'
+
+
+def get_video_info(filename):
+    # ffmpeg must be in path
+    command = [*COMMAND.split(), filename]
+    try:
+        output = check_output(command, stderr=STDOUT).decode()
+        match = re.match(r'(\d+),(\d+),(\d+)/(\d+),(\d+)/(\d+)\s*(\d+\.\d+)', output)
+        width = match.group(1)
+        height = match.group(2)
+        fps = round(int(match.group(3)) / int(match.group(4)), 1)
+        duration = round(float(match.group(7)))
+        size = round(os.path.getsize(filename) / 1e6, 1)
+        output = f'dim={width}x{height}, m:s={duration // 60}:{duration % 60}, fps={fps}, {size} MB'
+    except CalledProcessError as e:
+        output = e.output.decode()
+    return output
 
 
 # -- Other commands -----------------------------------------------------------
