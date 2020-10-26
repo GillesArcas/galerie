@@ -109,10 +109,10 @@ START = f'''\
 
 END = '</body>\n</html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
-IMGPAT = '<a href="%s"><img src=%s width="400"/></a>'
-IMGPAT2 = '<a href="file:///%s"><img src=file:///%s width="300" title="%s"/></a>'
-VIDPAT2 = '<a href="file:///%s" rel="video"><img src=file:///%s width="300" title="%s"/></a>'
-TITLEIMGPAT = '<a href="%s"><img src=%s width="400" title="%s"/></a>'
+IMGPAT = '<a href="%s"><img src="%s" width="400"/></a>'
+IMGPAT2 = '<a href="file:///%s"><img src="file:///%s" width="300" title="%s"/></a>'
+VIDPAT2 = '<a href="file:///%s" rel="video"><img src="file:///%s" width="300" title="%s"/></a>'
+TITLEIMGPAT = '<a href="%s"><img src="%s" width="400" title="%s"/></a>'
 TITLEIMGPAT2 = '''\
 <span>
 <a href="%s"><img src=%s width="400"/></a>
@@ -833,7 +833,8 @@ def extend_index(args):
 
     photoboxdir = os.path.join(args.input, 'photobox')
     if not os.path.exists(photoboxdir):
-        shutil.copytree(os.path.join(os.path.dirname(sys.argv[0]), 'photobox'), photoboxdir)
+        photoboxsrc = os.path.join(os.path.split(os.path.split(__file__)[0])[0], 'photobox')
+        shutil.copytree(photoboxsrc, photoboxdir)
 
     if os.path.exists(os.path.join(args.input, 'index.md')):
         title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
@@ -1025,18 +1026,26 @@ def parse_command_line():
     # normalize paths
     if args.input:
         args.input = os.path.abspath(args.input)
+        if not os.path.isdir(args.input):
+            error(f'** Directory not found: {args.input}')
     if args.output:
         args.output = os.path.abspath(args.output)
     if args.imgsource:
         args.imgsource = os.path.abspath(args.imgsource)
+        if not os.path.isdir(args.imgsource):
+            error(f'** Directory not found: {args.imgsource}')
 
     return args
+
+
+def error(msg):
+    print(msg)
+    sys.exit(1)
 
 
 def main():
     locale.setlocale(locale.LC_TIME, '')
     args = parse_command_line()
-
 
     if args.html:
         raw_to_html(args)
