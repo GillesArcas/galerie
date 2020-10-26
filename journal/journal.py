@@ -457,53 +457,24 @@ def parse_markdown(args, filename):
     return title, posts
 
 
-# -- Facebook json parser -----------------------------------------------------
+# -- Markdown printer ---------------------------------------------------------
 
-
-def parse_json_text(text):
-    text = ftfy.ftfy(text)
-    text = text.splitlines()
-    if is_title(text[0]):
-        return text[0], text[1:]
-    else:
-        return None, text
-
-
-def is_title(line):
-    # dubious. any line with a date is considered a title when in first line
-    pattern = r'(?:%s )?(1er|\d|\d\d) (%s)\b' % ('|'.join(JOURS), '|'.join(MOIS))
-    return re.search(pattern, line)
-
-
-def date_from_title(title, year):
-    pattern = r'(?:%s )?(1er|\d|\d\d) (%s)\b' % ('|'.join(JOURS), '|'.join(MOIS))
-    m = re.search(pattern, title)
-    if not m:
-        return None
-    else:
-        day = 1 if m.group(1) == '1er' else int(m.group(1))
-        month = MOIS.index(m.group(2)) + 1
-        return f'{year}-{month:02}-{day:02}'
-
-
-def parse_json(args, json_export_dir):
-    """
-    Generate Post objects from fb json export directory in chronological order.
-    json files are located in json_export_dir/posts, picture paths are relative
-    to <json_export_dir>
-    """
-    posts = dict()
-    json_dir = os.path.join(json_export_dir, 'posts')
-    for json_file in glob.glob(os.path.join(json_dir, '*.json')):
-        with open(json_file) as f:
-            for json_post in json.load(f):
-                post = Post.from_fb_json(json_post)
-                posts[post.timestamp] = post
-
-    if posts:
-        ordered_posts = [post for ts, post in sorted(posts.items())]
-        set_sequential_images(ordered_posts, args.year)
-        return ordered_posts
+def print_markdown(posts, title, fullname):
+    with open(fullname, 'wt', encoding='utf-8') as fdst:
+        print(f'# {title}\n', file=fdst)
+        for post in posts:
+            if post.title:
+                print(f'###### {post.title}', file=fdst)
+                print(file=fdst)
+            for line in post.text:
+                for chunk in textwrap.wrap(line, width=78):
+                    print(chunk, file=fdst)
+            print(file=fdst)
+            for media in post.images:
+                print(f'![]({media.uri})', file=fdst)
+                if media.caption:
+                    print(media.caption, file=fdst)
+            print('______', file=fdst)
 
 
 # -- html parser --------------------------------------------------------------
@@ -531,6 +502,15 @@ def parse_html(args, url):
                     record = [line]
         set_sequential_images(posts, args.year)
     return posts
+
+
+def retrieve_title(filename):
+    with open(filename, encoding='utf-8' ) as fsrc:
+        for line in fsrc:
+            if (match := re.search('<title>(.*)</title>', line)):
+                return match.group(1)
+        else:
+            return ''
 
 
 # -- html printer -------------------------------------------------------------
@@ -597,7 +577,86 @@ def print_html(posts, title, html_name, target='local'):
             return f.getvalue()
 
 
-# -- Raw format ---------------------------------------------------------------
+# -- Facebook json parser -----------------------------------------------------
+
+
+def parse_json_text(text):
+    text = ftfy.ftfy(text)
+    text = text.splitlines()
+    if is_title(text[0]):
+        return text[0], text[1:]
+    else:
+        return None, text
+
+
+def is_title(line):
+    # dubious. any line with a date is considered a title when in first line
+    pattern = r'(?:%s )?(1er|\d|\d\d) (%s)\b' % ('|'.join(JOURS), '|'.join(MOIS))
+    return re.search(pattern, line)
+
+
+def date_from_title(title, year):
+    pattern = r'(?:%s )?(1er|\d|\d\d) (%s)\b' % ('|'.join(JOURS), '|'.join(MOIS))
+    m = re.search(pattern, title)
+    if not m:
+        return None
+    else:
+        day = 1 if m.group(1) == '1er' else int(m.group(1))
+        month = MOIS.index(m.group(2)) + 1
+        return f'{year}-{month:02}-{day:02}'
+
+
+def parse_json(args, json_export_dir):
+    """
+    Generate Post objects from fb json export directory in chronological order.
+    json files are located in json_export_dir/posts, picture paths are relative
+    to <json_export_dir>
+    """
+    posts = dict()
+    json_dir = os.path.join(json_export_dir, 'posts')
+    for json_file in glob.glob(os.path.join(json_dir, '*.json')):
+        with open(json_file) as f:
+            for json_post in json.load(f):
+                post = Post.from_fb_json(json_post)
+                posts[post.timestamp] = post
+
+    if posts:
+        ordered_posts = [post for ts, post in sorted(posts.items())]
+        set_sequential_images(ordered_posts, args.year)
+        return ordered_posts
+
+
+# -- Markdown format ----------------------------------------------------------
+
+
+def create_index(args):
+    # list of all pictures and movies
+    medias = list_of_medias(args.imgsource)
+
+    # list of required dates (the DCIM directory can contain images not related
+    # with the desired index (e.g. two indexes for the same image directory)
+    required_dates = set()
+    if args.dates:
+        date1, date2 = args.dates.split('-')
+        for media in medias:
+            date = date_from_item(media)
+            if date1 <= date <= date2:
+                required_dates.add(date)
+    else:
+        for media in medias:
+            date = date_from_item(media)
+            required_dates.add(date)
+
+    title = args.imgsource
+    posts = list()
+    for date in sorted(required_dates):
+        year, month, day = date[0:4], date[4:6], date[6:8]
+        x = datetime(int(year), int(month), int(day))
+        datetext = x.strftime("%A %d %B %Y").capitalize()
+        posts.append(Post(None, title=datetext, text=[], photos=[]))
+
+    os.makedirs(args.output, exist_ok=True)
+    print_markdown(posts, title, os.path.join(args.output, 'index.md'))
 
 
 def raw_to_html(args):
@@ -608,22 +667,7 @@ def raw_to_html(args):
 def html_to_raw(args):
     title = retrieve_title(os.path.join(args.input, 'index.htm'))
     posts = parse_html(args, os.path.join(args.input, 'index.htm'))
-
-    with open(os.path.join(args.input, 'index.md'), 'wt', encoding='utf-8') as fdst:
-        print(f'# {title}\n', file=fdst)
-        for post in posts:
-            if post.title:
-                print(f'###### {post.title}', file=fdst)
-                print(file=fdst)
-            for line in post.text:
-                for chunk in textwrap.wrap(line, width=78):
-                    print(chunk, file=fdst)
-            print(file=fdst)
-            for media in post.images:
-                print(f'![]({media.uri})', file=fdst)
-                if media.caption:
-                    print(media.caption, file=fdst)
-            print('______', file=fdst)
+    print_markdown(posts, title, os.path.join(args.input, 'index.md'))
 
 
 # -- Import from fb -----------------------------------------------------------
@@ -843,9 +887,7 @@ def extend_index(args):
         posts = list()
 
     # list of all pictures and movies
-    jpg = list(glob.glob(os.path.join(args.imgsource, '*.jpg')))
-    mp4 = list(glob.glob(os.path.join(args.imgsource, '*.mp4')))
-    medias = sorted([*jpg, *mp4])
+    medias = list_of_medias(args.imgsource)
 
     # list of required dates (the DCIM directory can contain images not related with the current
     # page (e.g. two pages for the same image directory)
@@ -853,7 +895,7 @@ def extend_index(args):
         date1, date2 = args.dates.split('-')
         required_dates = set()
         for media in medias:
-            date =  date_from_item(media)
+            date = date_from_item(media)
             if date1 <= date <= date2:
                 required_dates.add(date)
     else:
@@ -923,13 +965,13 @@ def extend_index(args):
     print_html(posts, title, os.path.join(args.input, 'index-x.htm'), 'extended')
 
 
-def retrieve_title(filename):
-    with open(filename, encoding='utf-8' ) as fsrc:
-        for line in fsrc:
-            if (match := re.search('<title>(.*)</title>', line)):
-                return match.group(1)
-        else:
-            return ''
+def list_of_medias(imgsource):
+    """ list of all pictures and movies in imgsource directory
+    """
+    jpg = list(glob.glob(os.path.join(imgsource, '*.jpg')))
+    mp4 = list(glob.glob(os.path.join(imgsource, '*.mp4')))
+    medias = sorted([*jpg, *mp4])
+    return medias
 
 
 def date_from_item(filename):
@@ -1006,6 +1048,8 @@ def parse_command_line():
                         action='store_true', default=False)
     parser.add_argument('--extend', help='extend image set, source in --imgsource',
                         action='store_true', default=False)
+    parser.add_argument('--create', help='create journal from medias in --imgsource',
+                        action='store_true', default=False)
 
     parser.add_argument('--test', help='',
                         action='store_true', default=False)
@@ -1067,6 +1111,9 @@ def main():
 
     elif args.test:
         test(args)
+
+    elif args.create:
+        create_index(args)
 
     elif args.extend:
         extend_index(args)
