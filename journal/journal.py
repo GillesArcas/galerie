@@ -840,30 +840,28 @@ def make_thumbnail_video(video_name, thumb_name, size):
             printexc()
 
 
-ARROW = '''\
-iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAABr0lEQVR4
-2mP8//8/A7XAf6BZjIyMKGJMIMEtW7Zo//37F6yAGpaggH///jGoqKgctra2Xnz+/HkxEB+kiFoYZs
-E5oF1/2djYHhYXF6d8/PiRmRYW/IfiN/Ly8ktWr15tAgo2cn0E0gfC2CwAY2Bk3fX29p5069Ytbkos
-wWkBFP/h5ua+1tzc7Pv161dGUi0ixgI41tTU3L5z5051Ui0h2gIg/sLExHQ1MjIy99GjR7zEWkSKBX
-AsJCS0bcKECZ4/fvwgGGxkWQDFT0xNTRcdP35cDp8llFgAwl9ZWVnf5ALBu3fv2LBZxERhycD158+f
-W1evXtUHWsCDVQUFPvgpLi5+Yt68eXa/f//GmSHJseA9CwvLpeTk5IqXL19yUjuSfxgYGGw/dOiQFr
-WT6S9+fv4rvb29Xt+/fycpRxO0AFgm3QsLC2t7+PAh0ZmLWAveqqmpLdy+fbsuOaUqTD02C35zcXFt
-rqurS/3y5QtZ9QKsqMaocID4lYeHx8Tr16+LUlKzYbNgl7S09Only5ebwupmqtZo3d3dQe/fvye5vM
-fnchgGGwoC6M0NcgF60wUAaGZjqsPeuTAAAAAASUVORK5CYII='''
+# base64 video.png
+VIDEO_ICON = '''\
+iVBORw0KGgoAAAANSUhEUgAAABgAAAAUCAAAAACy3qJfAAAA4UlEQVR4
+2m1QoRbCMAy88SaK69xscfuEWiS4SZBIcCCRfAL8An8AcnJzTOJSWdxwzJXSPUoHRPQlueYuucigxm
+9kDGaMf8AjopGcYn8LmmyLoihBWBiThb+5MTuUsc3aL56upneZ9sByAIg8Z8BEn96EeZ65iU7DvmbP
+PxqDcH6p1swXBC4l6yZskACkTN1WrQr2SlIFhTtgqeZa+zsOogLXegvEocZ5c/W5BcoVNNCg3hSudV
+/hEh4ofw6cEb00Km8i0dpRDUXfKiaQOEAdrUDo4dFp9C33jjaRac9/gDF/AlplVYtfWGCjAAAAAElF
+TkSuQmCC'''
 
 
 def create_thumbnail_video(filename, thumbname, size):
     # ffmpeg must be in path
     ffmpeg = 'ffmpeg.exe'
-    command = '%s -i "%s" -vcodec mjpeg -vframes 1 -an -f rawvideo -s 240x180 "%s"'
+    command = '%s -v error -i "%s" -vcodec mjpeg -vframes 1 -an -f rawvideo -s 240x180 "%s"'
     command = command % (ffmpeg, filename, thumbname)
     result = os.system(command)
 
-    # add an arrow to the thumbnail to identify videos
+    # add an icon to the thumbnail to identify videos
     img1 = Image.open(thumbname)
-    img2 = Image.open(io.BytesIO(base64.b64decode(ARROW)))
+    img2 = Image.open(io.BytesIO(base64.b64decode(VIDEO_ICON)))
     width, height = img1.size
-    img1.paste(img2, (4, height - 24 - 4), img2)
+    img1.paste(img2, (6, height - 20 - 6), None)
     img1.save(thumbname)
 
 
