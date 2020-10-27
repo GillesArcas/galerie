@@ -932,8 +932,8 @@ def extend_index(args):
         if filename not in thumbnails:
             os.remove(filename)
 
-    for date, liste in bydate.items():          # ??? TODO
-        bydate[date] = liste  # sorted(liste)   # ???
+    for date, liste in bydate.items():
+        liste.sort(key=lambda item: time_from_item(item.uri))
 
     # make list of extra dates (not in posts)
     extradates = required_dates - {post.date.replace('-', '') for post in posts}
@@ -979,6 +979,15 @@ def date_from_item(filename):
     else:
         timestamp =  os.path.getmtime(filename)
         return datetime.fromtimestamp(timestamp).strftime('%Y%m%d')
+
+
+def time_from_item(filename):
+    if (match := re.match(r'(?:IMG|VID)_\d{8}_(\d{6})', os.path.basename(filename))):
+        # IMG_20190221_065509.jpg
+        return match.group(1)
+    else:
+        timestamp =  os.path.getmtime(filename)
+        return datetime.fromtimestamp(timestamp).strftime('%H%M%S')
 
 
 COMMAND = '''\
