@@ -875,7 +875,7 @@ def extend_index(args):
 
     photoboxdir = os.path.join(args.input, 'photobox')
     if not os.path.exists(photoboxdir):
-        photoboxsrc = os.path.join(os.path.split(os.path.split(__file__)[0])[0], 'photobox')
+        photoboxsrc  = os.path.dirname(__file__)
         shutil.copytree(photoboxsrc, photoboxdir)
 
     if os.path.exists(os.path.join(args.input, 'index.md')):
