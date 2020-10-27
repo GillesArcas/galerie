@@ -296,10 +296,11 @@ class Post:
                 html.append(f'<br />{line}')
             html.append('<br />')
 
-        html.append(f'<div id="gallery-{self.date}-blog">')
-        for image in self.images:
-            html.append(image.to_html_post())
-        html.append('</div>')
+        if self.images:
+            html.append(f'<div id="gallery-{self.date}-blog">')
+            for image in self.images:
+                html.append(image.to_html_post())
+            html.append('</div>')
 
         if self.dcim:
             html.append(SEP)
@@ -875,7 +876,7 @@ def extend_index(args):
 
     photoboxdir = os.path.join(args.input, 'photobox')
     if not os.path.exists(photoboxdir):
-        photoboxsrc  = os.path.dirname(__file__)
+        photoboxsrc  = os.path.join(os.path.dirname(__file__), 'photobox')
         shutil.copytree(photoboxsrc, photoboxdir)
 
     if os.path.exists(os.path.join(args.input, 'index.md')):
