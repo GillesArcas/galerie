@@ -20,7 +20,6 @@ import re
 import io
 import time
 import bisect
-import pprint
 import locale
 import textwrap
 import html
@@ -28,12 +27,12 @@ import base64
 from collections import defaultdict
 from datetime import datetime
 from urllib.request import urlopen
-from lxml import objectify
 from subprocess import check_output, CalledProcessError, STDOUT
 
 import ftfy
 import clipboard
 from PIL import Image
+from lxml import objectify
 
 
 USAGE = """
@@ -148,6 +147,7 @@ class PostImage:
         self.creation = creation
         self.thumb = thumb
         self.descr = descr
+        self.resized_url = None
 
     def to_html_post(self):
         if not self.caption:
@@ -186,6 +186,7 @@ class Post:
         self.text = text
         self.images = photos
         self.dcim = []
+        self.date = None
         if self.timestamp is not None:
             # timestamp peut être None si lu dans html
             self.timestamp_str = datetime.utcfromtimestamp(self.timestamp).strftime('%Y-%m-%d %H:%M:%S')
@@ -206,16 +207,16 @@ class Post:
             title = None
 
         text = list()
-        while (m := re.match(r'(([^\n]+\n)+)\n', post)):
+        while m := re.match(r'(([^\n]+\n)+)\n', post):
             para = m.group(1).replace('\n', ' ')
             text.append(para)
             post = post[m.end():]
 
-        if (m := re.match(r'(\n+)', post)):
+        if m := re.match(r'(\n+)', post):
             post = post[m.end():]
 
         images = list()
-        while (m := re.match(r'!\[\]\(([^\n]+)\)\n(([^!][^[][^]][^\n]+)\n)?', post)):
+        while m := re.match(r'!\[\]\(([^\n]+)\)\n(([^!][^[][^]][^\n]+)\n)?', post):
             images.append(PostImage(group(m, 3), m.group(1), None))
             post = post[m.end():]
 
@@ -508,7 +509,7 @@ def parse_html(args, url):
 def retrieve_title(filename):
     with open(filename, encoding='utf-8' ) as fsrc:
         for line in fsrc:
-            if (match := re.search('<title>(.*)</title>', line)):
+            if match := re.search('<title>(.*)</title>', line):
                 return match.group(1)
         else:
             return ''
@@ -598,12 +599,12 @@ def is_title(line):
 
 def date_from_title(title, year):
     pattern = r'(?:%s )?(1er|\d|\d\d) (%s)\b' % ('|'.join(JOURS), '|'.join(MOIS))
-    m = re.search(pattern, title)
-    if not m:
+    match = re.search(pattern, title)
+    if not match:
         return None
     else:
-        day = 1 if m.group(1) == '1er' else int(m.group(1))
-        month = MOIS.index(m.group(2)) + 1
+        day = 1 if match.group(1) == '1er' else int(match.group(1))
+        month = MOIS.index(match.group(2)) + 1
         return f'{year}-{month:02}-{day:02}'
 
 
@@ -788,16 +789,20 @@ def prepare_for_blogger(args):
 
 
 def remove_head(html):
-    str = '\n'.join(html)
-    str = re.sub(r'<head>.*</head>\n*', '', str)
-    return str.splitlines()
+    text = '\n'.join(html)
+    text = re.sub(r'<head>.*</head>\n*', '', text)
+    return text.splitlines()
 
 
 # -- Thumbnails (image and video) ---------------------------------------------
 
 
-def printexc():
-    print('Exception:', sys.exc_info()[1])   # just the instance/message
+def make_thumbnail(image_name, thumb_name, size):
+    if os.path.exists(thumb_name):
+        pass
+    else:
+        print('Making thumbnail:', thumb_name)
+        create_thumbnail(image_name, thumb_name, size)
 
 
 def create_thumbnail(image_name, thumb_name, size):
@@ -817,28 +822,12 @@ def create_thumbnail(image_name, thumb_name, size):
     imgobj.save(thumb_name)
 
 
-def make_thumbnail(image_name, thumb_name, size):
-    if os.path.exists(thumb_name):
-        pass
-    else:
-        print('Making thumbnail:', thumb_name)
-        try:
-            create_thumbnail(image_name, thumb_name, size)
-        except Exception:                                 # skip ctrl-c, not always IOError
-            print('Failed:', image_name)
-            printexc()
-
-
 def make_thumbnail_video(video_name, thumb_name, size):
     if os.path.exists(thumb_name):
         pass
     else:
         print('Making thumbnail:', thumb_name)
-        try:
-            create_thumbnail_video(video_name, thumb_name, size)
-        except Exception:                                 # skip ctrl-c, not always IOError
-            print('Failed:', video_name)
-            printexc()
+        create_thumbnail_video(video_name, thumb_name, size)
 
 
 # base64 video.png
@@ -853,12 +842,12 @@ TkSuQmCC'''
 
 def create_thumbnail_video(filename, thumbname, size):
     # ffmpeg must be in path
-    ffmpeg = 'ffmpeg.exe'
-    command = '%s -v error -i "%s" -vcodec mjpeg -vframes 1 -an -f rawvideo -s 240x180 "%s"'
-    command = command % (ffmpeg, filename, thumbname)
+    sizearg = '%dx%d' % size
+    command = 'ffmpeg -v error -i "%s" -vcodec mjpeg -vframes 1 -an -f rawvideo -s %s "%s"'
+    command = command % (filename, sizearg, thumbname)
     result = os.system(command)
 
-    # add an icon to the thumbnail to identify videos
+    # add a movie icon to the thumbnail to identify videos
     img1 = Image.open(thumbname)
     img2 = Image.open(io.BytesIO(base64.b64decode(VIDEO_ICON)))
     width, height = img1.size
@@ -870,6 +859,13 @@ def create_thumbnail_video(filename, thumbname, size):
 
 
 def extend_index(args):
+    # check for ffmpeg and ffprobe in path
+    for exe in ('ffmpeg', 'ffprobe'):
+        try:
+            check_output([exe, '-version'])
+        except FileNotFoundError:
+            error(f'File not found: {exe}')
+
     thumbdir = os.path.join(args.input, '.thumbnails')
     if not os.path.exists(thumbdir):
         os.mkdir(thumbdir)
@@ -915,15 +911,18 @@ def extend_index(args):
             if media_basename.lower().endswith('.jpg'):
                 thumb_basename = media_basename
                 thumb_fullname = os.path.join(thumbdir, thumb_basename)
-                info = media_basename + ': ' + get_image_info(media_fullname)
+                info, infofmt = get_image_info(media_fullname)
+                infofmt = media_basename + ': ' + infofmt
                 make_thumbnail(media_fullname, thumb_fullname, (300, 300))
-                item = PostImage(None, media, None, thumb_fullname, info)
+                item = PostImage(None, media, None, thumb_fullname, infofmt)
             else:
                 thumb_basename = media_basename.replace('.mp4', '.jpg')
                 thumb_fullname = os.path.join(thumbdir, thumb_basename)
-                info = media_basename + ': ' + get_video_info(media_fullname)
-                make_thumbnail_video(media_fullname, thumb_fullname, (300, 300))
-                item = PostVideo(None, media, None, thumb_fullname, info)
+                info, infofmt = get_video_info(media_fullname)
+                infofmt = media_basename + ': ' + infofmt
+                thumbheight = int(round(300 * int(info[1]) / int(info[0])))
+                make_thumbnail_video(media_fullname, thumb_fullname, (300, thumbheight))
+                item = PostVideo(None, media, None, thumb_fullname, infofmt)
             bydate[date].append(item)
             thumbnails.append(thumb_fullname)
 
@@ -1003,7 +1002,7 @@ def get_image_info(filename):
     img = Image.open(filename)
     width, height = img.size
     size = round(os.path.getsize(filename) / 1e6, 1)
-    return f'dim={width}x{height}, {size} MB'
+    return (width, height, size), f'dim={width}x{height}, {size} MB'
 
 
 def get_video_info(filename):
@@ -1020,7 +1019,7 @@ def get_video_info(filename):
         output = f'dim={width}x{height}, m:s={duration // 60}:{duration % 60}, fps={fps}, {size} MB'
     except CalledProcessError as e:
         output = e.output.decode()
-    return output
+    return (width, height, size, duration, fps), output
 
 
 # -- Other commands -----------------------------------------------------------
