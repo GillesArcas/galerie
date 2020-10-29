@@ -17,5 +17,11 @@ setup(
     data_files=[
        ('Lib/site-packages/journal', ['README.md', 'LICENSE']),
        ('Lib/site-packages/journal/photobox', glob.glob('photobox/*.*')),
+    ],
+    install_requires = [
+        'ftfy',
+        'clipboard',
+        'pillow',
+        'lxml'
     ]
 )
