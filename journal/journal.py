@@ -1,13 +1,16 @@
 """
-An offliner of facebook photos using fb json export
+Media directory and diary organizer. Handle a markdown file organized by dates,
+each day described by a text and a subset of the medias (photos and movies).
 
-*.json
-        produit de l'export facebook, non éditable (ex. pas de correction
-        d'orthographe), lu en objets Post
-objets Post
-        représentation interne, sauvée en index.htm
-index.htm
-        repésentation externe, éditable, relu en objets Post
+The markdown file can be:
+* edited manually (very basic syntax),
+* created from the media directory,
+* created from a range of facebook photo posts.
+
+The markdown file can be exported to:
+* an html file with the text and subset of medias associated with each day,
+* the previous html file extended with all medias in the media directory,
+* an html file ready to import into Blogger.
 """
 
 import sys
@@ -25,7 +28,7 @@ import textwrap
 import html
 import base64
 from collections import defaultdict
-from datetime import datetime
+from datetime import date, datetime
 from urllib.request import urlopen
 from subprocess import check_output, CalledProcessError, STDOUT
 
@@ -172,15 +175,6 @@ class PostVideo(PostImage):
 
 class Post:
     def __init__(self, timestamp, title, text, photos):
-        """
-        posts are extracted from fb json extract which is a list of post descriptions (fbpost).
-        At initialisation, the object if made of the following values:
-            timestamp = fbpost[timestamp]
-            title     = first line of fbpost[data][post] if dedicated syntax
-            text      = rest of fbpost[data][post]
-            images    = list of PostImage objects
-            dcim      = list of PostImage objects
-        """
         self.timestamp = timestamp
         self.title = title
         self.text = text
@@ -198,6 +192,13 @@ class Post:
     def from_markdown(cls, md_post):
         timestamp = None  # pour le moment
         post = ''.join(md_post)
+
+        m = re.match(r'\[([0-9/]{10})\]\n*', post)
+        if m:
+            date = m.group(1).replace('/', '-')
+            post = post[m.end():]
+        else:
+            date = None
 
         m = re.match(r'###### *([^\n]+)\n*', post)
         if m:
@@ -220,10 +221,19 @@ class Post:
             images.append(PostImage(group(m, 3), m.group(1), None))
             post = post[m.end():]
 
-        return cls(timestamp, title, text, images)
+        post = cls(timestamp, title, text, images)
+        post.date = date
+        return post
 
     @classmethod
     def from_fb_json(cls, json_post):
+        """
+        fb json extract is a list of post descriptions (fbpost) with:
+        timestamp = fbpost[timestamp]
+        title     = first line of fbpost[data][post] if dedicated syntax
+        text      = rest of fbpost[data][post]
+        images    = fbpost['attachments']['data']['media']
+        """
         timestamp = int(json_post['timestamp'])
         if json_post['data']:
             title, text = parse_json_text(json_post['data'][0]['post'])
@@ -454,7 +464,8 @@ def parse_markdown(args, filename):
                 else:
                     posts.append(Post.from_markdown(record))
                     record = []
-        set_sequential_images(posts, args.year)
+
+        ##set_sequential_images(posts, args.year)
 
     return title, posts
 
@@ -465,6 +476,8 @@ def print_markdown(posts, title, fullname):
     with open(fullname, 'wt', encoding='utf-8') as fdst:
         print(f'# {title}\n', file=fdst)
         for post in posts:
+            print(f"[{post.date.replace('-', '/')}]", file=fdst)
+            print(file=fdst)
             if post.title:
                 print(f'###### {post.title}', file=fdst)
                 print(file=fdst)
@@ -655,7 +668,9 @@ def create_index(args):
         year, month, day = date[0:4], date[4:6], date[6:8]
         x = datetime(int(year), int(month), int(day))
         datetext = x.strftime("%A %d %B %Y").capitalize()
-        posts.append(Post(None, title=datetext, text=[], photos=[]))
+        post = Post(None, title=datetext, text=[], photos=[])
+        post.date = f'{year}-{month}-{day}'
+        posts.append(post)
 
     os.makedirs(args.output, exist_ok=True)
     print_markdown(posts, title, os.path.join(args.output, 'index.md'))
@@ -972,17 +987,29 @@ def list_of_medias(imgsource):
     return medias
 
 
+def date_from_name(name):
+    # heuristics
+    if match := re.search(r'(?:[^0-9]|^)(\d{8})([^0-9]|$)', name):
+        digits = match.group(1)
+        year, month, day = int(digits[0:4]), int(digits[4:6]), int(digits[6:8])
+        if 2000 <= year <= date.today().year and 1 <= month <= 12 and 1 <= day <= 31:
+            return digits
+        else:
+            return None
+    else:
+        return None
+
+
 def date_from_item(filename):
-    if (match := re.match(r'(?:IMG|VID)_(\d{8})_\d{6}', os.path.basename(filename))):
-        # IMG_20190221_065509.jpg
-        return match.group(1)
+    if date := date_from_name(filename):
+        return date
     else:
         timestamp =  os.path.getmtime(filename)
         return datetime.fromtimestamp(timestamp).strftime('%Y%m%d')
 
 
 def time_from_item(filename):
-    if (match := re.match(r'(?:IMG|VID)_\d{8}_(\d{6})', os.path.basename(filename))):
+    if match := re.match(r'(?:IMG|VID)_\d{8}_(\d{6})', os.path.basename(filename)):
         # IMG_20190221_065509.jpg
         return match.group(1)
     else:
@@ -1036,6 +1063,20 @@ def rename_images_cmd(args):
     print_html(posts, 'TITLE', os.path.join(args.input, 'index.htm'))
 
 
+# -- Temp ---------------------------------------------------------------------
+
+
+def add_dates(args):
+    mdfile = os.path.join(args.input, 'index.md')
+    shutil.copyfile(mdfile, mdfile + '.bak')
+    os.system(f'attrib -r {mdfile}')
+    title, posts = parse_markdown(args, mdfile)
+    # for post in posts:
+        # date = post.date.replace('-', '/')
+        # post.title = f"[{date}] {post.title}"
+    print_markdown(posts, title, mdfile)
+
+
 # -- Main ---------------------------------------------------------------------
 
 
@@ -1056,6 +1097,8 @@ def parse_command_line():
     parser.add_argument('--extend', help='extend image set, source in --imgsource',
                         action='store_true', default=False)
     parser.add_argument('--create', help='create journal from medias in --imgsource',
+                        action='store_true', default=False)
+    parser.add_argument('--add_dates', help='e',
                         action='store_true', default=False)
 
     parser.add_argument('--test', help='',
@@ -1124,6 +1167,9 @@ def main():
 
     elif args.extend:
         extend_index(args)
+
+    elif args.add_dates:
+        add_dates(args)
 
 
 if __name__ == '__main__':
