@@ -19,7 +19,6 @@ setup(
        ('Lib/site-packages/journal/photobox', glob.glob('photobox/*.*')),
     ],
     install_requires = [
-        'ftfy',
         'clipboard',
         'pillow',
         'lxml'

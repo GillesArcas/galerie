@@ -5,7 +5,6 @@ each day described by a text and a subset of the medias (photos and movies).
 The markdown file can be:
 * edited manually (very basic syntax),
 * created from the media directory,
-* created from a range of facebook photo posts.
 
 The markdown file can be exported to:
 * an html file with the text and subset of medias associated with each day,
@@ -16,7 +15,6 @@ The markdown file can be exported to:
 import sys
 import os
 import argparse
-import json
 import glob
 import shutil
 import re
@@ -32,14 +30,12 @@ from datetime import date, datetime
 from urllib.request import urlopen
 from subprocess import check_output, CalledProcessError, STDOUT
 
-import ftfy
 import clipboard
 from PIL import Image
 from lxml import objectify
 
 
 USAGE = """
-fboff.py --import_fb      --input <json directory> --output <html directory> [--rename_img]
 fboff.py --import_blogger --input <blogger url>    --output <html directory> [--rename_img]
 fboff.py --export_blogger --input <html directory>
 fboff.py --rename_img     --input <html directory> [--year yyyy]
@@ -49,33 +45,6 @@ fboff.py --extend         --input <blogger url>    --imgsource <source directory
 
 # -- Post objects -------------------------------------------------------------
 
-"""
-Date des posts.
-
-Les posts sont l'unité de publication. A l'export json, ce sont les éléments de
-premiers niveaux. Ils sont ordonnés par l'ordre des time stamps de publication
-(ordre chronologique). Dans mon use case, un post peut ne pas avoir de titre
-et/ou un post peut ne pas avoir de photos.
-On veut donner une date à chaque post avec les contraintes suivantes :
-- si le post a un titre, sa date est la date du titre (donc le timestamp du post
-  ne convient pas)
-- si le post a une photo, sa date est la date de prise de vue (on admet que
-  c'est vérifié dans le use case)
-- les dates doivent respectées l'ordre des posts, autrement dit l'ordre des
-  timestamps de post (on admet que c'est vérifié dans le use case).
-
-Le problème se pose dans le cas des posts sans date, ni photo (cas des cartes
-par exemple qu'on souhaite renommer de façon cohérente avec les cartes). Dans ce
-cas, on attribue la date du post précédent.
-
-Dernier problème, si le premier post n'a pas de date, on lui atribue la date du
-post suivant.
-
-Pour simplifier, même chose mais on ne considère que la date dans le titre (donc
-pas de problème de cohérence).
-
-Problème de l'année ...
-"""
 
 FAVICON_BASE64 = '''\
 iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAAAAAA6mKC9AAAArUlEQVR42mP8z4AKmBjIF/ix7jhCYG
@@ -121,9 +90,6 @@ TITLEIMGPAT2 = '''\
 <p>%s</p>
 </span>
 '''
-
-JOURS = 'lundi mardi mercredi jeudi vendredi samedi dimanche'.split()
-MOIS = 'janvier février mars avril mai juin juillet août septembre octobre novembre décembre'.split()
 
 # diminution de l'espace entre images, on utilise :
 # "display: block;", "margin-bottom: 0em;" et "font-size: 0;"
@@ -226,40 +192,6 @@ class Post:
         return post
 
     @classmethod
-    def from_fb_json(cls, json_post):
-        """
-        fb json extract is a list of post descriptions (fbpost) with:
-        timestamp = fbpost[timestamp]
-        title     = first line of fbpost[data][post] if dedicated syntax
-        text      = rest of fbpost[data][post]
-        images    = fbpost['attachments']['data']['media']
-        """
-        timestamp = int(json_post['timestamp'])
-        if json_post['data']:
-            title, text = parse_json_text(json_post['data'][0]['post'])
-        else:
-            title, text = None, []
-        images = list()
-        if 'attachments' in json_post:
-            for attachment in json_post['attachments']:
-                if attachment:
-                    if attachment['data']:
-                        for data in attachment['data']:
-                            uri = data['media']['uri']
-                            try:
-                                creation = data['media']['media_metadata']['photo_metadata']['taken_timestamp']
-                            except:
-                                creation = None
-                            try:
-                                caption = data['media']['description']
-                                if json_post['data'] and caption == json_post['data'][0]['post']:
-                                    caption = None
-                            except:
-                                caption = None
-                            images.append(PostImage(caption, uri, creation))
-        return cls(timestamp, title, text, images)
-
-    @classmethod
     def from_html(cls, html_post):
         # méthode temporaire utilisée maintenant (2020/10/24) à convertir les
         # html locaux en md. à supprimer quand ça sera fait, en attendant on
@@ -351,6 +283,26 @@ def group(match, n):
 
 
 # -- Handling of dates and sequential image names -----------------------------
+
+
+JOURS = 'lundi mardi mercredi jeudi vendredi samedi dimanche'.split()
+MOIS = 'janvier février mars avril mai juin juillet août septembre octobre novembre décembre'.split()
+
+
+def date_from_title(title, year):
+    pattern = r'(?:%s )?(1er|\d|\d\d) (%s)\b' % ('|'.join(JOURS), '|'.join(MOIS))
+    if match := re.search(pattern, title):
+        day = 1 if match.group(1) == '1er' else int(match.group(1))
+        month = MOIS.index(match.group(2)) + 1
+        return f'{year}-{month:02}-{day:02}'
+
+    pattern = r'(?:%s )?(\d{1,2})/(\d{1,2})\b' % '|'.join(JOURS)
+    if match := re.search(pattern, title):
+        day = int(match.group(1))
+        month = int(match.group(2))
+        return f'{year}-{month:02}-{day:02}'
+
+    return None
 
 
 def set_year_in_posts(posts, year):
@@ -592,55 +544,6 @@ def print_html(posts, title, html_name, target='local'):
             return f.getvalue()
 
 
-# -- Facebook json parser -----------------------------------------------------
-
-
-def parse_json_text(text):
-    text = ftfy.ftfy(text)
-    text = text.splitlines()
-    if is_title(text[0]):
-        return text[0], text[1:]
-    else:
-        return None, text
-
-
-def is_title(line):
-    # dubious. any line with a date is considered a title when in first line
-    pattern = r'(?:%s )?(1er|\d|\d\d) (%s)\b' % ('|'.join(JOURS), '|'.join(MOIS))
-    return re.search(pattern, line)
-
-
-def date_from_title(title, year):
-    pattern = r'(?:%s )?(1er|\d|\d\d) (%s)\b' % ('|'.join(JOURS), '|'.join(MOIS))
-    match = re.search(pattern, title)
-    if not match:
-        return None
-    else:
-        day = 1 if match.group(1) == '1er' else int(match.group(1))
-        month = MOIS.index(match.group(2)) + 1
-        return f'{year}-{month:02}-{day:02}'
-
-
-def parse_json(args, json_export_dir):
-    """
-    Generate Post objects from fb json export directory in chronological order.
-    json files are located in json_export_dir/posts, picture paths are relative
-    to <json_export_dir>
-    """
-    posts = dict()
-    json_dir = os.path.join(json_export_dir, 'posts')
-    for json_file in glob.glob(os.path.join(json_dir, '*.json')):
-        with open(json_file) as f:
-            for json_post in json.load(f):
-                post = Post.from_fb_json(json_post)
-                posts[post.timestamp] = post
-
-    if posts:
-        ordered_posts = [post for ts, post in sorted(posts.items())]
-        set_sequential_images(ordered_posts, args.year)
-        return ordered_posts
-
-
 # -- Markdown format ----------------------------------------------------------
 
 
@@ -687,26 +590,6 @@ def html_to_raw(args):
     print_markdown(posts, title, os.path.join(args.input, 'index.md'))
 
 
-# -- Import from fb -----------------------------------------------------------
-
-
-def import_fb(args):
-    os.makedirs(args.output, exist_ok=True)
-    posts = parse_json(args, args.input)
-    for post in posts:
-        for image in post.images:
-            print(image.uri)
-            shutil.copy(os.path.join(args.input, image.uri), os.path.join(args.output, os.path.basename(image.uri)))
-            image.uri = os.path.basename(image.uri)
-
-    if not posts:
-        print('Warning: No posts found in', args.input)
-    else:
-        if args.rename_img:
-            rename_images(posts, args.output)
-        print_html(posts, 'TITLE', os.path.join(args.output, 'index.htm'))
-
-
 # -- Import from blogger-------------------------------------------------------
 
 
@@ -740,7 +623,8 @@ def import_blogger(args):
     ordered_posts = posts
     if args.rename_img:
         rename_images(ordered_posts, args.output)
-    print_html(ordered_posts, title, os.path.join(args.output, 'index.htm'))
+
+    print_markdown(ordered_posts, title, os.path.join(args.output, 'index.md'))
 
 
 # -- Export to blogger---------------------------------------------------------
@@ -1063,20 +947,6 @@ def rename_images_cmd(args):
     print_html(posts, 'TITLE', os.path.join(args.input, 'index.htm'))
 
 
-# -- Temp ---------------------------------------------------------------------
-
-
-def add_dates(args):
-    mdfile = os.path.join(args.input, 'index.md')
-    shutil.copyfile(mdfile, mdfile + '.bak')
-    os.system(f'attrib -r {mdfile}')
-    title, posts = parse_markdown(args, mdfile)
-    # for post in posts:
-        # date = post.date.replace('-', '/')
-        # post.title = f"[{date}] {post.title}"
-    print_markdown(posts, title, mdfile)
-
-
 # -- Main ---------------------------------------------------------------------
 
 
@@ -1085,8 +955,6 @@ def parse_command_line():
     parser.add_argument('--html', help='input md, output html',
                         action='store_true', default=None)
     parser.add_argument('--html_to_raw', help='input html, output raw',
-                        action='store_true', default=None)
-    parser.add_argument('--import_fb', help='input json export, output html reference',
                         action='store_true', default=None)
     parser.add_argument('--import_blogger', help='blogger post url, output html reference',
                         action='store_true', default=False)
@@ -1098,9 +966,6 @@ def parse_command_line():
                         action='store_true', default=False)
     parser.add_argument('--create', help='create journal from medias in --imgsource',
                         action='store_true', default=False)
-    parser.add_argument('--add_dates', help='e',
-                        action='store_true', default=False)
-
     parser.add_argument('--test', help='',
                         action='store_true', default=False)
     parser.add_argument('-i', '--input', help='input parameter',
@@ -1118,7 +983,7 @@ def parse_command_line():
     args = parser.parse_args()
 
     # normalize paths
-    if args.input:
+    if args.input and not args.import_blogger:
         args.input = os.path.abspath(args.input)
         if not os.path.isdir(args.input):
             error(f'** Directory not found: {args.input}')
@@ -1147,9 +1012,6 @@ def main():
     elif args.html_to_raw:
         html_to_raw(args)
 
-    elif args.import_fb:
-        import_fb(args)
-
     elif args.import_blogger:
         import_blogger(args)
 
@@ -1167,9 +1029,6 @@ def main():
 
     elif args.extend:
         extend_index(args)
-
-    elif args.add_dates:
-        add_dates(args)
 
 
 if __name__ == '__main__':
