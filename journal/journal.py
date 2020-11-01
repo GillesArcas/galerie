@@ -879,7 +879,7 @@ def list_of_files(sourcedir, recursive):
 def list_of_medias(imgsource, recursive):
     """ return the list of full paths for pictures and movies in source directory
     """
-    files = list_of_files(sourcedir, recursive)
+    files = list_of_files(imgsource, recursive)
     return [_ for _ in files if os.path.splitext(_)[1].lower() in ('.jpg', '.mp4')]
 
 
