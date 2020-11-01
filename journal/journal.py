@@ -472,7 +472,7 @@ def parse_html(args, url):
 
 
 def retrieve_title(filename):
-    with open(filename, encoding='utf-8' ) as fsrc:
+    with open(filename, encoding='utf-8') as fsrc:
         for line in fsrc:
             if match := re.search('<title>(.*)</title>', line):
                 return match.group(1)
@@ -524,7 +524,7 @@ def compose_html_extended(posts, title, target):
 
 
 def print_html_to_stream(posts, title, stream, target):
-    if target ==  'extended':
+    if target == 'extended':
         for line in compose_html_extended(posts, title, 'local'):
             print(line, file=stream)
     else:
@@ -549,7 +549,7 @@ def print_html(posts, title, html_name, target='local'):
 
 def create_index(args):
     # list of all pictures and movies
-    medias = list_of_medias(args.imgsource)
+    medias = list_of_medias(args.imgsource, args.recursive)
 
     # list of required dates (the DCIM directory can contain images not related
     # with the desired index (e.g. two indexes for the same image directory)
@@ -771,7 +771,7 @@ def extend_index(args):
 
     photoboxdir = os.path.join(args.input, 'photobox')
     if not os.path.exists(photoboxdir):
-        photoboxsrc  = os.path.join(os.path.dirname(__file__), 'photobox')
+        photoboxsrc = os.path.join(os.path.dirname(__file__), 'photobox')
         shutil.copytree(photoboxsrc, photoboxdir)
 
     if os.path.exists(os.path.join(args.input, 'index.md')):
@@ -781,7 +781,7 @@ def extend_index(args):
         posts = list()
 
     # list of all pictures and movies
-    medias = list_of_medias(args.imgsource)
+    medias = list_of_medias(args.imgsource, args.recursive)
 
     # list of required dates (the DCIM directory can contain images not related with the current
     # page (e.g. two pages for the same image directory)
@@ -803,10 +803,10 @@ def extend_index(args):
     bydate = defaultdict(list)
     thumbnails = list()
     for media in medias:
-        date =  date_from_item(media)
+        date = date_from_item(media)  #  calculé deux fois
         if date in required_dates:
             media_basename = os.path.basename(media)
-            media_fullname = os.path.join(args.imgsource, media_basename)
+            media_fullname = media
             if media_basename.lower().endswith('.jpg'):
                 thumb_basename = media_basename
                 thumb_fullname = os.path.join(thumbdir, thumb_basename)
@@ -862,13 +862,25 @@ def extend_index(args):
     print_html(posts, title, os.path.join(args.input, 'index-x.htm'), 'extended')
 
 
-def list_of_medias(imgsource):
-    """ list of all pictures and movies in imgsource directory
+def list_of_files(sourcedir, recursive):
+    """ return the list of full paths for files in source directory
     """
-    jpg = list(glob.glob(os.path.join(imgsource, '*.jpg')))
-    mp4 = list(glob.glob(os.path.join(imgsource, '*.mp4')))
-    medias = sorted([*jpg, *mp4])
-    return medias
+    result = list()
+    if recursive is False:
+        for basename in listdir(sourcedir):
+            result.append(os.path.join(sourcedir, basename))
+    else:
+        for root, dirs, files in os.walk(sourcedir):
+            for basename in files:
+                result.append(os.path.join(root, basename))
+    return result
+
+
+def list_of_medias(imgsource, recursive):
+    """ return the list of full paths for pictures and movies in source directory
+    """
+    files = list_of_files(sourcedir, recursive)
+    return [_ for _ in files if os.path.splitext(_)[1].lower() in ('.jpg', '.mp4')]
 
 
 def date_from_name(name):
@@ -888,7 +900,7 @@ def date_from_item(filename):
     if date := date_from_name(filename):
         return date
     else:
-        timestamp =  os.path.getmtime(filename)
+        timestamp = os.path.getmtime(filename)
         return datetime.fromtimestamp(timestamp).strftime('%Y%m%d')
 
 
@@ -897,7 +909,7 @@ def time_from_item(filename):
         # IMG_20190221_065509.jpg
         return match.group(1)
     else:
-        timestamp =  os.path.getmtime(filename)
+        timestamp = os.path.getmtime(filename)
         return datetime.fromtimestamp(timestamp).strftime('%H%M%S')
 
 
@@ -936,12 +948,12 @@ def get_video_info(filename):
 # -- Other commands -----------------------------------------------------------
 
 
-def test(args):
+def test(args):  # TODO: markdown
     posts = parse_html(args, os.path.join(args.input, 'index.htm'))
     print_html(posts, 'TITLE', 'tmp.htm')
 
 
-def rename_images_cmd(args):
+def rename_images_cmd(args):  # TODO: markdown
     posts = parse_html(args, os.path.join(args.input, 'index.htm'))
     rename_images(posts, args.input)
     print_html(posts, 'TITLE', os.path.join(args.input, 'index.htm'))
@@ -952,37 +964,44 @@ def rename_images_cmd(args):
 
 def parse_command_line():
     parser = argparse.ArgumentParser(description=None, usage=USAGE)
+
+    parser.add_argument('--create', help='create journal from medias in --imgsource',
+                        action='store_true', default=False)
     parser.add_argument('--html', help='input md, output html',
+                        action='store_true', default=False)
+    parser.add_argument('--extend', help='extend image set, source in --imgsource',
+                        action='store_true', default=False)
+    parser.add_argument('--export_blogger', help='input md, html blogger ready in clipboard',
+                        action='store_true', default=False)
+    parser.add_argument('--rename_img', help='fix photo names renaming as date+index',
                         action='store_true', default=None)
+
     parser.add_argument('--html_to_raw', help='input html, output raw',
                         action='store_true', default=None)
     parser.add_argument('--import_blogger', help='blogger post url, output html reference',
                         action='store_true', default=False)
-    parser.add_argument('--rename_img', help='fix photo names renaming as date+index',
-                        action='store_true', default=None)
-    parser.add_argument('--export_blogger', help='input html reference, html extract blogger ready in clipboard',
-                        action='store_true', default=False)
-    parser.add_argument('--extend', help='extend image set, source in --imgsource',
-                        action='store_true', default=False)
-    parser.add_argument('--create', help='create journal from medias in --imgsource',
-                        action='store_true', default=False)
     parser.add_argument('--test', help='',
                         action='store_true', default=False)
+
     parser.add_argument('-i', '--input', help='input parameter',
                         action='store', default=None)
     parser.add_argument('-o', '--output', help='output parameter',
                         action='store', default=None)
     parser.add_argument('--year', help='year',
                         action='store', default=None)
+    parser.add_argument('--dates', help='dates interval for extended index',
+                        action='store', default=None)
     parser.add_argument('--full', help='full html (versus blogger ready html)',
                         action='store_true', default=False)
     parser.add_argument('--imgsource', help='image source for extended index',
                         action='store', default=None)
-    parser.add_argument('--dates', help='dates interval for extended index',
-                        action='store', default=None)
+    parser.add_argument('--recursive', help='--imgsource scans recursively',
+                        action='store_true', default=True)
+    parser.add_argument('--flat', dest='recursive', help='--imgsource does not recurse',
+                        action='store_false')
     args = parser.parse_args()
 
-    # normalize paths
+   # normalize paths
     if args.input and not args.import_blogger:
         args.input = os.path.abspath(args.input)
         if not os.path.isdir(args.input):
