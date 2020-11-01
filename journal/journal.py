@@ -36,10 +36,12 @@ from lxml import objectify
 
 
 USAGE = """
-fboff.py --import_blogger --input <blogger url>    --output <html directory> [--rename_img]
-fboff.py --export_blogger --input <html directory>
-fboff.py --rename_img     --input <html directory> [--year yyyy]
-fboff.py --extend         --input <blogger url>    --imgsource <source directory> [--year yyyy]
+journal --create         --output <directory>    --imgsource <media directory>
+journal --html           --input  <directory>
+journal --extend         --input  <directory>    --imgsource <media directory>
+journal --rename_img     --input  <directory>
+journal --export_blogger --input  <directory> [--full]
+journal --import_blogger --input  <blogger url>  --output <directory> [--rename_img]
 """
 
 
@@ -657,7 +659,7 @@ def compose_blogger_html(args):
     """ Compose html with blogger image urls
     """
     imgdata = parse_images_url(args)
-    posts = parse_html(args, os.path.join(args.input, 'index.htm'))
+    title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
 
     for post in posts:
         for image in post.images:
@@ -668,7 +670,7 @@ def compose_blogger_html(args):
                 image.uri = img_url
                 image.resized_url = resized_url
 
-    return print_html(posts, 'TITLE', '', target='blogger').splitlines()
+    return print_html(posts, title, '', target='blogger').splitlines()
 
 
 def prepare_for_blogger(args):
