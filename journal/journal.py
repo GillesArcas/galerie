@@ -31,6 +31,7 @@ from urllib.request import urlopen
 from subprocess import check_output, CalledProcessError, STDOUT
 
 import clipboard
+import PIL
 from PIL import Image
 from lxml import objectify
 
@@ -176,7 +177,7 @@ class Post:
             title = None
 
         text = list()
-        while m := re.match(r'(([^\n]+\n)+)\n', post):
+        while m := re.match(r'(?!\!\[\])(([^\n]+\n)+)(\n|$)', post):
             para = m.group(1).replace('\n', ' ')
             text.append(para)
             post = post[m.end():]
@@ -206,6 +207,9 @@ class Post:
             m = re.match('<b>([^<>]+)</b>', line)
             if m:
                 title = m.group(1)
+                continue
+            if date_from_title(line, '2000'):
+                title = line
                 continue
             m = re.search(r'<img [^<>]*src="?([^ "]+)"? width="\d+"(?: title="([^"]+)")?\s*/>', line)
             if m:
@@ -812,10 +816,13 @@ def extend_index(args):
             if media_basename.lower().endswith('.jpg'):
                 thumb_basename = media_basename
                 thumb_fullname = os.path.join(thumbdir, thumb_basename)
-                info, infofmt = get_image_info(media_fullname)
-                infofmt = media_basename + ': ' + infofmt
-                make_thumbnail(media_fullname, thumb_fullname, (300, 300))
-                item = PostImage(None, media, None, thumb_fullname, infofmt)
+                try:
+                    info, infofmt = get_image_info(media_fullname)
+                    infofmt = media_basename + ': ' + infofmt
+                    make_thumbnail(media_fullname, thumb_fullname, (300, 300))
+                    item = PostImage(None, media, None, thumb_fullname, infofmt)
+                except PIL.UnidentifiedImageError:
+                    warning(f'** Unable to read image {media_fullname}')
             else:
                 thumb_basename = media_basename.replace('.mp4', '.jpg')
                 thumb_fullname = os.path.join(thumbdir, thumb_basename)
@@ -1016,6 +1023,10 @@ def parse_command_line():
             error(f'** Directory not found: {args.imgsource}')
 
     return args
+
+
+def warning(msg):
+    print(msg)
 
 
 def error(msg):
