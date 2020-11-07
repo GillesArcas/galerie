@@ -27,7 +27,6 @@ import html
 import base64
 from collections import defaultdict
 from datetime import date, datetime
-from urllib.request import urlopen
 from subprocess import check_output, CalledProcessError, STDOUT
 
 import clipboard
@@ -43,7 +42,6 @@ journal --html           --input  <directory>
 journal --extend         --input  <directory>    --imgsource <media directory>
 journal --rename_img     --input  <directory>
 journal --export_blogger --input  <directory> [--full]
-journal --import_blogger --input  <blogger url>  --output <directory> [--rename_img]
 """
 
 
@@ -201,37 +199,6 @@ class Post:
         post.date = date
         return post
 
-    @classmethod
-    def from_html(cls, html_post):
-        # méthode temporaire utilisée maintenant (2020/10/24) à convertir les
-        # html locaux en md. à supprimer quand ça sera fait, en attendant on
-        # n'hésite pas à éditer manuellement les md générés.
-        timestamp = None  # pour le moment
-        title = None
-        text = ''
-        images = list()
-        for line in html_post:
-            m = re.match('<b>([^<>]+)</b>', line)
-            if m:
-                title = m.group(1)
-                continue
-            if date_from_title(line, '2000'):
-                title = line
-                continue
-            m = re.search(r'<img [^<>]*src="?([^ "]+)"? width="\d+"(?: title="([^"]+)")?\s*/>', line)
-            if m:
-                images.append(PostImage(m.group(2), m.group(1), None))
-                continue
-            m = re.match('<[^<>]+>', line)
-            if m:
-                # ignore les autres balises
-                continue
-            # tout le reste c'est le texte sauf la ligne vide de séparation à la fin
-            text += line
-        text = re.sub(r'\n$', '', text)
-        text = text.split('\n') if text else []
-        return cls(timestamp, title, text, images)
-
     def to_html(self, target='local'):
         if target == 'local':
             return self.to_html_local()
@@ -303,7 +270,7 @@ JOURS = 'lundi mardi mercredi jeudi vendredi samedi dimanche'.split()
 MOIS = 'janvier février mars avril mai juin juillet août septembre octobre novembre décembre'.split()
 
 
-def date_from_title(title, year):
+def date_from_title(title, year):  # TODO: remove
     pattern = r'(?:%s )?(1er|\d|\d\d) (%s)\b' % ('|'.join(JOURS), '|'.join(MOIS))
     if match := re.search(pattern, title):
         day = 1 if match.group(1) == '1er' else int(match.group(1))
@@ -319,7 +286,7 @@ def date_from_title(title, year):
     return None
 
 
-def set_year_in_posts(posts, year):
+def set_year_in_posts(posts, year):  # TODO: remove
     # nécessite un paramètre si on ne peut pas trouver l'année (blogger)
     if year is not None:
         for post in posts:
@@ -351,7 +318,7 @@ def set_year_in_posts(posts, year):
             year = post.year
 
 
-def set_date_in_posts(posts):
+def set_date_in_posts(posts):  # TODO: remove
     # première passe pour donner une date aux posts avec titre
     for post in posts:
         post.date = None
@@ -458,42 +425,6 @@ def print_markdown(posts, title, fullname):
             print('______', file=fdst)
 
 
-# -- html parser --------------------------------------------------------------
-
-
-def parse_html(args, url):
-    """
-    Generate Post objects from html (local or blogger). Posts are in
-    chronological order.
-    """
-    posts = list()
-    if not os.path.exists(url):
-        print('/!\\', 'File not found:', url)
-    else:
-        with open(url, encoding='utf-8') as f:
-            line = next(f)
-            while SEP not in line:
-                line = next(f)
-            record = [line]
-            for line in f:
-                if SEP not in line and '</body>' not in line:
-                    record.append(line)
-                else:
-                    posts.append(Post.from_html(record))
-                    record = [line]
-        set_sequential_images(posts, args.year)
-    return posts
-
-
-def retrieve_title(filename):
-    with open(filename, encoding='utf-8') as fsrc:
-        for line in fsrc:
-            if match := re.search('<title>(.*)</title>', line):
-                return match.group(1)
-        else:
-            return ''
-
-
 # -- html printer -------------------------------------------------------------
 
 
@@ -596,49 +527,6 @@ def create_index(args):
 def raw_to_html(args):
     title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
     print_html(posts, title, os.path.join(args.input, 'index.htm'))
-
-
-def html_to_raw(args):
-    title = retrieve_title(os.path.join(args.input, 'index.htm'))
-    posts = parse_html(args, os.path.join(args.input, 'index.htm'))
-    print_markdown(posts, title, os.path.join(args.input, 'index.md'))
-
-
-# -- Import from blogger-------------------------------------------------------
-
-
-def import_blogger(args):
-    """
-    Import html and photos from blogger and make the reference page.
-    """
-    if not os.path.exists(args.output):
-        os.mkdir(args.output)
-
-    with urlopen(args.input) as u:
-        buffer = u.read()
-        buffer = buffer.decode('utf-8')
-
-    tmp_name = os.path.join(args.output, 'tmp.htm')
-    with open(tmp_name, 'wt', encoding='utf-8') as f:
-        f.write(buffer)
-
-    posts = parse_html(args, tmp_name)
-    title = retrieve_title(tmp_name)
-    os.remove(tmp_name)
-
-    for post in posts:
-        for image in post.images:
-            print(image.uri)
-            with urlopen(image.uri) as u, open(os.path.join(args.output, os.path.basename(image.uri)), 'wb') as fimg:
-                fimg.write(u.read())
-            image.uri = os.path.basename(image.uri)
-
-    # posts are chronologicaly ordered in blogger
-    ordered_posts = posts
-    if args.rename_img:
-        rename_images(ordered_posts, args.output)
-
-    print_markdown(ordered_posts, title, os.path.join(args.output, 'index.md'))
 
 
 # -- Export to blogger---------------------------------------------------------
@@ -1006,13 +894,13 @@ def get_video_info(filename):
 # -- Other commands -----------------------------------------------------------
 
 
-def test(args):  # TODO: markdown
-    posts = parse_html(args, os.path.join(args.input, 'index.htm'))
+def test(args):
+    posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
     print_html(posts, 'TITLE', 'tmp.htm')
 
 
-def rename_images_cmd(args):  # TODO: markdown
-    posts = parse_html(args, os.path.join(args.input, 'index.htm'))
+def rename_images_cmd(args):
+    posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
     rename_images(posts, args.input)
     print_html(posts, 'TITLE', os.path.join(args.input, 'index.htm'))
 
@@ -1034,10 +922,6 @@ def parse_command_line():
     parser.add_argument('--rename_img', help='fix photo names renaming as date+index',
                         action='store_true', default=None)
 
-    parser.add_argument('--html_to_raw', help='input html, output raw',
-                        action='store_true', default=None)
-    parser.add_argument('--import_blogger', help='blogger post url, output html reference',
-                        action='store_true', default=False)
     parser.add_argument('--test', help='',
                         action='store_true', default=False)
 
@@ -1089,12 +973,6 @@ def main():
 
     if args.html:
         raw_to_html(args)
-
-    elif args.html_to_raw:
-        html_to_raw(args)
-
-    elif args.import_blogger:
-        import_blogger(args)
 
     elif args.export_blogger:
         prepare_for_blogger(args)
