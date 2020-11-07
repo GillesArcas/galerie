@@ -34,6 +34,7 @@ import clipboard
 import PIL
 from PIL import Image
 from lxml import objectify
+import markdown
 
 
 USAGE = """
@@ -138,6 +139,9 @@ class PostImage:
 
 
 class PostVideo(PostImage):
+    def to_html_post(self):
+        return VIDPAT2 % (self.uri, '', '')
+
     def to_html_dcim(self):
         return VIDPAT2 % (self.uri, self.thumb, self.descr)
 
@@ -167,7 +171,7 @@ class Post:
             date = m.group(1).replace('/', '-')
             post = post[m.end():]
         else:
-            date = None
+            error(f'No date in record {md_post}')
 
         m = re.match(r'###### *([^\n]+)\n*', post)
         if m:
@@ -177,7 +181,7 @@ class Post:
             title = None
 
         text = list()
-        while m := re.match(r'(?!\!\[\])(([^\n]+\n)+)(\n|$)', post):
+        while m := re.match(r'(?!\!?\[\])(([^\n]+\n)+)(\n|$)', post):
             para = m.group(1).replace('\n', ' ')
             text.append(para)
             post = post[m.end():]
@@ -186,8 +190,11 @@ class Post:
             post = post[m.end():]
 
         images = list()
-        while m := re.match(r'!\[\]\(([^\n]+)\)\n(([^!][^[][^]][^\n]+)\n)?', post):
-            images.append(PostImage(group(m, 3), m.group(1), None))
+        while m := re.match(r'!?\[\]\(([^\n]+)\)\n(([^!][^[][^]][^\n]+)\n)?', post):
+            if m.group(0)[0] == '!':
+                images.append(PostImage(group(m, 3), m.group(1), None))
+            else:
+                images.append(PostVideo(group(m, 3), m.group(1), None))
             post = post[m.end():]
 
         post = cls(timestamp, title, text, images)
@@ -233,6 +240,7 @@ class Post:
 
     def to_html_local(self):
         html = list()
+        ##print(markdown.markdown(self.text)) TODO: remove
         html.append(SEP)
         if self.title:
             html.append(f'<b>{self.title}</b>')
@@ -247,15 +255,15 @@ class Post:
 
         if self.images:
             html.append(f'<div id="gallery-{self.date}-blog">')
-            for image in self.images:
-                html.append(image.to_html_post())
+            for media in self.images:
+                html.append(media.to_html_post())
             html.append('</div>')
 
         if self.dcim:
             html.append(SEP)
             html.append(f'<div id="gallery-{self.date}-dcim">')
-            for image in self.dcim:
-                html.append(image.to_html_dcim())
+            for media in self.dcim:
+                html.append(media.to_html_dcim())
             html.append('</div>')
 
         return html
@@ -763,6 +771,30 @@ def create_thumbnail_video(filename, thumbname, size):
 # -- Addition of DCIM images --------------------------------------------------
 
 
+def create_item(media_fullname, thumbdir):
+    media_basename = os.path.basename(media_fullname)
+    if media_basename.lower().endswith('.jpg'):
+        thumb_basename = media_basename
+        thumb_fullname = os.path.join(thumbdir, thumb_basename)
+        try:
+            info, infofmt = get_image_info(media_fullname)
+            infofmt = media_basename + ': ' + infofmt
+            make_thumbnail(media_fullname, thumb_fullname, (300, 300))
+            item = PostImage(None, media_fullname, None, thumb_fullname, infofmt)
+        except PIL.UnidentifiedImageError:
+            # corrupted image
+            warning(f'** Unable to read image {media_fullname}')
+    else:
+        thumb_basename = media_basename.replace('.mp4', '.jpg')
+        thumb_fullname = os.path.join(thumbdir, thumb_basename)
+        info, infofmt = get_video_info(media_fullname)
+        infofmt = media_basename + ': ' + infofmt
+        thumbheight = int(round(300 * int(info[3]) / int(info[2])))
+        make_thumbnail_video(media_fullname, thumb_fullname, (300, thumbheight))
+        item = PostVideo(None, media_fullname, None, thumb_fullname, infofmt)
+    return item, thumb_fullname
+
+
 def extend_index(args):
     # check for ffmpeg and ffprobe in path
     for exe in ('ffmpeg', 'ffprobe'):
@@ -821,14 +853,15 @@ def extend_index(args):
                     infofmt = media_basename + ': ' + infofmt
                     make_thumbnail(media_fullname, thumb_fullname, (300, 300))
                     item = PostImage(None, media, None, thumb_fullname, infofmt)
-                except PIL.UnidentifiedImageError:
+                except (PIL.UnidentifiedImageError, OSError):
+                    # corrupted image
                     warning(f'** Unable to read image {media_fullname}')
             else:
                 thumb_basename = media_basename.replace('.mp4', '.jpg')
                 thumb_fullname = os.path.join(thumbdir, thumb_basename)
                 info, infofmt = get_video_info(media_fullname)
                 infofmt = media_basename + ': ' + infofmt
-                thumbheight = int(round(300 * int(info[1]) / int(info[0])))
+                thumbheight = int(round(300 * int(info[3]) / int(info[2])))
                 make_thumbnail_video(media_fullname, thumb_fullname, (300, thumbheight))
                 item = PostVideo(None, media, None, thumb_fullname, infofmt)
             bydate[date].append(item)
@@ -876,7 +909,7 @@ def list_of_files(sourcedir, recursive):
     """
     result = list()
     if recursive is False:
-        for basename in listdir(sourcedir):
+        for basename in os.listdir(sourcedir):
             result.append(os.path.join(sourcedir, basename))
     else:
         for root, dirs, files in os.walk(sourcedir):
@@ -913,10 +946,22 @@ def date_from_item(filename):
         return datetime.fromtimestamp(timestamp).strftime('%Y%m%d')
 
 
+def time_from_name(name):
+    # heuristics
+    if match := re.search(r'(?:[^0-9]|^)(\d{8})[^0-9](\d{6})([^0-9]|$)', name):
+        digits = match.group(2)
+        hour, minute, second = int(digits[0:2]), int(digits[2:4]), int(digits[4:6])
+        if 0 <= hour < 24 and 0 <= minute < 60 and 0 <= second < 60:
+            return digits
+        else:
+            return None
+    else:
+        return None
+
+
 def time_from_item(filename):
-    if match := re.match(r'(?:IMG|VID)_\d{8}_(\d{6})', os.path.basename(filename)):
-        # IMG_20190221_065509.jpg
-        return match.group(1)
+    if time := time_from_name(filename):
+        return time
     else:
         timestamp = os.path.getmtime(filename)
         return datetime.fromtimestamp(timestamp).strftime('%H%M%S')
@@ -931,14 +976,18 @@ COMMAND = '''\
 
 
 def get_image_info(filename):
+    date = date_from_item(filename)
+    time = time_from_item(filename)
     img = Image.open(filename)
     width, height = img.size
     size = round(os.path.getsize(filename) / 1e6, 1)
-    return (width, height, size), f'dim={width}x{height}, {size} MB'
+    return (date, time, width, height, size), f'{date} {time}, dim={width}x{height}, {size} MB'
 
 
 def get_video_info(filename):
     # ffmpeg must be in path
+    date = date_from_item(filename)
+    time = time_from_item(filename)
     command = [*COMMAND.split(), filename]
     try:
         output = check_output(command, stderr=STDOUT).decode()
@@ -948,10 +997,10 @@ def get_video_info(filename):
         fps = round(int(match.group(3)) / int(match.group(4)), 1)
         duration = round(float(match.group(7)))
         size = round(os.path.getsize(filename) / 1e6, 1)
-        output = f'dim={width}x{height}, m:s={duration // 60}:{duration % 60}, fps={fps}, {size} MB'
+        output = f'{date} {time}, dim={width}x{height}, m:s={duration // 60}:{duration % 60}, fps={fps}, {size} MB'
     except CalledProcessError as e:
         output = e.output.decode()
-    return (width, height, size, duration, fps), output
+    return (date, time, width, height, size, duration, fps), output
 
 
 # -- Other commands -----------------------------------------------------------
