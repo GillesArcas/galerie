@@ -71,9 +71,7 @@ START = f'''\
 {CAPTION_IMAGE_STYLE}
     <meta name="viewport" content="width=device-width">
     <link rel="stylesheet" href="photobox/photobox.css">
-    <!--[if lt IE 9]><link rel="stylesheet" href="photobox/photobox.ie.css"><![endif]-->
-    <!--[if lt IE 9]><script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="photobox/jquery.min.js"></script>
     <script src="photobox/jquery.photobox.js"></script>
 </head>
 
@@ -944,7 +942,7 @@ def parse_command_line():
     args = parser.parse_args()
 
    # normalize paths
-    if args.input and not args.import_blogger:
+    if args.input:
         args.input = os.path.abspath(args.input)
         if not os.path.isdir(args.input):
             error(f'** Directory not found: {args.input}')
