@@ -528,94 +528,9 @@ def create_index(args):
     print_markdown(posts, title, os.path.join(args.output, 'index.md'))
 
 
-def raw_to_html(args):
+def markdown_to_html(args):
     title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
     print_html(posts, title, os.path.join(args.input, 'index.htm'))
-
-
-# -- Export to blogger---------------------------------------------------------
-
-
-def online_images_url(args):
-    with urlopen(args.urlblogger) as u:
-        buffer = u.read()
-        buffer = buffer.decode('utf-8')
-
-    online_images = dict()
-    for match in re.finditer('<div class="separator".*?</div>', buffer, flags=re.DOTALL):
-        div_separator = match.group(0)
-        elem_div = objectify.fromstring(div_separator)
-        for elem_a in elem_div.iterchildren(tag='a'):
-            href = elem_a.get("href")
-            thumb = elem_a.img.get("src")
-            online_images[os.path.basename(href)] = (href, thumb)
-
-    return online_images
-
-
-def check_images(args, posts, online_images):
-    result = True
-    for post in posts:
-        for image in post.images:
-            if image.basename in online_images:
-                with open(os.path.join(args.input, image.uri), 'rb') as f:
-                    md5_offline = hashlib.md5(f.read()).digest()
-                with urlopen(online_images[image.basename][0]) as u:
-                    binimg = u.read()
-                    md5_online = hashlib.md5(binimg).digest()
-                    if 0:  # TODO something
-                        with open(os.path.join('d:/volatil', image.uri), 'wb') as fdst:
-                            fdst.write(binimg)
-                if md5_offline != md5_online:
-                    print('Files are different, upload', image.basename)
-                    result = False
-            else:
-                print('File is absent, upload', image.basename)
-                result = False
-    return result
-
-
-def compose_blogger_html(args, title, posts, imgdata):
-    """ Compose html with blogger image urls
-    """
-    for post in posts:
-        for image in post.images:
-            if image.uri not in imgdata:
-                print('Image missing: ', image.uri)
-            else:
-                img_url, resized_url = imgdata[image.uri]
-                image.uri = img_url
-                image.resized_url = resized_url
-
-    return print_html(posts, title, '', target='blogger').splitlines()
-
-
-def prepare_for_blogger(args):
-    """
-    Export blogger html to clipboard.
-    If --full, export complete html, otherwise export html extract ready to
-    paste into blogger edit mode.
-    """
-    title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
-    online_images = online_images_url(args)
-
-    if args.check_images and check_images(args, posts, online_images) is False:
-        pass
-
-    html = compose_blogger_html(args, title, posts, online_images)
-    html = '\n'.join(html)
-
-    if args.full is False:
-        html = re.search('<body>(.*)?</body>', html, flags=re.DOTALL).group(1)
-        html = re.sub('<script>.*?</script>', '', html, flags=re.DOTALL)
-
-    clipboard.copy(html)
-
-
-def remove_head(html):
-    text = '\n'.join(html)
-    text = re.sub(r'<head>.*</head>\n*', '', text)
-    return text.splitlines()
 
 
 # -- Thumbnails (image and video) ---------------------------------------------
@@ -914,6 +829,85 @@ def get_video_info(filename):
     return (date, time, width, height, size, duration, fps), output
 
 
+# -- Export to blogger---------------------------------------------------------
+
+
+def online_images_url(args):
+    with urlopen(args.urlblogger) as u:
+        buffer = u.read()
+        buffer = buffer.decode('utf-8')
+
+    online_images = dict()
+    for match in re.finditer('<div class="separator".*?</div>', buffer, flags=re.DOTALL):
+        div_separator = match.group(0)
+        elem_div = objectify.fromstring(div_separator)
+        for elem_a in elem_div.iterchildren(tag='a'):
+            href = elem_a.get("href")
+            thumb = elem_a.img.get("src")
+            online_images[os.path.basename(href)] = (href, thumb)
+
+    return online_images
+
+
+def check_images(args, posts, online_images):
+    result = True
+    for post in posts:
+        for image in post.images:
+            if image.basename in online_images:
+                with open(os.path.join(args.input, image.uri), 'rb') as f:
+                    md5_offline = hashlib.md5(f.read()).digest()
+                with urlopen(online_images[image.basename][0]) as u:
+                    binimg = u.read()
+                    md5_online = hashlib.md5(binimg).digest()
+                    if 0:  # TODO something
+                        with open(os.path.join('d:/volatil', image.uri), 'wb') as fdst:
+                            fdst.write(binimg)
+                if md5_offline != md5_online:
+                    print('Files are different, upload', image.basename)
+                    result = False
+            else:
+                print('File is absent, upload', image.basename)
+                result = False
+    return result
+
+
+def compose_blogger_html(args, title, posts, imgdata):
+    """ Compose html with blogger image urls
+    """
+    for post in posts:
+        for image in post.images:
+            if image.uri not in imgdata:
+                print('Image missing: ', image.uri)
+            else:
+                img_url, resized_url = imgdata[image.uri]
+                image.uri = img_url
+                image.resized_url = resized_url
+
+    return print_html(posts, title, '', target='blogger').splitlines()
+
+
+def prepare_for_blogger(args):
+    """
+    Export blogger html to clipboard.
+    If --full, export complete html, otherwise export html extract ready to
+    paste into blogger edit mode.
+    """
+    title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
+    online_images = online_images_url(args)
+
+    if args.check_images and check_images(args, posts, online_images) is False:
+        pass
+
+    html = compose_blogger_html(args, title, posts, online_images)
+    html = '\n'.join(html)
+
+    if args.full is False:
+        html = re.search('<body>(.*)?</body>', html, flags=re.DOTALL).group(1)
+        html = re.sub('<script>.*?</script>', '', html, flags=re.DOTALL)
+
+    clipboard.copy(html)
+
+
 # -- Other commands -----------------------------------------------------------
 
 
@@ -1002,20 +996,20 @@ def main():
     locale.setlocale(locale.LC_TIME, '')
     args = parse_command_line()
 
-    if args.html:
-        raw_to_html(args)
+    if args.create:
+        create_index(args)
 
-    elif args.blogger:
-        prepare_for_blogger(args)
+    elif args.html:
+        markdown_to_html(args)
+
+    elif args.extend:
+        extend_index(args)
 
     elif args.rename_img:
         rename_images_cmd(args)
 
-    elif args.create:
-        create_index(args)
-
-    elif args.extend:
-        extend_index(args)
+    elif args.blogger:
+        prepare_for_blogger(args)
 
     elif args.test:
         test(args)
