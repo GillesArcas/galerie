@@ -25,7 +25,6 @@ import locale
 import textwrap
 import html
 import base64
-import hashlib
 from collections import defaultdict
 from datetime import date, datetime
 from subprocess import check_output, CalledProcessError, STDOUT
@@ -33,7 +32,7 @@ from urllib.request import urlopen
 
 import clipboard
 import PIL
-from PIL import Image
+from PIL import Image, ImageChops
 from lxml import objectify
 import markdown
 
@@ -849,22 +848,29 @@ def online_images_url(args):
     return online_images
 
 
+def compare_image_buffers(imgbuf1, imgbuf2):
+    with io.BytesIO(imgbuf1) as imgio1, io.BytesIO(imgbuf2) as imgio2:
+        img1 = Image.open(imgio1)
+        img2 = Image.open(imgio2)
+        diff = ImageChops.difference(img1, img2)
+        return not diff.getbbox()
+
+
 def check_images(args, posts, online_images):
     result = True
     for post in posts:
         for image in post.images:
             if image.basename in online_images:
                 with open(os.path.join(args.input, image.uri), 'rb') as f:
-                    md5_offline = hashlib.md5(f.read()).digest()
-                with urlopen(online_images[image.basename][0]) as u:
-                    binimg = u.read()
-                    md5_online = hashlib.md5(binimg).digest()
-                    if 0:  # TODO something
-                        with open(os.path.join('d:/volatil', image.uri), 'wb') as fdst:
-                            fdst.write(binimg)
-                if md5_offline != md5_online:
+                    imgbuf1 = f.read()
+                try:
+                    with urlopen(online_images[image.basename][0]) as u:
+                        imgbuf2 = u.read()
+                except FileNotFoundError:
+                    print('File not found', online_images[image.basename][0])
+                    next
+                if compare_image_buffers(imgbuf1, imgbuf2) is False:
                     print('Files are different, upload', image.basename)
-                    result = False
             else:
                 print('File is absent, upload', image.basename)
                 result = False
