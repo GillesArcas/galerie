@@ -25,9 +25,11 @@ import locale
 import textwrap
 import html
 import base64
+import hashlib
 from collections import defaultdict
 from datetime import date, datetime
 from subprocess import check_output, CalledProcessError, STDOUT
+from urllib.request import urlopen
 
 import clipboard
 import PIL
@@ -37,11 +39,11 @@ import markdown
 
 
 USAGE = """
-journal --create         --output <directory>    --imgsource <media directory>
-journal --html           --input  <directory>
-journal --extend         --input  <directory>    --imgsource <media directory>
-journal --rename_img     --input  <directory>
-journal --export_blogger --input  <directory> [--full]
+journal --create     --output <directory> --imgsource <media directory>
+journal --html       --input  <directory>
+journal --extend     --input  <directory> --imgsource <media directory>
+journal --rename_img --input  <directory>
+journal --blogger    --input  <directory> --url <url> [--check] [--full]
 """
 
 
@@ -113,6 +115,7 @@ class PostImage:
     def __init__(self, caption, uri, creation, thumb=None, descr=''):
         self.caption = caption
         self.uri = uri
+        self.basename = os.path.basename(uri)
         self.creation = creation
         self.thumb = thumb
         self.descr = descr
@@ -239,9 +242,12 @@ class Post:
         if self.title:
             html.append(f'<b>{self.title}</b>')
             html.append('<br />')
-        for line in self.text:
+        text = [md_links_to_html(line) for line in self.text]
+        if text:
+            line = text[0]
             html.append(line)
-        if self.text:
+            for line in text[1:]:
+                html.append(f'<br />{line}')
             html.append('<br />')
         for image in self.images:
             html.append(image.to_html_blogger())
@@ -530,41 +536,54 @@ def raw_to_html(args):
 # -- Export to blogger---------------------------------------------------------
 
 
-def parse_images_url(args):
-    imgdata = dict()
-    uploaded_images = os.path.join(args.input, 'uploaded-images.htm')
-    if os.path.exists(uploaded_images):
-        with open(uploaded_images, encoding='utf-8') as f:
-            s = f.read()
+def online_images_url(args):
+    with urlopen(args.urlblogger) as u:
+        buffer = u.read()
+        buffer = buffer.decode('utf-8')
 
-            # XML is required to have exactly one top-level element (Stackoverflow)
-            s = f'<tmp>{s}</tmp>'
+    online_images = dict()
+    for match in re.finditer('<div class="separator".*?</div>', buffer, flags=re.DOTALL):
+        div_separator = match.group(0)
+        elem_div = objectify.fromstring(div_separator)
+        for elem_a in elem_div.iterchildren(tag='a'):
+            href = elem_a.get("href")
+            thumb = elem_a.img.get("src")
+            online_images[os.path.basename(href)] = (href, thumb)
 
-            x = objectify.fromstring(s)
-            for elem_div in x.iterchildren(tag='div'):
-                elem_a = next(elem_div.iterchildren(tag='a'))
-                href = elem_a.get("href")
-                imgdata[os.path.basename(href)] = (
-                    href,
-                    elem_a.img.get("src"),
-                    elem_a.img.get("data-original-height"),
-                    elem_a.img.get("data-original-width")
-                )
-    return imgdata
+    return online_images
 
 
-def compose_blogger_html(args):
+def check_images(args, posts, online_images):
+    result = True
+    for post in posts:
+        for image in post.images:
+            if image.basename in online_images:
+                with open(os.path.join(args.input, image.uri), 'rb') as f:
+                    md5_offline = hashlib.md5(f.read()).digest()
+                with urlopen(online_images[image.basename][0]) as u:
+                    binimg = u.read()
+                    md5_online = hashlib.md5(binimg).digest()
+                    if 0:  # TODO something
+                        with open(os.path.join('d:/volatil', image.uri), 'wb') as fdst:
+                            fdst.write(binimg)
+                if md5_offline != md5_online:
+                    print('Files are different, upload', image.basename)
+                    result = False
+            else:
+                print('File is absent, upload', image.basename)
+                result = False
+    return result
+
+
+def compose_blogger_html(args, title, posts, imgdata):
     """ Compose html with blogger image urls
     """
-    imgdata = parse_images_url(args)
-    title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
-
     for post in posts:
         for image in post.images:
             if image.uri not in imgdata:
                 print('Image missing: ', image.uri)
             else:
-                img_url, resized_url, original_height, original_width = imgdata[image.uri]
+                img_url, resized_url = imgdata[image.uri]
                 image.uri = img_url
                 image.resized_url = resized_url
 
@@ -577,14 +596,20 @@ def prepare_for_blogger(args):
     If --full, export complete html, otherwise export html extract ready to
     paste into blogger edit mode.
     """
-    html = compose_blogger_html(args)
+    title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
+    online_images = online_images_url(args)
+
+    if args.check_images and check_images(args, posts, online_images) is False:
+        pass
+
+    html = compose_blogger_html(args, title, posts, online_images)
+    html = '\n'.join(html)
 
     if args.full is False:
-        html = remove_head(html)
-        tags = ('html', 'body')
-        html = [line for line in html if not any(_ in line for _ in tags)]
+        html = re.search('<body>(.*)?</body>', html, flags=re.DOTALL).group(1)
+        html = re.sub('<script>.*?</script>', '', html, flags=re.DOTALL)
 
-    clipboard.copy('\n'.join(html))
+    clipboard.copy(html)
 
 
 def remove_head(html):
@@ -883,7 +908,7 @@ def get_video_info(filename):
         fps = round(int(match.group(3)) / int(match.group(4)), 1)
         duration = round(float(match.group(7)))
         size = round(os.path.getsize(filename) / 1e6, 1)
-        output = f'{date} {time}, dim={width}x{height}, m:s={duration // 60}:{duration % 60}, fps={fps}, {size} MB'
+        output = f'{date} {time}, dim={width}x{height}, m:s={duration // 60:02}:{duration % 60:02}, fps={fps}, {size} MB'
     except CalledProcessError as e:
         output = e.output.decode()
     return (date, time, width, height, size, duration, fps), output
@@ -915,7 +940,8 @@ def parse_command_line():
                         action='store_true', default=False)
     parser.add_argument('--extend', help='extend image set, source in --imgsource',
                         action='store_true', default=False)
-    parser.add_argument('--export_blogger', help='input md, html blogger ready in clipboard',
+    parser.add_argument('--blogger', dest='blogger',
+                        help='input md, html blogger ready in clipboard',
                         action='store_true', default=False)
     parser.add_argument('--rename_img', help='fix photo names renaming as date+index',
                         action='store_true', default=None)
@@ -931,17 +957,22 @@ def parse_command_line():
                         action='store', default=None)
     parser.add_argument('--dates', help='dates interval for extended index',
                         action='store', default=None)
-    parser.add_argument('--full', help='full html (versus blogger ready html)',
-                        action='store_true', default=False)
     parser.add_argument('--imgsource', help='image source for extended index',
                         action='store', default=None)
     parser.add_argument('--recursive', help='--imgsource scans recursively',
                         action='store_true', default=True)
     parser.add_argument('--flat', dest='recursive', help='--imgsource does not recurse',
                         action='store_false')
+
+    parser.add_argument('--full', help='full html (versus blogger ready html)',
+                        action='store_true', default=False)
+    parser.add_argument('--check', dest='check_images', help='check availability of images on blogger',
+                        action='store_true')
+    parser.add_argument('--url', dest='urlblogger', help='blogger post url',
+                        action='store')
     args = parser.parse_args()
 
-   # normalize paths
+   # check and normalize paths
     if args.input:
         args.input = os.path.abspath(args.input)
         if not os.path.isdir(args.input):
@@ -952,6 +983,8 @@ def parse_command_line():
         args.imgsource = os.path.abspath(args.imgsource)
         if not os.path.isdir(args.imgsource):
             error(f'** Directory not found: {args.imgsource}')
+    if args.blogger and args.urlblogger is None:
+        error(f'** Give blogger url with --url')
 
     return args
 
@@ -972,20 +1005,20 @@ def main():
     if args.html:
         raw_to_html(args)
 
-    elif args.export_blogger:
+    elif args.blogger:
         prepare_for_blogger(args)
 
     elif args.rename_img:
         rename_images_cmd(args)
-
-    elif args.test:
-        test(args)
 
     elif args.create:
         create_index(args)
 
     elif args.extend:
         extend_index(args)
+
+    elif args.test:
+        test(args)
 
 
 if __name__ == '__main__':
