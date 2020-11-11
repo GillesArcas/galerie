@@ -81,16 +81,15 @@ START = f'''\
 
 END = '</body>\n</html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
-IMGPAT = '<a href="%s"><img src="%s" width="400"/></a>'
-IMGPAT2 = '<a href="file:///%s"><img src="file:///%s" width="300" title="%s"/></a>'
-VIDPAT2 = '<a href="file:///%s" rel="video"><img src="file:///%s" width="300" title="%s"/></a>'
-TITLEIMGPAT = '<a href="%s"><img src="%s" width="400" title="%s"/></a>'
-TITLEIMGPAT2 = '''\
+IMGPOST = '<a href="%s"><img src="%s" width="400" title="%s"/></a>'
+IMGPOSTCAPTION = '''\
 <span>
-<a href="%s"><img src=%s width="400"/></a>
+<a href="%s"><img src=%s width="400" title="%s"/></a>
 <p>%s</p>
 </span>
 '''
+IMGDCIM = '<a href="file:///%s"><img src="%s" width="300" title="%s"/></a>'
+VIDPAT2 = '<a href="file:///%s" rel="video"><img src="%s" width="300" title="%s"/></a>'
 
 # diminution de l'espace entre images, on utilise :
 # "display: block;", "margin-bottom: 0em;" et "font-size: 0;"
@@ -122,12 +121,12 @@ class PostImage:
 
     def to_html_post(self):
         if not self.caption:
-            return IMGPAT % (self.uri, self.uri)
+            return IMGPOST % (self.uri, self.thumb, self.descr)
         else:
-            return TITLEIMGPAT2 % (self.uri, self.uri, self.caption)
+            return IMGPOSTCAPTION % (self.uri, self.thumb, self.descr, self.caption)
 
     def to_html_dcim(self):
-        return IMGPAT2 % (self.uri, self.thumb, self.descr)
+        return IMGDCIM % (self.uri, self.thumb, self.descr)
 
     def to_html_blogger(self):
         if not self.caption:
@@ -188,7 +187,7 @@ class Post:
             post = post[m.end():]
 
         images = list()
-        while m := re.match(r'!?\[\]\(([^\n]+)\)\n(([^!][^[][^]][^\n]+)\n)?', post):
+        while m := re.match(r'!?\[\]\(([^\n]+)\)\n(([^![][^\n]+)\n)?', post):
             if m.group(0)[0] == '!':
                 images.append(PostImage(group(m, 3), m.group(1), None))
             else:
@@ -527,9 +526,55 @@ def create_index(args):
     print_markdown(posts, title, os.path.join(args.output, 'index.md'))
 
 
+def make_basic_index(args):
+    # check for ffmpeg and ffprobe in path
+    for exe in ('ffmpeg', 'ffprobe'):
+        try:
+            check_output([exe, '-version'])
+        except FileNotFoundError:
+            error(f'File not found: {exe}')
+
+    thumbdir = os.path.join(args.input, '.thumbnails')
+    if not os.path.exists(thumbdir):
+        os.mkdir(thumbdir)
+
+    photoboxdir = os.path.join(args.input, 'photobox')
+    if not os.path.exists(photoboxdir):
+        photoboxsrc = os.path.join(os.path.dirname(__file__), 'photobox')
+        shutil.copytree(photoboxsrc, photoboxdir)
+
+    if os.path.exists(os.path.join(args.input, 'index.md')):
+        title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
+    else:
+        title = os.path.basename(args.input)
+        posts = list()
+
+    for post in posts:
+        for media in post.images:
+            media_fullname = os.path.join(args.input, media.uri)
+            item, _ = create_item(media_fullname, thumbdir, 'post')
+            media.thumb = '/'.join(('.thumbnails', os.path.basename(item.thumb)))
+            media.descr = item.descr
+
+    thumblist = []
+    for post in posts:
+        thumblist.extend([os.path.basename(media.thumb) for media in post.images])
+    purge_thumbnails(thumbdir, thumblist, 'post')
+
+    return title, posts
+
+
+def purge_thumbnails(thumbdir, thumblist, key):
+    # purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
+    for fullname in glob.glob(os.path.join(thumbdir, f'{key}*.jpg')):
+        if os.path.basename(fullname) not in thumblist:
+            print('Removing thumbnail', fullname)
+            os.remove(fullname)
+
+
 def markdown_to_html(args):
-    title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
-    print_html(posts, title, os.path.join(args.input, 'index.htm'))
+    title, posts = make_basic_index(args)
+    print_html(posts, title, os.path.join(args.input, 'index.htm'), 'extended')
 
 
 # -- Thumbnails (image and video) ---------------------------------------------
@@ -596,53 +641,33 @@ def create_thumbnail_video(filename, thumbname, size):
 # -- Addition of DCIM images --------------------------------------------------
 
 
-def create_item(media_fullname, thumbdir):
+def create_item(media_fullname, thumbdir, key):
     media_basename = os.path.basename(media_fullname)
     if media_basename.lower().endswith('.jpg'):
-        thumb_basename = media_basename
+        thumb_basename = key + '-' + media_basename
         thumb_fullname = os.path.join(thumbdir, thumb_basename)
         try:
             info, infofmt = get_image_info(media_fullname)
             infofmt = media_basename + ': ' + infofmt
             make_thumbnail(media_fullname, thumb_fullname, (300, 300))
-            item = PostImage(None, media_fullname, None, thumb_fullname, infofmt)
+            item = PostImage(None, media_fullname, None, '/'.join(('.thumbnails', thumb_basename)), infofmt)
         except PIL.UnidentifiedImageError:
             # corrupted image
             warning(f'** Unable to read image {media_fullname}')
             return None, ''
     else:
-        thumb_basename = media_basename.replace('.mp4', '.jpg')
+        thumb_basename = key + '-' + media_basename.replace('.mp4', '.jpg')
         thumb_fullname = os.path.join(thumbdir, thumb_basename)
         info, infofmt = get_video_info(media_fullname)
         infofmt = media_basename + ': ' + infofmt
         thumbheight = int(round(300 * int(info[3]) / int(info[2])))
         make_thumbnail_video(media_fullname, thumb_fullname, (300, thumbheight))
-        item = PostVideo(None, media_fullname, None, thumb_fullname, infofmt)
+        item = PostVideo(None, media_fullname, None, '/'.join(('.thumbnails', thumb_basename)), infofmt)
     return item, thumb_fullname
 
 
 def extend_index(args):
-    # check for ffmpeg and ffprobe in path
-    for exe in ('ffmpeg', 'ffprobe'):
-        try:
-            check_output([exe, '-version'])
-        except FileNotFoundError:
-            error(f'File not found: {exe}')
-
-    thumbdir = os.path.join(args.input, '.thumbnails')
-    if not os.path.exists(thumbdir):
-        os.mkdir(thumbdir)
-
-    photoboxdir = os.path.join(args.input, 'photobox')
-    if not os.path.exists(photoboxdir):
-        photoboxsrc = os.path.join(os.path.dirname(__file__), 'photobox')
-        shutil.copytree(photoboxsrc, photoboxdir)
-
-    if os.path.exists(os.path.join(args.input, 'index.md')):
-        title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
-    else:
-        title = os.path.basename(args.input)
-        posts = list()
+    title, posts = make_basic_index(args)
 
     # list of all pictures and movies
     medias = list_of_medias(args.imgsource, args.recursive)
@@ -666,19 +691,14 @@ def extend_index(args):
 
     bydate = defaultdict(list)
     thumbnails = list()
+    thumbdir = os.path.join(args.input, '.thumbnails')
     for media_fullname in medias:
         date = date_from_item(media_fullname)  #  calculé deux fois
         if date in required_dates:
-            item, thumb_fullname = create_item(media_fullname, thumbdir)
+            item, thumb_fullname = create_item(media_fullname, thumbdir, 'dcim')
             if item:
                 bydate[date].append(item)
                 thumbnails.append(thumb_fullname)
-
-    # purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
-    for basename in glob.glob(os.path.join(thumbdir, '*.jpg')):
-        filename = os.path.join(thumbdir, basename)
-        if filename not in thumbnails:
-            os.remove(filename)
 
     for date, liste in bydate.items():
         liste.sort(key=lambda item: time_from_item(item.uri))
@@ -707,6 +727,11 @@ def extend_index(args):
             if date not in date_already_seen:
                 post.dcim = bydate[date]
                 date_already_seen.add(date)
+
+    thumblist = []
+    for post in posts:
+        thumblist.extend([os.path.basename(media.thumb) for media in post.dcim])
+    purge_thumbnails(thumbdir, thumblist, 'dcim')
 
     print_html(posts, title, os.path.join(args.input, 'index-x.htm'), 'extended')
 
@@ -908,6 +933,11 @@ def rename_images_cmd(args):
     print_html(posts, 'TITLE', os.path.join(args.input, 'index.htm'))
 
 
+def idempotence(args):
+    title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
+    print_markdown(posts, title, os.path.join(args.output, 'index.md'))
+
+
 # -- Main ---------------------------------------------------------------------
 
 
@@ -926,6 +956,8 @@ def parse_command_line():
     parser.add_argument('--rename_img', help='fix photo names renaming as date+index',
                         action='store_true', default=None)
 
+    parser.add_argument('--idem', help='',
+                        action='store_true', default=False)
     parser.add_argument('--test', help='',
                         action='store_true', default=False)
 
@@ -996,6 +1028,9 @@ def main():
 
     elif args.blogger:
         prepare_for_blogger(args)
+
+    elif args.idem:
+        idempotence(args)
 
     elif args.test:
         pass
