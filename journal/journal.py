@@ -609,6 +609,7 @@ def create_item(media_fullname, thumbdir):
         except PIL.UnidentifiedImageError:
             # corrupted image
             warning(f'** Unable to read image {media_fullname}')
+            return None, ''
     else:
         thumb_basename = media_basename.replace('.mp4', '.jpg')
         thumb_fullname = os.path.join(thumbdir, thumb_basename)
@@ -646,8 +647,8 @@ def extend_index(args):
     # list of all pictures and movies
     medias = list_of_medias(args.imgsource, args.recursive)
 
-    # list of required dates (the DCIM directory can contain images not related with the current
-    # page (e.g. two pages for the same image directory)
+    # list of required dates (the DCIM directory can contain images not related
+    # with the current page (e.g. two pages for the same image directory)
     if args.dates:
         date1, date2 = args.dates.split('-')
         required_dates = set()
@@ -665,32 +666,13 @@ def extend_index(args):
 
     bydate = defaultdict(list)
     thumbnails = list()
-    for media in medias:
-        date = date_from_item(media)  #  calculé deux fois
+    for media_fullname in medias:
+        date = date_from_item(media_fullname)  #  calculé deux fois
         if date in required_dates:
-            media_basename = os.path.basename(media)
-            media_fullname = media
-            if media_basename.lower().endswith('.jpg'):
-                thumb_basename = media_basename
-                thumb_fullname = os.path.join(thumbdir, thumb_basename)
-                try:
-                    info, infofmt = get_image_info(media_fullname)
-                    infofmt = media_basename + ': ' + infofmt
-                    make_thumbnail(media_fullname, thumb_fullname, (300, 300))
-                    item = PostImage(None, media, None, thumb_fullname, infofmt)
-                except (PIL.UnidentifiedImageError, OSError):
-                    # corrupted image
-                    warning(f'** Unable to read image {media_fullname}')
-            else:
-                thumb_basename = media_basename.replace('.mp4', '.jpg')
-                thumb_fullname = os.path.join(thumbdir, thumb_basename)
-                info, infofmt = get_video_info(media_fullname)
-                infofmt = media_basename + ': ' + infofmt
-                thumbheight = int(round(300 * int(info[3]) / int(info[2])))
-                make_thumbnail_video(media_fullname, thumb_fullname, (300, thumbheight))
-                item = PostVideo(None, media, None, thumb_fullname, infofmt)
-            bydate[date].append(item)
-            thumbnails.append(thumb_fullname)
+            item, thumb_fullname = create_item(media_fullname, thumbdir)
+            if item:
+                bydate[date].append(item)
+                thumbnails.append(thumb_fullname)
 
     # purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
     for basename in glob.glob(os.path.join(thumbdir, '*.jpg')):
@@ -871,6 +853,9 @@ def check_images(args, posts, online_images):
                     next
                 if compare_image_buffers(imgbuf1, imgbuf2) is False:
                     print('Files are different, upload', image.basename)
+                else:
+                    if 1:
+                        print('File already online', image.basename)
             else:
                 print('File is absent, upload', image.basename)
                 result = False
@@ -915,11 +900,6 @@ def prepare_for_blogger(args):
 
 
 # -- Other commands -----------------------------------------------------------
-
-
-def test(args):
-    posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
-    print_html(posts, 'TITLE', 'tmp.htm')
 
 
 def rename_images_cmd(args):
@@ -1018,7 +998,7 @@ def main():
         prepare_for_blogger(args)
 
     elif args.test:
-        test(args)
+        pass
 
 
 if __name__ == '__main__':
