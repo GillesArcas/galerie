@@ -84,6 +84,7 @@ GALLERYCALL = "$('#%s').photobox('a', { thumbs:true, time:0, history:false, loop
 END = '</body>\n</html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
 IMGPOST = '<a href="%s"><img src="%s" width="400" title="%s"/></a>'
+VIDPOST = '<a href="%s" rel="video"><img src="%s" width="400" title="%s"/></a>'
 IMGPOSTCAPTION = '''\
 <span>
 <a href="%s"><img src=%s width="400" title="%s"/></a>
@@ -139,7 +140,7 @@ class PostImage:
 
 class PostVideo(PostImage):
     def to_html_post(self):
-        return VIDPAT2 % (self.uri, '', '')
+        return VIDPOST % (self.uri, self.thumb, self.descr)
 
     def to_html_dcim(self):
         return VIDPAT2 % (self.uri, self.thumb, self.descr)
@@ -742,6 +743,7 @@ def online_images_url(args):
     online_images = dict()
     for match in re.finditer('<div class="separator".*?</div>', buffer, flags=re.DOTALL):
         div_separator = match.group(0)
+        div_separator = div_separator.replace('&nbsp;', '')
         elem_div = objectify.fromstring(div_separator)
         for elem_a in elem_div.iterchildren(tag='a'):
             href = elem_a.get("href")
