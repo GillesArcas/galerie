@@ -79,6 +79,8 @@ START = f'''\
 <body>\
 '''
 
+GALLERYCALL = "$('#%s').photobox('a', { thumbs:true, time:0, history:false, loop:false });"
+
 END = '</body>\n</html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
 IMGPOST = '<a href="%s"><img src="%s" width="400" title="%s"/></a>'
@@ -220,14 +222,14 @@ class Post:
             html.append('<br />')
 
         if self.images:
-            html.append(f'<div id="gallery-{self.date}-blog">')
+            html.append(f'<div id="gallery-{self.date}-blog-{self.daterank}">')
             for media in self.images:
                 html.append(media.to_html_post())
             html.append('</div>')
 
         if self.dcim:
             html.append(SEP)
-            html.append(f'<div id="gallery-{self.date}-dcim">')
+            html.append(f'<div id="gallery-{self.date}-dcim-{self.daterank}">')
             for media in self.dcim:
                 html.append(media.to_html_dcim())
             html.append('</div>')
@@ -400,6 +402,11 @@ def parse_markdown(args, filename):
                     posts.append(Post.from_markdown(record))
                     record = []
 
+        daterank = defaultdict(int)
+        for post in posts:
+            daterank[post.date] += 1
+            post.daterank = daterank[post.date]
+
         ##set_sequential_images(posts, args.year)
 
     return title, posts
@@ -461,9 +468,9 @@ def compose_html_extended(posts, title, target):
     html.append('<script>')
     for post in posts:
         if post.images:
-            html.append(f"$('#gallery-{post.date}-blog').photobox('a', {{ thumbs:true, time:0, history:false, loop:false }});")
+            html.append(GALLERYCALL % f'gallery-{post.date}-blog-{post.daterank}')
         if post.dcim:
-            html.append(f"$('#gallery-{post.date}-dcim').photobox('a', {{ thumbs:true, time:0, history:false, loop:false }});")
+            html.append(GALLERYCALL % f'gallery-{post.date}-dcim-{post.daterank}')
     html.append('</script>')
 
     html.append(END)
@@ -714,19 +721,16 @@ def extend_index(args):
         datetext = x.strftime("%A %d %B %Y").capitalize()
         newpost = Post(timestamp, title=None, text=[datetext], photos=[])
         newpost.date = f'{year}-{month}-{day}'
+        newpost.daterank = 1
         newpost.dcim = bydate[date]
         bisect.insort(posts, newpost)
 
     # several posts can have the same date, only the first one is completed with dcim images
-    date_already_seen = set()
-
     for post in posts:
-        if post.date:
+        if post.daterank == 1:
             date = post.date
             date = date.replace('-', '')
-            if date not in date_already_seen:
-                post.dcim = bydate[date]
-                date_already_seen.add(date)
+            post.dcim = bydate[date]
 
     thumblist = []
     for post in posts:
