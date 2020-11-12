@@ -153,9 +153,7 @@ class Post:
         self.images = photos
         self.dcim = []
         self.date = None
-        if self.timestamp is not None:
-            # timestamp peut être None si lu dans html
-            self.timestamp_str = datetime.utcfromtimestamp(self.timestamp).strftime('%Y-%m-%d %H:%M:%S')
+        self.daterank = 0
 
     def __lt__(self, other):
         return self.date < other.date
@@ -270,7 +268,7 @@ def group(match, n):
 # -- Markdown parser ----------------------------------------------------------
 
 
-def parse_markdown(args, filename):
+def parse_markdown(filename):
     """
     Generate Post objects from markdown. Posts are in chronological order.
     """
@@ -389,90 +387,85 @@ def print_html(posts, title, html_name, target='local'):
             return f.getvalue()
 
 
-# -- Markdown format ----------------------------------------------------------
+# -- Media description --------------------------------------------------------
 
 
-def create_index(args):
-    # list of all pictures and movies
-    medias = list_of_medias(args.imgsource, args.recursive)
-
-    # list of required dates (the DCIM directory can contain images not related
-    # with the desired index (e.g. two indexes for the same image directory)
-    required_dates = set()
-    if args.dates:
-        date1, date2 = args.dates.split('-')
-        for media in medias:
-            date = date_from_item(media)
-            if date1 <= date <= date2:
-                required_dates.add(date)
+def date_from_name(name):
+    # heuristics
+    if match := re.search(r'(?:[^0-9]|^)(\d{8})([^0-9]|$)', name):
+        digits = match.group(1)
+        year, month, day = int(digits[0:4]), int(digits[4:6]), int(digits[6:8])
+        if 2000 <= year <= date.today().year and 1 <= month <= 12 and 1 <= day <= 31:
+            return digits
+        else:
+            return None
     else:
-        for media in medias:
-            date = date_from_item(media)
-            required_dates.add(date)
-
-    title = args.imgsource
-    posts = list()
-    for date in sorted(required_dates):
-        year, month, day = date[0:4], date[4:6], date[6:8]
-        x = datetime(int(year), int(month), int(day))
-        datetext = x.strftime("%A %d %B %Y").capitalize()
-        post = Post(None, title=datetext, text=[], photos=[])
-        post.date = f'{year}-{month}-{day}'
-        posts.append(post)
-
-    os.makedirs(args.output, exist_ok=True)
-    print_markdown(posts, title, os.path.join(args.output, 'index.md'))
+        return None
 
 
-def make_basic_index(args):
-    # check for ffmpeg and ffprobe in path
-    for exe in ('ffmpeg', 'ffprobe'):
-        try:
-            check_output([exe, '-version'])
-        except FileNotFoundError:
-            error(f'File not found: {exe}')
-
-    thumbdir = os.path.join(args.input, '.thumbnails')
-    if not os.path.exists(thumbdir):
-        os.mkdir(thumbdir)
-
-    photoboxdir = os.path.join(args.input, 'photobox')
-    if not os.path.exists(photoboxdir):
-        photoboxsrc = os.path.join(os.path.dirname(__file__), 'photobox')
-        shutil.copytree(photoboxsrc, photoboxdir)
-
-    if os.path.exists(os.path.join(args.input, 'index.md')):
-        title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
+def date_from_item(filename):
+    if date := date_from_name(filename):
+        return date
     else:
-        title = os.path.basename(args.input)
-        posts = list()
-
-    for post in posts:
-        for media in post.images:
-            media_fullname = os.path.join(args.input, media.uri)
-            item, _ = create_item(media_fullname, thumbdir, 'post')
-            media.thumb = '/'.join(('.thumbnails', os.path.basename(item.thumb)))
-            media.descr = item.descr
-
-    thumblist = []
-    for post in posts:
-        thumblist.extend([os.path.basename(media.thumb) for media in post.images])
-    purge_thumbnails(thumbdir, thumblist, 'post')
-
-    return title, posts
+        timestamp = os.path.getmtime(filename)
+        return datetime.fromtimestamp(timestamp).strftime('%Y%m%d')
 
 
-def purge_thumbnails(thumbdir, thumblist, key):
-    # purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
-    for fullname in glob.glob(os.path.join(thumbdir, f'{key}*.jpg')):
-        if os.path.basename(fullname) not in thumblist:
-            print('Removing thumbnail', fullname)
-            os.remove(fullname)
+def time_from_name(name):
+    # heuristics
+    if match := re.search(r'(?:[^0-9]|^)(\d{8})[^0-9](\d{6})([^0-9]|$)', name):
+        digits = match.group(2)
+        hour, minute, second = int(digits[0:2]), int(digits[2:4]), int(digits[4:6])
+        if 0 <= hour < 24 and 0 <= minute < 60 and 0 <= second < 60:
+            return digits
+        else:
+            return None
+    else:
+        return None
 
 
-def markdown_to_html(args):
-    title, posts = make_basic_index(args)
-    print_html(posts, title, os.path.join(args.input, 'index.htm'), 'extended')
+def time_from_item(filename):
+    if time := time_from_name(filename):
+        return time
+    else:
+        timestamp = os.path.getmtime(filename)
+        return datetime.fromtimestamp(timestamp).strftime('%H%M%S')
+
+
+COMMAND = '''\
+    ffprobe -v error
+            -select_streams v:0
+            -show_entries stream=width,height,avg_frame_rate,r_frame_rate:format=duration
+            -of csv=p=0
+'''
+
+
+def get_image_info(filename):
+    date = date_from_item(filename)
+    time = time_from_item(filename)
+    img = Image.open(filename)
+    width, height = img.size
+    size = round(os.path.getsize(filename) / 1e6, 1)
+    return (date, time, width, height, size), f'{date} {time}, dim={width}x{height}, {size} MB'
+
+
+def get_video_info(filename):
+    # ffmpeg must be in path
+    date = date_from_item(filename)
+    time = time_from_item(filename)
+    command = [*COMMAND.split(), filename]
+    try:
+        output = check_output(command, stderr=STDOUT).decode()
+        match = re.match(r'(\d+),(\d+),(\d+)/(\d+),(\d+)/(\d+)\s*(\d+\.\d+)', output)
+        width = match.group(1)
+        height = match.group(2)
+        fps = round(int(match.group(3)) / int(match.group(4)), 1)
+        duration = round(float(match.group(7)))
+        size = round(os.path.getsize(filename) / 1e6, 1)
+        output = f'{date} {time}, dim={width}x{height}, m:s={duration // 60:02}:{duration % 60:02}, fps={fps}, {size} MB'
+    except CalledProcessError as e:
+        output = e.output.decode()
+    return (date, time, width, height, size, duration, fps), output
 
 
 # -- Thumbnails (image and video) ---------------------------------------------
@@ -536,9 +529,6 @@ def create_thumbnail_video(filename, thumbname, size):
     img1.save(thumbname)
 
 
-# -- Addition of DCIM images --------------------------------------------------
-
-
 def create_item(media_fullname, thumbdir, key):
     media_basename = os.path.basename(media_fullname)
     if media_basename.lower().endswith('.jpg'):
@@ -562,6 +552,95 @@ def create_item(media_fullname, thumbdir, key):
         make_thumbnail_video(media_fullname, thumb_fullname, (300, thumbheight))
         item = PostVideo(None, media_fullname, None, '/'.join(('.thumbnails', thumb_basename)), infofmt)
     return item, thumb_fullname
+
+
+# -- Markdown format ----------------------------------------------------------
+
+
+def create_index(args):
+    # list of all pictures and movies
+    medias = list_of_medias(args.imgsource, args.recursive)
+
+    # list of required dates (the DCIM directory can contain images not related
+    # with the desired index (e.g. two indexes for the same image directory)
+    required_dates = set()
+    if args.dates:
+        date1, date2 = args.dates.split('-')
+        for media in medias:
+            date = date_from_item(media)
+            if date1 <= date <= date2:
+                required_dates.add(date)
+    else:
+        for media in medias:
+            date = date_from_item(media)
+            required_dates.add(date)
+
+    title = args.imgsource
+    posts = list()
+    for date in sorted(required_dates):
+        year, month, day = date[0:4], date[4:6], date[6:8]
+        x = datetime(int(year), int(month), int(day))
+        datetext = x.strftime("%A %d %B %Y").capitalize()
+        post = Post(None, title=datetext, text=[], photos=[])
+        post.date = f'{year}-{month}-{day}'
+        posts.append(post)
+
+    os.makedirs(args.output, exist_ok=True)
+    print_markdown(posts, title, os.path.join(args.output, 'index.md'))
+
+
+def make_basic_index(args):
+    # check for ffmpeg and ffprobe in path
+    for exe in ('ffmpeg', 'ffprobe'):
+        try:
+            check_output([exe, '-version'])
+        except FileNotFoundError:
+            error(f'File not found: {exe}')
+
+    thumbdir = os.path.join(args.input, '.thumbnails')
+    if not os.path.exists(thumbdir):
+        os.mkdir(thumbdir)
+
+    photoboxdir = os.path.join(args.input, 'photobox')
+    if not os.path.exists(photoboxdir):
+        photoboxsrc = os.path.join(os.path.dirname(__file__), 'photobox')
+        shutil.copytree(photoboxsrc, photoboxdir)
+
+    if os.path.exists(os.path.join(args.input, 'index.md')):
+        title, posts = parse_markdown(os.path.join(args.input, 'index.md'))
+    else:
+        title = os.path.basename(args.input)
+        posts = list()
+
+    for post in posts:
+        for media in post.images:
+            media_fullname = os.path.join(args.input, media.uri)
+            item, _ = create_item(media_fullname, thumbdir, 'post')
+            media.thumb = '/'.join(('.thumbnails', os.path.basename(item.thumb)))
+            media.descr = item.descr
+
+    thumblist = []
+    for post in posts:
+        thumblist.extend([os.path.basename(media.thumb) for media in post.images])
+    purge_thumbnails(thumbdir, thumblist, 'post')
+
+    return title, posts
+
+
+def purge_thumbnails(thumbdir, thumblist, key):
+    # purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
+    for fullname in glob.glob(os.path.join(thumbdir, f'{key}*.jpg')):
+        if os.path.basename(fullname) not in thumblist:
+            print('Removing thumbnail', fullname)
+            os.remove(fullname)
+
+
+def markdown_to_html(args):
+    title, posts = make_basic_index(args)
+    print_html(posts, title, os.path.join(args.input, 'index.htm'), 'extended')
+
+
+# -- Addition of DCIM images --------------------------------------------------
 
 
 def extend_index(args):
@@ -652,84 +731,6 @@ def list_of_medias(imgsource, recursive):
     return [_ for _ in files if os.path.splitext(_)[1].lower() in ('.jpg', '.mp4')]
 
 
-def date_from_name(name):
-    # heuristics
-    if match := re.search(r'(?:[^0-9]|^)(\d{8})([^0-9]|$)', name):
-        digits = match.group(1)
-        year, month, day = int(digits[0:4]), int(digits[4:6]), int(digits[6:8])
-        if 2000 <= year <= date.today().year and 1 <= month <= 12 and 1 <= day <= 31:
-            return digits
-        else:
-            return None
-    else:
-        return None
-
-
-def date_from_item(filename):
-    if date := date_from_name(filename):
-        return date
-    else:
-        timestamp = os.path.getmtime(filename)
-        return datetime.fromtimestamp(timestamp).strftime('%Y%m%d')
-
-
-def time_from_name(name):
-    # heuristics
-    if match := re.search(r'(?:[^0-9]|^)(\d{8})[^0-9](\d{6})([^0-9]|$)', name):
-        digits = match.group(2)
-        hour, minute, second = int(digits[0:2]), int(digits[2:4]), int(digits[4:6])
-        if 0 <= hour < 24 and 0 <= minute < 60 and 0 <= second < 60:
-            return digits
-        else:
-            return None
-    else:
-        return None
-
-
-def time_from_item(filename):
-    if time := time_from_name(filename):
-        return time
-    else:
-        timestamp = os.path.getmtime(filename)
-        return datetime.fromtimestamp(timestamp).strftime('%H%M%S')
-
-
-COMMAND = '''\
-    ffprobe -v error
-            -select_streams v:0
-            -show_entries stream=width,height,avg_frame_rate,r_frame_rate:format=duration
-            -of csv=p=0
-'''
-
-
-def get_image_info(filename):
-    date = date_from_item(filename)
-    time = time_from_item(filename)
-    img = Image.open(filename)
-    width, height = img.size
-    size = round(os.path.getsize(filename) / 1e6, 1)
-    return (date, time, width, height, size), f'{date} {time}, dim={width}x{height}, {size} MB'
-
-
-def get_video_info(filename):
-    # ffmpeg must be in path
-    date = date_from_item(filename)
-    time = time_from_item(filename)
-    command = [*COMMAND.split(), filename]
-    try:
-        output = check_output(command, stderr=STDOUT).decode()
-        match = re.match(r'(\d+),(\d+),(\d+)/(\d+),(\d+)/(\d+)\s*(\d+\.\d+)', output)
-        width = match.group(1)
-        height = match.group(2)
-        fps = round(int(match.group(3)) / int(match.group(4)), 1)
-        duration = round(float(match.group(7)))
-        size = round(os.path.getsize(filename) / 1e6, 1)
-        output = f'{date} {time}, dim={width}x{height}, m:s={duration // 60:02}:{duration % 60:02}, fps={fps}, {size} MB'
-    except CalledProcessError as e:
-        output = e.output.decode()
-    return (date, time, width, height, size, duration, fps), output
-
-
 # -- Export to blogger---------------------------------------------------------
 
 
@@ -803,7 +804,7 @@ def prepare_for_blogger(args):
     If --full, export complete html, otherwise export html extract ready to
     paste into blogger edit mode.
     """
-    title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
+    title, posts = parse_markdown(os.path.join(args.input, 'index.md'))
     online_images = online_images_url(args)
 
     if args.check_images and check_images(args, posts, online_images) is False:
@@ -834,13 +835,13 @@ def rename_images(posts, path):
 
 
 def rename_images_cmd(args):
-    posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
+    posts = parse_markdown(os.path.join(args.input, 'index.md'))
     rename_images(posts, args.input)
     print_html(posts, 'TITLE', os.path.join(args.input, 'index.htm'))
 
 
 def idempotence(args):
-    title, posts = parse_markdown(args, os.path.join(args.input, 'index.md'))
+    title, posts = parse_markdown(os.path.join(args.input, 'index.md'))
     print_markdown(posts, title, os.path.join(args.output, 'index.md'))
 
 
