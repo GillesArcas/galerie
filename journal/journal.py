@@ -267,113 +267,6 @@ def group(match, n):
         return None
 
 
-# -- Handling of dates and sequential image names -----------------------------
-
-
-JOURS = 'lundi mardi mercredi jeudi vendredi samedi dimanche'.split()
-MOIS = 'janvier février mars avril mai juin juillet août septembre octobre novembre décembre'.split()
-
-
-def date_from_title(title, year):  # TODO: remove
-    pattern = r'(?:%s )?(1er|\d|\d\d) (%s)\b' % ('|'.join(JOURS), '|'.join(MOIS))
-    if match := re.search(pattern, title):
-        day = 1 if match.group(1) == '1er' else int(match.group(1))
-        month = MOIS.index(match.group(2)) + 1
-        return f'{year}-{month:02}-{day:02}'
-
-    pattern = r'(?:%s )?(\d{1,2})/(\d{1,2})\b' % '|'.join(JOURS)
-    if match := re.search(pattern, title):
-        day = int(match.group(1))
-        month = int(match.group(2))
-        return f'{year}-{month:02}-{day:02}'
-
-    return None
-
-
-def set_year_in_posts(posts, year):  # TODO: remove
-    # nécessite un paramètre si on ne peut pas trouver l'année (blogger)
-    if year is not None:
-        for post in posts:
-            post.year = year
-        return
-
-    # première passe pour donner une année aux posts avec photo (prend l'année
-    # de la première photo)
-    for post in posts:
-        post.year = None
-        for image in post.images:
-            if image.creation:
-                post.year = datetime.utcfromtimestamp(image.creation).strftime('%Y')
-                break
-
-    # cas du premier post sans année, on lui donne l'année du premier post avec année
-    if posts[0].year is None:
-        for post in posts[1:]:
-            if post.year:
-                posts[0].year = post.year
-                break
-
-    # deuxième passe pour donner aux posts sans année l'année du post précédent
-    year = posts[0].year
-    for post in posts[1:]:
-        if post.year is None:
-            post.year = year
-        else:
-            year = post.year
-
-
-def set_date_in_posts(posts):  # TODO: remove
-    # première passe pour donner une date aux posts avec titre
-    for post in posts:
-        post.date = None
-        if post.title:
-            post.date = date_from_title(post.title, post.year)
-
-    # cas du premier post sans date, on lui donne la date du premier post avec date
-    if posts[0].date is None:
-        for post in posts[1:]:
-            if post.date:
-                posts[0].date = post.date
-                break
-
-    # deuxième passe pour donner aux posts sans date la date du post précédent
-    date = posts[0].date
-    for post in posts[1:]:
-        if post.date is None:
-            post.date = date
-        else:
-            date = post.date
-
-
-def set_sequential_image_names(posts):
-    """Numérotage séquentiel des images à l'intérieur d'un post
-    """
-    last_image = dict()
-    for post in posts:
-        if post.date not in last_image:
-            last_image[post.date] = 0
-        for image in post.images:
-            last_image[post.date] += 1
-            image.seqname = post.date + '-' + str(last_image[post.date]) + os.path.splitext(image.uri)[1]
-
-
-def set_sequential_images(posts, year):
-    if posts:
-        set_year_in_posts(posts, year)
-        set_date_in_posts(posts)
-        set_sequential_image_names(posts)
-
-
-def rename_images(posts, path):
-    for post in posts:
-        for image in post.images:
-            try:
-                os.rename(os.path.join(path, image.uri), os.path.join(path, image.seqname))
-                image.uri = image.seqname
-            except IOError:
-                print('Unable to rename:', os.path.join(path, image.uri), '-->', os.path.join(path, image.seqname))
-
-
 # -- Markdown parser ----------------------------------------------------------
 
 
@@ -406,8 +299,6 @@ def parse_markdown(args, filename):
         for post in posts:
             daterank[post.date] += 1
             post.daterank = daterank[post.date]
-
-        ##set_sequential_images(posts, args.year)
 
     return title, posts
 
@@ -722,7 +613,7 @@ def extend_index(args):
         newpost = Post(timestamp, title=None, text=[datetext], photos=[])
         newpost.date = f'{year}-{month}-{day}'
         newpost.daterank = 1
-        newpost.dcim = bydate[date]
+        newpost.dcim = bydate[date]  # TODO: refait en dessous
         bisect.insort(posts, newpost)
 
     # several posts can have the same date, only the first one is completed with dcim images
@@ -929,6 +820,17 @@ def prepare_for_blogger(args):
 
 
 # -- Other commands -----------------------------------------------------------
+
+
+def rename_images(posts, path):
+    for post in posts:
+        for image in post.images:
+            try:
+                seqname = post.date + '-' + post.daterank + os.path.splitext(image.uri)[1]
+                os.rename(os.path.join(path, image.uri), os.path.join(path, seqname))
+                image.uri = image.seqname
+            except IOError:
+                print('Unable to rename:', os.path.join(path, image.uri), '-->', os.path.join(path, seqname))
 
 
 def rename_images_cmd(args):
