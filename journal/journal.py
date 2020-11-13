@@ -122,6 +122,12 @@ class PostImage:
         self.descr = descr
         self.resized_url = None
 
+    def to_markdown(self):
+        if not self.caption:
+            return '![](%s)' % (self.uri,)
+        else:
+            return '![](%s)\n%s' % (self.uri, self.caption)
+
     def to_html_post(self):
         if not self.caption:
             return IMGPOST % (self.uri, self.thumb, self.descr)
@@ -139,11 +145,24 @@ class PostImage:
 
 
 class PostVideo(PostImage):
+    def to_markdown(self):
+        if not self.caption:
+            return '[](%s)' % (self.uri,)
+        else:
+            return '[](%s)\n%s' % (self.uri, self.caption)
+
     def to_html_post(self):
         return VIDPOST % (self.uri, self.thumb, self.descr)
 
     def to_html_dcim(self):
         return VIDPAT2 % (self.uri, self.thumb, self.descr)
+
+    def to_html_blogger(self):
+        x = f'<p style="text-align: center;">{self.iframe}</p>'
+        if not self.caption:
+            return x
+        else:
+            return f'%s\n{CAPTION_PAT}' % (x, self.caption)
 
 
 class Post:
@@ -318,16 +337,14 @@ def print_markdown(posts, title, fullname):
                     print(chunk, file=fdst)
             print(file=fdst)
             for media in post.images:
-                print(f'![]({media.uri})', file=fdst)
-                if media.caption:
-                    print(media.caption, file=fdst)
+                print(media.to_markdown(), file=fdst)
             print('______', file=fdst)
 
 
 # -- html printer -------------------------------------------------------------
 
 
-def compose_html(posts, title, target):
+def compose_html_reduced(posts, title, target):
     html = list()
     html.append(START % title)
 
@@ -336,17 +353,11 @@ def compose_html(posts, title, target):
             html.append(line.strip())
         html.append('')
 
-    html.append('<script>')
-    for post in posts:
-        if post.images:
-            html.append(f"$('#gallery-{post.date}-blog').photobox('a', {{ thumbs:true, time:0, history:false, loop:false }});")
-    html.append('</script>')
-
     html.append(END)
     return html
 
 
-def compose_html_extended(posts, title, target):
+def compose_html_full(posts, title, target):
     html = list()
     html.append(START % title)
 
@@ -368,16 +379,16 @@ def compose_html_extended(posts, title, target):
 
 
 def print_html_to_stream(posts, title, stream, target):
-    if target == 'extended':
-        for line in compose_html_extended(posts, title, 'local'):
+    if target == 'regular':
+        for line in compose_html_full(posts, title, 'local'):
             print(line, file=stream)
     else:
-        for line in compose_html(posts, title, target):
+        for line in compose_html_reduced(posts, title, target):
             print(line, file=stream)
 
 
-def print_html(posts, title, html_name, target='local'):
-    assert target in ('local', 'extended', 'blogger')
+def print_html(posts, title, html_name, target='regular'):
+    assert target in ('regular', 'blogger')
     if html_name:
         with open(html_name, 'wt', encoding='utf-8') as f:
             print_html_to_stream(posts, title, f, target)
@@ -463,7 +474,9 @@ def get_video_info(filename):
         fps = round(int(match.group(3)) / int(match.group(4)), 1)
         duration = round(float(match.group(7)))
         size = round(os.path.getsize(filename) / 1e6, 1)
-        output = f'{date} {time}, dim={width}x{height}, m:s={duration // 60:02}:{duration % 60:02}, fps={fps}, {size} MB'
+        mn = duration // 60
+        sec = duration % 60
+        output = f'{date} {time}, dim={width}x{height}, m:s={mn:02}:{sec:02}, fps={fps}, {size} MB'
     except CalledProcessError as e:
         output = e.output.decode()
     return (date, time, width, height, size, duration, fps), output
@@ -638,7 +651,7 @@ def purge_thumbnails(thumbdir, thumblist, key):
 
 def markdown_to_html(args):
     title, posts = make_basic_index(args)
-    print_html(posts, title, os.path.join(args.input, 'index.htm'), 'extended')
+    print_html(posts, title, os.path.join(args.input, 'index.htm'), 'regular')
 
 
 # -- Addition of DCIM images --------------------------------------------------
@@ -708,7 +721,7 @@ def extend_index(args):
         thumblist.extend([os.path.basename(media.thumb) for media in post.dcim])
     purge_thumbnails(thumbdir, thumblist, 'dcim')
 
-    print_html(posts, title, os.path.join(args.input, 'index-x.htm'), 'extended')
+    print_html(posts, title, os.path.join(args.input, 'index-x.htm'), 'regular')
 
 
 def list_of_files(sourcedir, recursive):
@@ -750,7 +763,13 @@ def online_images_url(args):
             thumb = elem_a.img.get("src")
             online_images[os.path.basename(href)] = (href, thumb)
 
-    return online_images
+    # video insertion relies only on video order
+    online_videos = list()
+    for match in re.finditer('<iframe allowfullscreen="allowfullscreen".*?</iframe>', buffer, flags=re.DOTALL):
+        iframe = match.group(0)
+        online_videos.append(iframe)
+
+    return online_images, online_videos
 
 
 def compare_image_buffers(imgbuf1, imgbuf2):
@@ -764,40 +783,55 @@ def compare_image_buffers(imgbuf1, imgbuf2):
 def check_images(args, posts, online_images):
     result = True
     for post in posts:
-        for image in post.images:
-            if image.basename in online_images:
-                with open(os.path.join(args.input, image.uri), 'rb') as f:
-                    imgbuf1 = f.read()
-                try:
-                    with urlopen(online_images[image.basename][0]) as u:
-                        imgbuf2 = u.read()
-                except FileNotFoundError:
-                    print('File not found', online_images[image.basename][0])
-                    next
-                if compare_image_buffers(imgbuf1, imgbuf2) is False:
-                    print('Files are different, upload', image.basename)
+        for media in post.images:
+            if type(media) is PostImage:
+                if media.basename in online_images:
+                    with open(os.path.join(args.input, media.uri), 'rb') as f:
+                        imgbuf1 = f.read()
+                    try:
+                        with urlopen(online_images[media.basename][0]) as u:
+                            imgbuf2 = u.read()
+                    except FileNotFoundError:
+                        print('File not found', online_images[media.basename][0])
+                        next
+                    if compare_image_buffers(imgbuf1, imgbuf2) is False:
+                        print('Files are different, upload', media.basename)
+                    else:
+                        if 1:
+                            print('File already online', media.basename)
                 else:
-                    if 1:
-                        print('File already online', image.basename)
+                    print('File is absent, upload', media.basename)
+                    result = False
+            elif type(media) is PostVideo:
+                # no check for the moment
+                print('Video not checked', media.basename)
             else:
-                print('File is absent, upload', image.basename)
-                result = False
+                assert False
     return result
 
 
-def compose_blogger_html(args, title, posts, imgdata):
+def compose_blogger_html(args, title, posts, imgdata, online_videos):
     """ Compose html with blogger image urls
     """
     for post in posts:
-        for image in post.images:
-            if image.uri not in imgdata:
-                print('Image missing: ', image.uri)
+        for media in post.images:
+            if type(media) is PostImage:
+                if media.uri not in imgdata:
+                    print('Image missing: ', media.uri)
+                else:
+                    img_url, resized_url = imgdata[media.uri]
+                    media.uri = img_url
+                    media.resized_url = resized_url
+            elif isinstance(media, PostVideo):
+                if not online_videos:
+                   print('Video missing: ', media.uri)
+                else:
+                    media.iframe = online_videos[0]
+                    del online_videos[0]
             else:
-                img_url, resized_url = imgdata[image.uri]
-                image.uri = img_url
-                image.resized_url = resized_url
+                assert False
 
-    return print_html(posts, title, '', target='blogger').splitlines()
+    return print_html(posts, title, '', target='blogger')
 
 
 def prepare_for_blogger(args):
@@ -807,13 +841,12 @@ def prepare_for_blogger(args):
     paste into blogger edit mode.
     """
     title, posts = parse_markdown(os.path.join(args.input, 'index.md'))
-    online_images = online_images_url(args)
+    online_images, online_videos = online_images_url(args)
 
     if args.check_images and check_images(args, posts, online_images) is False:
         pass
 
-    html = compose_blogger_html(args, title, posts, online_images)
-    html = '\n'.join(html)
+    html = compose_blogger_html(args, title, posts, online_images, online_videos)
 
     if args.full is False:
         html = re.search('<body>(.*)?</body>', html, flags=re.DOTALL).group(1)
@@ -837,9 +870,9 @@ def rename_images(posts, path):
 
 
 def rename_images_cmd(args):
-    posts = parse_markdown(os.path.join(args.input, 'index.md'))
+    title, posts = parse_markdown(os.path.join(args.input, 'index.md'))
     rename_images(posts, args.input)
-    print_html(posts, 'TITLE', os.path.join(args.input, 'index.htm'))
+    print_markdown(posts, title, os.path.join(args.input, 'index.md'))
 
 
 def idempotence(args):
