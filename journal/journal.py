@@ -822,7 +822,7 @@ def compose_blogger_html(args, title, posts, imgdata, online_videos):
                     img_url, resized_url = imgdata[media.uri]
                     media.uri = img_url
                     media.resized_url = resized_url
-            elif isinstance(media, PostVideo):
+            elif type(media) is PostVideo:
                 if not online_videos:
                    print('Video missing: ', media.uri)
                 else:
