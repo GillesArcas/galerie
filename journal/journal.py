@@ -119,6 +119,92 @@ CAPTION_PAT = '''\
 '''
 
 
+class Post:
+    def __init__(self, timestamp, title, text, photos):
+        self.timestamp = timestamp
+        self.title = title
+        self.text = text
+        self.images = photos
+        self.dcim = []
+        self.date = None
+        self.daterank = 0
+
+    def __lt__(self, other):
+        return self.date < other.date
+
+    @classmethod
+    def from_markdown(cls, post):
+        m = re.match(r'\[([0-9/]{10})\]\n*', post[0])
+        if m:
+            date = m.group(1).replace('/', '-')
+            del post[0]
+        else:
+            error(f'No date in record {md_post}')
+
+        while post and not post[0].strip():
+            del post[0]
+
+        text = ''
+        while post and not re.match(r'!?\[\]', post[0]):
+            text += post[0]
+            del post[0]
+
+        # remove empty lines at end
+        text = re.sub(r'\n\n$', '\n', text)
+
+        medias = list()
+        while post and (match := re.match(r'!?\[\]\((.*)\)', post[0])):
+            media = match.group(1)
+            caption = None
+            del post[0]
+            if post and not re.match(r'!?\[\]', post[0]):
+                caption = post[0].strip()
+                del post[0]
+            if match.group(0)[0] == '!':
+                medias.append(PostImage(caption, media, None))
+            else:
+                medias.append(PostVideo(caption, media, None))
+
+        post = cls(None, None, text, medias)
+        post.date = date
+        return post
+
+    def to_html(self, target='regular'):
+        if target == 'regular':
+            return self.to_html_regular()
+        if target == 'blogger':
+            return self.to_html_blogger()
+
+    def to_html_regular(self):
+        html = list()
+        if self.text:
+            html.append(markdown.markdown(self.text))
+
+        if self.images:
+            html.append(f'<div id="gallery-{self.date}-blog-{self.daterank}">')
+            for media in self.images:
+                html.append(media.to_html_post())
+            html.append('</div>')
+
+        if self.dcim:
+            html.append(SEP)
+            html.append(f'<div id="gallery-{self.date}-dcim-{self.daterank}">')
+            for media in self.dcim:
+                html.append(media.to_html_dcim())
+            html.append('</div>')
+
+        html.append(SEP)
+        return html
+
+    def to_html_blogger(self):
+        html = list()
+        html.append(markdown.markdown(text))
+        for image in self.images:
+            html.append(image.to_html_blogger())
+        html.append(SEP)
+        return html
+
+
 class PostImage:
     def __init__(self, caption, uri, creation, thumb=None, descr=''):
         self.caption = caption
@@ -170,92 +256,6 @@ class PostVideo(PostImage):
             return x
         else:
             return f'%s\n{CAPTION_PAT}' % (x, self.caption)
-
-
-class Post:
-    def __init__(self, timestamp, title, text, photos):
-        self.timestamp = timestamp
-        self.title = title
-        self.text = text
-        self.images = photos
-        self.dcim = []
-        self.date = None
-        self.daterank = 0
-
-    def __lt__(self, other):
-        return self.date < other.date
-
-    @classmethod
-    def from_markdown(cls, post):
-        m = re.match(r'\[([0-9/]{10})\]\n*', post[0])
-        if m:
-            date = m.group(1).replace('/', '-')
-            del post[0]
-        else:
-            error(f'No date in record {md_post}')
-
-        while post and not post[0].strip():
-            del post[0]
-
-        text = ''
-        while post and not re.match(r'!?\[\]', post[0]):
-            text += post[0]
-            del post[0]
-
-        # remove empty lines at end
-        text = re.sub(r'\n\n$', '\n', text)
-
-        medias = list()
-        while post and (match := re.match(r'!?\[\]\((.*)\)', post[0])):
-            media = match.group(1)
-            caption = None
-            del post[0]
-            if post and not re.match(r'!?\[\]', post[0]):
-                caption = post[0].strip()
-                del post[0]
-            if match.group(0)[0] == '!':
-                medias.append(PostImage(caption, media, None))
-            else:
-                medias.append(PostVideo(caption, media, None))
-
-        post = cls(None, None, text, medias)
-        post.date = date
-        return post
-
-    def to_html(self, target='local'):
-        if target == 'local':
-            return self.to_html_local()
-        if target == 'blogger':
-            return self.to_html_blogger()
-
-    def to_html_local(self):
-        html = list()
-        if self.text:
-            html.append(markdown.markdown(self.text))
-
-        if self.images:
-            html.append(f'<div id="gallery-{self.date}-blog-{self.daterank}">')
-            for media in self.images:
-                html.append(media.to_html_post())
-            html.append('</div>')
-
-        if self.dcim:
-            html.append(SEP)
-            html.append(f'<div id="gallery-{self.date}-dcim-{self.daterank}">')
-            for media in self.dcim:
-                html.append(media.to_html_dcim())
-            html.append('</div>')
-
-        html.append(SEP)
-        return html
-
-    def to_html_blogger(self):
-        html = list()
-        html.append(markdown.markdown(text))
-        for image in self.images:
-            html.append(image.to_html_blogger())
-        html.append(SEP)
-        return html
 
 
 # -- Markdown parser ----------------------------------------------------------
@@ -355,7 +355,7 @@ def compose_html_full(posts, title, target):
 
 def print_html_to_stream(posts, title, stream, target):
     if target == 'regular':
-        for line in compose_html_full(posts, title, 'local'):
+        for line in compose_html_full(posts, title, target):
             print(line, file=stream)
     else:
         for line in compose_html_reduced(posts, title, target):
