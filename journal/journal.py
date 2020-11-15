@@ -204,7 +204,6 @@ class Post:
 
         # remove empty lines at end
         text = re.sub(r'\n\n$', '\n', text)
-        text = [text]
 
         medias = list()
         while post and (match := re.match(r'!?\[\]\((.*)\)', post[0])):
@@ -231,20 +230,8 @@ class Post:
 
     def to_html_local(self):
         html = list()
-        if self.title:
-            html.append(f'<b>{self.title}</b>')
-            html.append('<br />')
-        """
-        text = [md_links_to_html(line) for line in self.text]
-        if text:
-            line = text[0]
-            html.append(line)
-            for line in text[1:]:
-                html.append(f'<br />{line}')
-            html.append('<br />')
-        """
-        text = '\n\n'.join(self.text)
-        html.append(markdown.markdown(text))
+        if self.text:
+            html.append(markdown.markdown(self.text))
 
         if self.images:
             html.append(f'<div id="gallery-{self.date}-blog-{self.daterank}">')
@@ -264,35 +251,11 @@ class Post:
 
     def to_html_blogger(self):
         html = list()
-        # if self.title:
-            # html.append(f'<b>{self.title}</b>')
-            # html.append('<br />')
-        # text = [md_links_to_html(line) for line in self.text]
-        # if text:
-            # line = text[0]
-            # html.append(line)
-            # for line in text[1:]:
-                # html.append(f'<br />{line}')
-            # html.append('<br />')
-        text = '\n\n'.join(self.text)
         html.append(markdown.markdown(text))
         for image in self.images:
             html.append(image.to_html_blogger())
         html.append(SEP)
         return html
-
-
-def md_links_to_html(line):
-    line = html.escape(line, quote=False)
-    line = re.sub(r'(?<!\!)\[([^]]*)\]\(([^)]*)\)', r'<a href=\2>\1</a>', line)
-    return line
-
-
-def group(match, n):
-    try:
-        return match.group(n)
-    except:
-        return None
 
 
 # -- Markdown parser ----------------------------------------------------------
@@ -338,16 +301,14 @@ def print_markdown(posts, title, fullname):
         print(f'# {title}\n', file=fdst)
         for post in posts:
             print(f"[{post.date.replace('-', '/')}]", file=fdst)
-            print(file=fdst)
-            if post.title:
-                print(f'###### {post.title}', file=fdst)
+            if post.text:
                 print(file=fdst)
-            for line in post.text[0].splitlines():
-                if not line:
-                    print(file=fdst)
-                else:
-                    for chunk in textwrap.wrap(line, width=78):
-                        print(chunk, file=fdst)
+                for line in post.text.splitlines():
+                    if not line:
+                        print(file=fdst)
+                    else:
+                        for chunk in textwrap.wrap(line, width=78):
+                            print(chunk, file=fdst)
             if post.images:
                 print(file=fdst)
                 for media in post.images:
@@ -609,7 +570,7 @@ def create_index(args):
         year, month, day = date[0:4], date[4:6], date[6:8]
         x = datetime(int(year), int(month), int(day))
         datetext = x.strftime("%A %d %B %Y").capitalize()
-        post = Post(None, title=datetext, text=[], photos=[])
+        post = Post(None, title=None, text=datetext, photos=[])
         post.date = f'{year}-{month}-{day}'
         posts.append(post)
 
@@ -717,7 +678,7 @@ def extend_index(args):
         year, month, day = date[0:4], date[4:6], date[6:8]
         x = datetime(int(year), int(month), int(day))
         datetext = x.strftime("%A %d %B %Y").capitalize()
-        newpost = Post(timestamp, title=None, text=[datetext], photos=[])
+        newpost = Post(timestamp, title=None, text=datetext, photos=[])
         newpost.date = f'{year}-{month}-{day}'
         newpost.daterank = 1
         newpost.dcim = bydate[date]  # TODO: refait en dessous
