@@ -58,7 +58,13 @@ QsXcv4f+p1gRfZhkDzz0+V+KCZzQAUfv8fCr4DMcQdSAAA+dJRILrFW04AAAAASUVORK5CYII='''
 CAPTION_IMAGE_STYLE = '''\
     <style type="text/css">
         span { display:inline-table; }
+     </style>\
+'''
+
+STYLE = '''\
+    <style type="text/css">
         p { margin-top:0px; margin-bottom:0px; }
+        h3 { font-size: 100%%; font-weight: bold; margin-top:0px; margin-bottom:0px; }
      </style>\
 '''
 
@@ -69,11 +75,12 @@ START = f'''\
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>%s</title>
     <link rel="icon" href="data:image/png;base64,\n{FAVICON_BASE64}" />
-{CAPTION_IMAGE_STYLE}
     <meta name="viewport" content="width=device-width">
     <link rel="stylesheet" href="photobox/photobox.css">
     <script src="photobox/jquery.min.js"></script>
     <script src="photobox/jquery.photobox.js"></script>
+{CAPTION_IMAGE_STYLE}
+{STYLE}
 </head>
 
 <body>\
@@ -179,42 +186,40 @@ class Post:
         return self.date < other.date
 
     @classmethod
-    def from_markdown(cls, md_post):
-        timestamp = None  # pour le moment
-        post = ''.join(md_post)
-
-        m = re.match(r'\[([0-9/]{10})\]\n*', post)
+    def from_markdown(cls, post):
+        m = re.match(r'\[([0-9/]{10})\]\n*', post[0])
         if m:
             date = m.group(1).replace('/', '-')
-            post = post[m.end():]
+            del post[0]
         else:
             error(f'No date in record {md_post}')
 
-        m = re.match(r'###### *([^\n]+)\n*', post)
-        if m:
-            title = m.group(1)
-            post = post[m.end():]
-        else:
-            title = None
+        while post and not post[0].strip():
+            del post[0]
 
-        text = list()
-        while m := re.match(r'(?!\!?\[\])(([^\n]+\n)+)(\n|$)', post):
-            para = m.group(1).replace('\n', ' ')
-            text.append(para)
-            post = post[m.end():]
+        text = ''
+        while post and not re.match(r'!?\[\]', post[0]):
+            text += post[0]
+            del post[0]
 
-        if m := re.match(r'(\n+)', post):
-            post = post[m.end():]
+        # remove empty lines at end
+        text = re.sub(r'\n\n$', '\n', text)
+        text = [text]
 
-        images = list()
-        while m := re.match(r'!?\[\]\(([^\n]+)\)\n(([^![][^\n]+)\n)?', post):
-            if m.group(0)[0] == '!':
-                images.append(PostImage(group(m, 3), m.group(1), None))
+        medias = list()
+        while post and (match := re.match(r'!?\[\]\((.*)\)', post[0])):
+            media = match.group(1)
+            caption = None
+            del post[0]
+            if post and not re.match(r'!?\[\]', post[0]):
+                caption = post[0].strip()
+                del post[0]
+            if match.group(0)[0] == '!':
+                medias.append(PostImage(caption, media, None))
             else:
-                images.append(PostVideo(group(m, 3), m.group(1), None))
-            post = post[m.end():]
+                medias.append(PostVideo(caption, media, None))
 
-        post = cls(timestamp, title, text, images)
+        post = cls(None, None, text, medias)
         post.date = date
         return post
 
@@ -226,11 +231,10 @@ class Post:
 
     def to_html_local(self):
         html = list()
-        ##print(markdown.markdown(self.text)) TODO: remove
-        html.append(SEP)
         if self.title:
             html.append(f'<b>{self.title}</b>')
             html.append('<br />')
+        """
         text = [md_links_to_html(line) for line in self.text]
         if text:
             line = text[0]
@@ -238,6 +242,9 @@ class Post:
             for line in text[1:]:
                 html.append(f'<br />{line}')
             html.append('<br />')
+        """
+        text = '\n\n'.join(self.text)
+        html.append(markdown.markdown(text))
 
         if self.images:
             html.append(f'<div id="gallery-{self.date}-blog-{self.daterank}">')
@@ -252,23 +259,26 @@ class Post:
                 html.append(media.to_html_dcim())
             html.append('</div>')
 
+        html.append(SEP)
         return html
 
     def to_html_blogger(self):
         html = list()
-        html.append(SEP)
-        if self.title:
-            html.append(f'<b>{self.title}</b>')
-            html.append('<br />')
-        text = [md_links_to_html(line) for line in self.text]
-        if text:
-            line = text[0]
-            html.append(line)
-            for line in text[1:]:
-                html.append(f'<br />{line}')
-            html.append('<br />')
+        # if self.title:
+            # html.append(f'<b>{self.title}</b>')
+            # html.append('<br />')
+        # text = [md_links_to_html(line) for line in self.text]
+        # if text:
+            # line = text[0]
+            # html.append(line)
+            # for line in text[1:]:
+                # html.append(f'<br />{line}')
+            # html.append('<br />')
+        text = '\n\n'.join(self.text)
+        html.append(markdown.markdown(text))
         for image in self.images:
             html.append(image.to_html_blogger())
+        html.append(SEP)
         return html
 
 
@@ -332,12 +342,16 @@ def print_markdown(posts, title, fullname):
             if post.title:
                 print(f'###### {post.title}', file=fdst)
                 print(file=fdst)
-            for line in post.text:
-                for chunk in textwrap.wrap(line, width=78):
-                    print(chunk, file=fdst)
-            print(file=fdst)
-            for media in post.images:
-                print(media.to_markdown(), file=fdst)
+            for line in post.text[0].splitlines():
+                if not line:
+                    print(file=fdst)
+                else:
+                    for chunk in textwrap.wrap(line, width=78):
+                        print(chunk, file=fdst)
+            if post.images:
+                print(file=fdst)
+                for media in post.images:
+                    print(media.to_markdown(), file=fdst)
             print('______', file=fdst)
 
 
@@ -851,6 +865,7 @@ def prepare_for_blogger(args):
     if args.full is False:
         html = re.search('<body>(.*)?</body>', html, flags=re.DOTALL).group(1)
         html = re.sub('<script>.*?</script>', '', html, flags=re.DOTALL)
+        html = STYLE.replace('%%', '%') + html
 
     clipboard.copy(html)
 
