@@ -105,7 +105,7 @@ VIDPOSTCAPTION = '''\
 </span>
 '''
 IMGDCIM = '<a href="file:///%s"><img src="%s" width="300" title="%s"/></a>'
-VIDPAT2 = '<a href="file:///%s" rel="video"><img src="%s" width="300" title="%s"/></a>'
+VIDDCIM = '<a href="file:///%s" rel="video"><img src="%s" width="300" title="%s"/></a>'
 
 # diminution de l'espace entre images, on utilise :
 # "display: block;", "margin-bottom: 0em;" et "font-size: 0;"
@@ -257,7 +257,7 @@ class PostVideo(PostImage):
             return VIDPOSTCAPTION % (self.uri, self.thumb, self.descr, self.caption)
 
     def to_html_dcim(self):
-        return VIDPAT2 % (self.uri, self.thumb, self.descr)
+        return VIDDCIM % (self.uri, self.thumb, self.descr)
 
     def to_html_blogger(self):
         x = f'<p style="text-align: center;">{self.iframe}</p>'
