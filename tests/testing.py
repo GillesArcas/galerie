@@ -3,7 +3,9 @@ import sys
 import shutil
 import glob
 # from journal import main
+import clipboard
 import journal.journal
+
 
 def list_compare(tag1, tag2, list1, list2):
 
@@ -85,17 +87,32 @@ def test4(mode):
 def test5(mode):
     journal.journal.main('--create --out tmp --imgs . --flat')
     if mode == 'ref':
-        return shutil.copyfile('tmp/index.md', 'index-create.md')
+        return shutil.copyfile('tmp/index.md', 'index-create-base.md')
     else:
-        return file_compare('index-create.md', 'tmp/index.md')
+        return file_compare('index-create-base.md', 'tmp/index.md')
 
 
 def test6(mode):
-    # journal.journal.main('--blogger --in ./ --out tmp --imgs . --flat')
-    return True
+    journal.journal.main('--create --out tmp --imgs . --flat --dates 20000101-20000110')
+    if mode == 'ref':
+        return shutil.copyfile('tmp/index.md', 'index-create-dates.md')
+    else:
+        return file_compare('index-create-dates.md', 'tmp/index.md')
 
 
-TESTLIST = [test1, test2, test3, test4, test5, test6]
+def test7(mode):
+    journal.journal.main('--blogger --in ./ --url blogger-medias.htm')
+    if mode == 'ref':
+        with open('blogger-output.htm', 'wt') as f:
+            f.write(clipboard.paste())
+        return None
+    else:
+        with open('tmp/blogger-output.htm', 'wt') as f:
+            f.write(clipboard.paste())
+        return file_compare('blogger-output.htm', 'tmp/blogger-output.htm')
+
+
+TESTLIST = [test1, test2, test3, test4, test5, test6, test7]
 
 
 def main():
