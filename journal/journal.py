@@ -578,7 +578,7 @@ def create_index(args):
     for date in sorted(required_dates):
         dt = datetime.strptime(date, '%Y%m%d')
         datetext = dt.strftime("%A %d %B %Y").capitalize()
-        post = Post(date, text=datetext, photos=[])
+        post = Post(date, text=datetext, medias=[])
         posts.append(post)
 
     os.makedirs(args.output, exist_ok=True)
@@ -683,7 +683,7 @@ def extend_index(args):
     for date in extradates:
         dt = datetime.strptime(date, '%Y%m%d')
         datetext = dt.strftime("%A %d %B %Y").capitalize()
-        newpost = Post(date, text=datetext, photos=[])
+        newpost = Post(date, text=datetext, medias=[])
         newpost.daterank = 1
         newpost.dcim = bydate[date]  # TODO: refait en dessous
         bisect.insort(posts, newpost)
