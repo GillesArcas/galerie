@@ -4,7 +4,7 @@ each day described by a text and a subset of the medias (photos and movies).
 
 The markdown file can be:
 * edited manually (very basic syntax),
-* created from the media directory,
+* created from the media directory.
 
 The markdown file can be exported to:
 * an html file with the text and subset of medias associated with each day,
@@ -95,6 +95,12 @@ VIDPOST = '<a href="%s" rel="video"><img src="%s" width="400" title="%s"/></a>'
 IMGPOSTCAPTION = '''\
 <span>
 <a href="%s"><img src=%s width="400" title="%s"/></a>
+<p>%s</p>
+</span>
+'''
+VIDPOSTCAPTION = '''\
+<span>
+<a href="%s" rel="video"><img src=%s width="400" title="%s"/></a>
 <p>%s</p>
 </span>
 '''
@@ -245,7 +251,10 @@ class PostVideo(PostImage):
             return '[](%s)\n%s' % (self.uri, self.caption)
 
     def to_html_post(self):
-        return VIDPOST % (self.uri, self.thumb, self.descr)
+        if not self.caption:
+            return VIDPOST % (self.uri, self.thumb, self.descr)
+        else:
+            return VIDPOSTCAPTION % (self.uri, self.thumb, self.descr, self.caption)
 
     def to_html_dcim(self):
         return VIDPAT2 % (self.uri, self.thumb, self.descr)

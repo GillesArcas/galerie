@@ -42,6 +42,8 @@ Pusieurs images et une vidéo.
 ![](OCT_20000107_000000.jpg)
 Une pieuvre
 [](VID_20000107_000000.mp4)
+[](VID_20000107_000001.mp4)
+Une vidéo avec une légende
 ![](OCT_20000107_000001.jpg)
 Une autre pieuvre
 ![](OCT_20000107_000002.jpg)
