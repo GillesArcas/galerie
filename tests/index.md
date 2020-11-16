@@ -37,7 +37,7 @@ Un deuxième enregistrement pour la même date.
 ______
 [2000/01/07]
 
-Pusieurs images et une vidéo.
+Plusieurs images et une vidéo.
 
 ![](OCT_20000107_000000.jpg)
 Une pieuvre

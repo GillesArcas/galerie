@@ -183,17 +183,15 @@ class Post:
         if self.text:
             html.append(markdown.markdown(self.text))
 
-        dashdate = f'{self.date[0:4]}-{self.date[4:6]}-{self.date[6:8]}'
-
         if self.images:
-            html.append(f'<div id="gallery-{dashdate}-blog-{self.daterank}">')
+            html.append(f'<div id="gallery-{self.date}-blog-{self.daterank}">')
             for media in self.images:
                 html.append(media.to_html_post())
             html.append('</div>')
 
         if self.dcim:
             html.append(SEP)
-            html.append(f'<div id="gallery-{dashdate}-dcim-{self.daterank}">')
+            html.append(f'<div id="gallery-{self.date}-dcim-{self.daterank}">')
             for media in self.dcim:
                 html.append(media.to_html_dcim())
             html.append('</div>')
@@ -351,11 +349,10 @@ def compose_html_full(posts, title, target):
 
     html.append('<script>')
     for post in posts:
-        dashdate = f'{post.date[0:4]}-{post.date[4:6]}-{post.date[6:8]}'
         if post.images:
-            html.append(GALLERYCALL % f'gallery-{dashdate}-blog-{post.daterank}')
+            html.append(GALLERYCALL % f'gallery-{post.date}-blog-{post.daterank}')
         if post.dcim:
-            html.append(GALLERYCALL % f'gallery-{dashdate}-dcim-{post.daterank}')
+            html.append(GALLERYCALL % f'gallery-{post.date}-dcim-{post.daterank}')
     html.append('</script>')
 
     html.append(END)
