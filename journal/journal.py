@@ -198,7 +198,7 @@ class Post:
 
     def to_html_blogger(self):
         html = list()
-        html.append(markdown.markdown(text))
+        html.append(markdown.markdown(self.text))
         for image in self.images:
             html.append(image.to_html_blogger())
         html.append(SEP)
@@ -586,11 +586,11 @@ def make_basic_index(args):
         except FileNotFoundError:
             error(f'File not found: {exe}')
 
-    thumbdir = os.path.join(args.input, '.thumbnails')
+    thumbdir = os.path.join(args.output, '.thumbnails')
     if not os.path.exists(thumbdir):
         os.mkdir(thumbdir)
 
-    photoboxdir = os.path.join(args.input, 'photobox')
+    photoboxdir = os.path.join(args.output, 'photobox')
     if not os.path.exists(photoboxdir):
         photoboxsrc = os.path.join(os.path.dirname(__file__), 'photobox')
         shutil.copytree(photoboxsrc, photoboxdir)
@@ -626,7 +626,7 @@ def purge_thumbnails(thumbdir, thumblist, key):
 
 def markdown_to_html(args):
     title, posts = make_basic_index(args)
-    print_html(posts, title, os.path.join(args.input, 'index.htm'), 'regular')
+    print_html(posts, title, os.path.join(args.output, 'index.htm'), 'regular')
 
 
 # -- Addition of DCIM images --------------------------------------------------
@@ -657,7 +657,7 @@ def extend_index(args):
 
     bydate = defaultdict(list)
     thumbnails = list()
-    thumbdir = os.path.join(args.input, '.thumbnails')
+    thumbdir = os.path.join(args.output, '.thumbnails')
     for media_fullname in medias:
         date = date_from_item(media_fullname)  #  calculé deux fois
         if date in required_dates:
@@ -696,7 +696,7 @@ def extend_index(args):
         thumblist.extend([os.path.basename(media.thumb) for media in post.dcim])
     purge_thumbnails(thumbdir, thumblist, 'dcim')
 
-    print_html(posts, title, os.path.join(args.input, 'index-x.htm'), 'regular')
+    print_html(posts, title, os.path.join(args.output, 'index-x.htm'), 'regular')
 
 
 def list_of_files(sourcedir, recursive):
@@ -724,12 +724,16 @@ def list_of_medias(imgsource, recursive):
 
 
 def online_images_url(args):
-    with urlopen(args.urlblogger) as u:
-        buffer = u.read()
-        buffer = buffer.decode('utf-8')
+    if args.urlblogger.startswith('http:'):
+        with urlopen(args.urlblogger) as u:
+            buffer = u.read()
+    else:
+        with open(args.urlblogger, 'rb') as f:
+            buffer = f.read()
+    buffer = buffer.decode('utf-8')
 
     online_images = dict()
-    for match in re.finditer('<div class="separator".*?</div>', buffer, flags=re.DOTALL):
+    for match in re.finditer('<div class="separator"((?!<div).)*?</div>', buffer, flags=re.DOTALL):
         div_separator = match.group(0)
         div_separator = div_separator.replace('&nbsp;', '')
         elem_div = objectify.fromstring(div_separator)
@@ -859,7 +863,7 @@ def idempotence(args):
 # -- Main ---------------------------------------------------------------------
 
 
-def parse_command_line():
+def parse_command_line(argstring):
     parser = argparse.ArgumentParser(description=None, usage=USAGE)
 
     parser.add_argument('--create', help='create journal from medias in --imgsource',
@@ -900,7 +904,11 @@ def parse_command_line():
                         action='store_true')
     parser.add_argument('--url', dest='urlblogger', help='blogger post url',
                         action='store')
-    args = parser.parse_args()
+
+    if argstring is None:
+        args = parser.parse_args()
+    else:
+        args = parser.parse_args(argstring.split())
 
    # check and normalize paths
     if args.input:
@@ -909,6 +917,8 @@ def parse_command_line():
             error(f'** Directory not found: {args.input}')
     if args.output:
         args.output = os.path.abspath(args.output)
+    if args.output is None:
+        args.output = args.input
     if args.imgsource:
         args.imgsource = os.path.abspath(args.imgsource)
         if not os.path.isdir(args.imgsource):
@@ -928,9 +938,9 @@ def error(msg):
     sys.exit(1)
 
 
-def main():
+def main(argstring=None):
     locale.setlocale(locale.LC_TIME, '')
-    args = parse_command_line()
+    args = parse_command_line(argstring)
 
     if args.create:
         create_index(args)
