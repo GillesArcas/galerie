@@ -1,5 +1,7 @@
 import os
 import sys
+import shutil
+import glob
 # from journal import main
 import journal.journal
 
@@ -39,44 +41,95 @@ def directory_compare(dir1, dir2):
     return list_compare(dir1, dir2, list1, list2)
 
 
-def test1():
-    journal.journal.main('--idem --in ./ --out tmp')
-    return file_compare('index.md', 'tmp/index.md')
+def test1(mode):
+    if mode == 'ref':
+        return None
+    else:
+        journal.journal.main('--idem --in ./ --out tmp')
+        return file_compare('index.md', 'tmp/index.md')
 
 
-def test2():
-    journal.journal.main('--html --in ./ --out tmp')
-    return (
-        file_compare('index.htm', 'tmp/index.htm') and
-        directory_compare('.thumbnails', 'tmp/.thumbnails')
-    )
+def test2(mode):
+    if mode == 'ref':
+        journal.journal.main('--html --in ./ --out .')
+        return None
+    else:
+        journal.journal.main('--html --in ./ --out tmp')
+        return file_compare('index.htm', 'tmp/index.htm')
 
 
-def test3():
-    journal.journal.main('--extend --in ./ --out tmp --imgs . --flat')
-    return (
-        file_compare('index-x.htm', 'tmp/index-x.htm') and
-        directory_compare('.thumbnails', 'tmp/.thumbnails')
-    )
+def test3(mode):
+    if mode == 'ref':
+        journal.journal.main('--extend --in ./ --out . --imgs . --flat')
+        os.rename('index-x.htm', 'index-x-base.htm')
+        return None
+    else:
+        journal.journal.main('--extend --in ./ --out tmp --imgs . --flat')
+        return file_compare('index-x-base.htm', 'tmp/index-x.htm')
 
 
-TESTLIST = [test1, test2, test3]
+def test4(mode):
+    if mode == 'ref':
+        journal.journal.main('--extend --in ./ --out . --imgs . --flat --dates 20000101-20000110')
+        os.rename('index-x.htm', 'index-x-dates.htm')
+        return None
+    else:
+        journal.journal.main('--extend --in ./ --out tmp --imgs . --flat --dates 20000101-20000110')
+        return (
+            file_compare('index-x-dates.htm', 'tmp/index-x.htm') and
+            # .thumbnails is tested after the latter command modifying thumbnails
+            directory_compare('.thumbnails', 'tmp/.thumbnails')
+            )
+
+
+def test5(mode):
+    journal.journal.main('--create --out tmp --imgs . --flat')
+    if mode == 'ref':
+        return shutil.copyfile('tmp/index.md', 'index-create.md')
+    else:
+        return file_compare('index-create.md', 'tmp/index.md')
+
+
+def test6(mode):
+    # journal.journal.main('--blogger --in ./ --out tmp --imgs . --flat')
+    return True
+
+
+TESTLIST = [test1, test2, test3, test4, test5, test6]
 
 
 def main():
-    if not os.path.exists('tmp'):
-        os.mkdir('tmp')
-
-    result = sum(test() for test in TESTLIST)
-
-    if result == len(TESTLIST):
-        print('All tests ok')
-        sys.exit(0)
+    if sys.argv[1:] and sys.argv[1] == 'ref':
+        mode = 'ref'
     else:
-        print('Test failure (failed: %d)' % (len(TESTLIST) - result))
-        sys.exit(1)
+        mode = 'test'
 
-    # os.remove('tmp')
+    if os.path.exists('tmp'):
+        shutil.rmtree('tmp')
+    os.mkdir('tmp')
+
+    if mode == 'ref':
+        for fn in glob.glob('index*.*'):
+            if fn != 'index.md':
+                os.remove(fn)
+        for idx, test in enumerate(TESTLIST, 1):
+            print(f'Test #{idx}')
+            test('ref')
+        shutil.rmtree('tmp')
+    else:
+        nbtest = len(TESTLIST)
+        nbcorrect = 0
+        for idx, test in enumerate(TESTLIST, 1):
+            print(f'Test #{idx}')
+            nbcorrect += test('go')
+
+        if nbcorrect == len(TESTLIST):
+            print('All tests ok')
+            shutil.rmtree('tmp')
+            sys.exit(0)
+        else:
+            print('Test failure (%d/%d)' % (nbcorrect, nbtest))
+            sys.exit(1)
 
 
 main()
