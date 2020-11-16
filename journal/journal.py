@@ -126,9 +126,8 @@ CAPTION_PAT = '''\
 
 
 class Post:
-    def __init__(self, timestamp, title, text, photos):
+    def __init__(self, timestamp, text, photos):
         self.timestamp = timestamp
-        self.title = title
         self.text = text
         self.images = photos
         self.dcim = []
@@ -171,7 +170,7 @@ class Post:
             else:
                 medias.append(PostVideo(caption, media))
 
-        post = cls(None, None, text, medias)
+        post = cls(None, text, medias)
         post.date = date
         return post
 
@@ -578,7 +577,7 @@ def create_index(args):
         year, month, day = date[0:4], date[4:6], date[6:8]
         x = datetime(int(year), int(month), int(day))
         datetext = x.strftime("%A %d %B %Y").capitalize()
-        post = Post(None, title=None, text=datetext, photos=[])
+        post = Post(None, text=datetext, photos=[])
         post.date = f'{year}-{month}-{day}'
         posts.append(post)
 
@@ -686,7 +685,7 @@ def extend_index(args):
         year, month, day = date[0:4], date[4:6], date[6:8]
         x = datetime(int(year), int(month), int(day))
         datetext = x.strftime("%A %d %B %Y").capitalize()
-        newpost = Post(timestamp, title=None, text=datetext, photos=[])
+        newpost = Post(timestamp, text=datetext, photos=[])
         newpost.date = f'{year}-{month}-{day}'
         newpost.daterank = 1
         newpost.dcim = bydate[date]  # TODO: refait en dessous
