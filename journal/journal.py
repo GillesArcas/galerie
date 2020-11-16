@@ -126,10 +126,11 @@ CAPTION_PAT = '''\
 
 
 class Post:
-    def __init__(self, date, text, photos):
+    def __init__(self, date, text, medias):
+        # date: yyyymmdd
         self.date = date
         self.text = text
-        self.images = photos
+        self.images = medias
         self.dcim = []
         self.daterank = 0
 
@@ -140,7 +141,7 @@ class Post:
     def from_markdown(cls, post):
         m = re.match(r'\[([0-9/]{10})\]\n*', post[0])
         if m:
-            date = m.group(1).replace('/', '-')
+            date = m.group(1).replace('/', '')
             del post[0]
         else:
             error(f'No date in record {md_post}')
@@ -182,15 +183,17 @@ class Post:
         if self.text:
             html.append(markdown.markdown(self.text))
 
+        dashdate = f'{self.date[0:4]}-{self.date[4:6]}-{self.date[6:8]}'
+
         if self.images:
-            html.append(f'<div id="gallery-{self.date}-blog-{self.daterank}">')
+            html.append(f'<div id="gallery-{dashdate}-blog-{self.daterank}">')
             for media in self.images:
                 html.append(media.to_html_post())
             html.append('</div>')
 
         if self.dcim:
             html.append(SEP)
-            html.append(f'<div id="gallery-{self.date}-dcim-{self.daterank}">')
+            html.append(f'<div id="gallery-{dashdate}-dcim-{self.daterank}">')
             for media in self.dcim:
                 html.append(media.to_html_dcim())
             html.append('</div>')
@@ -304,7 +307,8 @@ def print_markdown(posts, title, fullname):
     with open(fullname, 'wt', encoding='utf-8') as fdst:
         print(f'# {title}\n', file=fdst)
         for post in posts:
-            print(f"[{post.date.replace('-', '/')}]", file=fdst)
+            date = f'[{post.date[0:4]}/{post.date[4:6]}/{post.date[6:8]}]'
+            print(date, file=fdst)
             if post.text:
                 print(file=fdst)
                 for line in post.text.splitlines():
@@ -347,10 +351,11 @@ def compose_html_full(posts, title, target):
 
     html.append('<script>')
     for post in posts:
+        dashdate = f'{post.date[0:4]}-{post.date[4:6]}-{post.date[6:8]}'
         if post.images:
-            html.append(GALLERYCALL % f'gallery-{post.date}-blog-{post.daterank}')
+            html.append(GALLERYCALL % f'gallery-{dashdate}-blog-{post.daterank}')
         if post.dcim:
-            html.append(GALLERYCALL % f'gallery-{post.date}-dcim-{post.daterank}')
+            html.append(GALLERYCALL % f'gallery-{dashdate}-dcim-{post.daterank}')
     html.append('</script>')
 
     html.append(END)
@@ -571,10 +576,8 @@ def create_index(args):
     title = args.imgsource
     posts = list()
     for date in sorted(required_dates):
-        year, month, day = date[0:4], date[4:6], date[6:8]
-        x = datetime(int(year), int(month), int(day))
-        date = f'{year}-{month}-{day}'
-        datetext = x.strftime("%A %d %B %Y").capitalize()
+        dt = datetime.strptime(date, '%Y%m%d')
+        datetext = dt.strftime("%A %d %B %Y").capitalize()
         post = Post(date, text=datetext, photos=[])
         posts.append(post)
 
@@ -678,11 +681,8 @@ def extend_index(args):
 
     # complete posts with extra dates from args.dates
     for date in extradates:
-        timestamp = time.mktime(time.strptime(date, '%Y%m%d'))
-        year, month, day = date[0:4], date[4:6], date[6:8]
-        x = datetime(int(year), int(month), int(day))
-        datetext = x.strftime("%A %d %B %Y").capitalize()
-        date = f'{year}-{month}-{day}'
+        dt = datetime.strptime(date, '%Y%m%d')
+        datetext = dt.strftime("%A %d %B %Y").capitalize()
         newpost = Post(date, text=datetext, photos=[])
         newpost.daterank = 1
         newpost.dcim = bydate[date]  # TODO: refait en dessous
