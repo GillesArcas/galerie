@@ -167,9 +167,9 @@ class Post:
                 caption = post[0].strip()
                 del post[0]
             if match.group(0)[0] == '!':
-                medias.append(PostImage(caption, media, None))
+                medias.append(PostImage(caption, media))
             else:
-                medias.append(PostVideo(caption, media, None))
+                medias.append(PostVideo(caption, media))
 
         post = cls(None, None, text, medias)
         post.date = date
@@ -212,11 +212,10 @@ class Post:
 
 
 class PostImage:
-    def __init__(self, caption, uri, creation, thumb=None, descr=''):
+    def __init__(self, caption, uri, thumb=None, descr=''):
         self.caption = caption
         self.uri = uri
         self.basename = os.path.basename(uri)
-        self.creation = creation
         self.thumb = thumb
         self.descr = descr
         self.resized_url = None
@@ -536,7 +535,7 @@ def create_item(media_fullname, thumbdir, key):
             info, infofmt = get_image_info(media_fullname)
             infofmt = media_basename + ': ' + infofmt
             make_thumbnail(media_fullname, thumb_fullname, (300, 300))
-            item = PostImage(None, media_fullname, None, '/'.join(('.thumbnails', thumb_basename)), infofmt)
+            item = PostImage(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)), infofmt)
         except PIL.UnidentifiedImageError:
             # corrupted image
             warning(f'** Unable to read image {media_fullname}')
@@ -548,7 +547,7 @@ def create_item(media_fullname, thumbdir, key):
         infofmt = media_basename + ': ' + infofmt
         thumbheight = int(round(300 * int(info[3]) / int(info[2])))
         make_thumbnail_video(media_fullname, thumb_fullname, (300, thumbheight))
-        item = PostVideo(None, media_fullname, None, '/'.join(('.thumbnails', thumb_basename)), infofmt)
+        item = PostVideo(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)), infofmt)
     return item, thumb_fullname
 
 
