@@ -19,14 +19,12 @@ import glob
 import shutil
 import re
 import io
-import time
 import bisect
 import locale
 import textwrap
-import html
 import base64
+import datetime
 from collections import defaultdict
-from datetime import date, datetime
 from subprocess import check_output, CalledProcessError, STDOUT
 from urllib.request import urlopen
 
@@ -144,7 +142,7 @@ class Post:
             date = m.group(1).replace('/', '')
             del post[0]
         else:
-            error(f'No date in record {md_post}')
+            error(f'No date in record {post}')
 
         while post and not post[0].strip():
             del post[0]
@@ -388,7 +386,7 @@ def date_from_name(name):
     if match := re.search(r'(?:[^0-9]|^)(\d{8})([^0-9]|$)', name):
         digits = match.group(1)
         year, month, day = int(digits[0:4]), int(digits[4:6]), int(digits[6:8])
-        if 2000 <= year <= date.today().year and 1 <= month <= 12 and 1 <= day <= 31:
+        if 2000 <= year <= datetime.date.today().year and 1 <= month <= 12 and 1 <= day <= 31:
             return digits
         else:
             return None
@@ -401,7 +399,7 @@ def date_from_item(filename):
         return date
     else:
         timestamp = os.path.getmtime(filename)
-        return datetime.fromtimestamp(timestamp).strftime('%Y%m%d')
+        return datetime.datetime.fromtimestamp(timestamp).strftime('%Y%m%d')
 
 
 def time_from_name(name):
@@ -422,7 +420,7 @@ def time_from_item(filename):
         return time
     else:
         timestamp = os.path.getmtime(filename)
-        return datetime.fromtimestamp(timestamp).strftime('%H%M%S')
+        return datetime.datetime.fromtimestamp(timestamp).strftime('%H%M%S')
 
 
 COMMAND = '''\
@@ -573,7 +571,7 @@ def create_index(args):
     title = args.imgsource
     posts = list()
     for date in sorted(required_dates):
-        dt = datetime.strptime(date, '%Y%m%d')
+        dt = datetime.datetime.strptime(date, '%Y%m%d')
         datetext = dt.strftime("%A %d %B %Y").capitalize()
         post = Post(date, text=datetext, medias=[])
         posts.append(post)
@@ -678,7 +676,7 @@ def extend_index(args):
 
     # complete posts with extra dates from args.dates
     for date in extradates:
-        dt = datetime.strptime(date, '%Y%m%d')
+        dt = datetime.datetime.strptime(date, '%Y%m%d')
         datetext = dt.strftime("%A %d %B %Y").capitalize()
         newpost = Post(date, text=datetext, medias=[])
         newpost.daterank = 1
@@ -790,7 +788,7 @@ def check_images(args, posts, online_images):
     return result
 
 
-def compose_blogger_html(args, title, posts, imgdata, online_videos):
+def compose_blogger_html(title, posts, imgdata, online_videos):
     """ Compose html with blogger image urls
     """
     for post in posts:
@@ -804,7 +802,7 @@ def compose_blogger_html(args, title, posts, imgdata, online_videos):
                     media.resized_url = resized_url
             elif type(media) is PostVideo:
                 if not online_videos:
-                   print('Video missing: ', media.uri)
+                    print('Video missing: ', media.uri)
                 else:
                     media.iframe = online_videos[0]
                     del online_videos[0]
@@ -826,7 +824,7 @@ def prepare_for_blogger(args):
     if args.check_images and check_images(args, posts, online_images) is False:
         pass
 
-    html = compose_blogger_html(args, title, posts, online_images, online_videos)
+    html = compose_blogger_html(title, posts, online_images, online_videos)
 
     if args.full is False:
         html = re.search('<body>(.*)?</body>', html, flags=re.DOTALL).group(1)
@@ -925,7 +923,7 @@ def parse_command_line(argstring):
         if not os.path.isdir(args.imgsource):
             error(f'** Directory not found: {args.imgsource}')
     if args.blogger and args.urlblogger is None:
-        error(f'** Give blogger url with --url')
+        error('** Give blogger url with --url')
 
     return args
 
