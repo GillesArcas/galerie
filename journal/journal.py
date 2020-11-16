@@ -130,7 +130,7 @@ class Post:
         # date: yyyymmdd
         self.date = date
         self.text = text
-        self.images = medias
+        self.medias = medias
         self.dcim = []
         self.daterank = 0
 
@@ -183,9 +183,9 @@ class Post:
         if self.text:
             html.append(markdown.markdown(self.text))
 
-        if self.images:
+        if self.medias:
             html.append(f'<div id="gallery-{self.date}-blog-{self.daterank}">')
-            for media in self.images:
+            for media in self.medias:
                 html.append(media.to_html_post())
             html.append('</div>')
 
@@ -202,7 +202,7 @@ class Post:
     def to_html_blogger(self):
         html = list()
         html.append(markdown.markdown(self.text))
-        for image in self.images:
+        for image in self.medias:
             html.append(image.to_html_blogger())
         html.append(SEP)
         return html
@@ -315,9 +315,9 @@ def print_markdown(posts, title, fullname):
                     else:
                         for chunk in textwrap.wrap(line, width=78):
                             print(chunk, file=fdst)
-            if post.images:
+            if post.medias:
                 print(file=fdst)
-                for media in post.images:
+                for media in post.medias:
                     print(media.to_markdown(), file=fdst)
             print('______', file=fdst)
 
@@ -349,7 +349,7 @@ def compose_html_full(posts, title, target):
 
     html.append('<script>')
     for post in posts:
-        if post.images:
+        if post.medias:
             html.append(GALLERYCALL % f'gallery-{post.date}-blog-{post.daterank}')
         if post.dcim:
             html.append(GALLERYCALL % f'gallery-{post.date}-dcim-{post.daterank}')
@@ -606,7 +606,7 @@ def make_basic_index(args):
         posts = list()
 
     for post in posts:
-        for media in post.images:
+        for media in post.medias:
             media_fullname = os.path.join(args.input, media.uri)
             item, _ = create_item(media_fullname, thumbdir, 'post')
             media.thumb = '/'.join(('.thumbnails', os.path.basename(item.thumb)))
@@ -614,7 +614,7 @@ def make_basic_index(args):
 
     thumblist = []
     for post in posts:
-        thumblist.extend([os.path.basename(media.thumb) for media in post.images])
+        thumblist.extend([os.path.basename(media.thumb) for media in post.medias])
     purge_thumbnails(thumbdir, thumblist, 'post')
 
     return title, posts
@@ -633,7 +633,7 @@ def markdown_to_html(args):
     print_html(posts, title, os.path.join(args.output, 'index.htm'), 'regular')
 
 
-# -- Addition of DCIM images --------------------------------------------------
+# -- Addition of DCIM medias --------------------------------------------------
 
 
 def extend_index(args):
@@ -642,7 +642,7 @@ def extend_index(args):
     # list of all pictures and movies
     medias = list_of_medias(args.imgsource, args.recursive)
 
-    # list of required dates (the DCIM directory can contain images not related
+    # list of required dates (the DCIM directory can contain medias not related
     # with the current page (e.g. two pages for the same image directory)
     if args.dates:
         date1, date2 = args.dates.split('-')
@@ -685,7 +685,7 @@ def extend_index(args):
         newpost.dcim = bydate[date]  # TODO: refait en dessous
         bisect.insort(posts, newpost)
 
-    # several posts can have the same date, only the first one is completed with dcim images
+    # several posts can have the same date, only the first one is completed with dcim medias
     for post in posts:
         if post.daterank == 1:
             date = post.date
@@ -763,7 +763,7 @@ def compare_image_buffers(imgbuf1, imgbuf2):
 def check_images(args, posts, online_images):
     result = True
     for post in posts:
-        for media in post.images:
+        for media in post.medias:
             if type(media) is PostImage:
                 if media.basename in online_images:
                     with open(os.path.join(args.input, media.uri), 'rb') as f:
@@ -794,7 +794,7 @@ def compose_blogger_html(args, title, posts, imgdata, online_videos):
     """ Compose html with blogger image urls
     """
     for post in posts:
-        for media in post.images:
+        for media in post.medias:
             if type(media) is PostImage:
                 if media.uri not in imgdata:
                     print('Image missing: ', media.uri)
@@ -841,7 +841,7 @@ def prepare_for_blogger(args):
 
 def rename_images(posts, path):
     for post in posts:
-        for image in post.images:
+        for image in post.medias:
             try:
                 seqname = post.date + '-' + post.daterank + os.path.splitext(image.uri)[1]
                 os.rename(os.path.join(path, image.uri), os.path.join(path, seqname))
@@ -901,7 +901,7 @@ def parse_command_line(argstring):
 
     parser.add_argument('--full', help='full html (versus blogger ready html)',
                         action='store_true', default=False)
-    parser.add_argument('--check', dest='check_images', help='check availability of images on blogger',
+    parser.add_argument('--check', dest='check_images', help='check availability of medias on blogger',
                         action='store_true')
     parser.add_argument('--url', dest='urlblogger', help='blogger post url',
                         action='store')
