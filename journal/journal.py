@@ -126,12 +126,11 @@ CAPTION_PAT = '''\
 
 
 class Post:
-    def __init__(self, timestamp, text, photos):
-        self.timestamp = timestamp
+    def __init__(self, date, text, photos):
+        self.date = date
         self.text = text
         self.images = photos
         self.dcim = []
-        self.date = None
         self.daterank = 0
 
     def __lt__(self, other):
@@ -170,9 +169,7 @@ class Post:
             else:
                 medias.append(PostVideo(caption, media))
 
-        post = cls(None, text, medias)
-        post.date = date
-        return post
+        return cls(date, text, medias)
 
     def to_html(self, target='regular'):
         if target == 'regular':
@@ -576,9 +573,9 @@ def create_index(args):
     for date in sorted(required_dates):
         year, month, day = date[0:4], date[4:6], date[6:8]
         x = datetime(int(year), int(month), int(day))
+        date = f'{year}-{month}-{day}'
         datetext = x.strftime("%A %d %B %Y").capitalize()
-        post = Post(None, text=datetext, photos=[])
-        post.date = f'{year}-{month}-{day}'
+        post = Post(date, text=datetext, photos=[])
         posts.append(post)
 
     os.makedirs(args.output, exist_ok=True)
@@ -685,8 +682,8 @@ def extend_index(args):
         year, month, day = date[0:4], date[4:6], date[6:8]
         x = datetime(int(year), int(month), int(day))
         datetext = x.strftime("%A %d %B %Y").capitalize()
-        newpost = Post(timestamp, text=datetext, photos=[])
-        newpost.date = f'{year}-{month}-{day}'
+        date = f'{year}-{month}-{day}'
+        newpost = Post(date, text=datetext, photos=[])
         newpost.daterank = 1
         newpost.dcim = bydate[date]  # TODO: refait en dessous
         bisect.insort(posts, newpost)
