@@ -87,22 +87,22 @@ GALLERYCALL = "$('#%s').photobox('a', { thumbs:true, time:0, history:false, loop
 
 END = '</body>\n</html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
-IMGPOST = '<a href="%s"><img src="%s" width="400" title="%s"/></a>'
-VIDPOST = '<a href="%s" rel="video"><img src="%s" width="400" title="%s"/></a>'
+IMGPOST = '<a href="%s"><img src="%s" width="%d" height="%d" title="%s"/></a>'
+VIDPOST = '<a href="%s" rel="video"><img src="%s" width="%d" height="%d" title="%s"/></a>'
 IMGPOSTCAPTION = '''\
 <span>
-<a href="%s"><img src=%s width="400" title="%s"/></a>
+<a href="%s"><img src=%s width="%d" height="%d" title="%s"/></a>
 <p>%s</p>
 </span>
 '''
 VIDPOSTCAPTION = '''\
 <span>
-<a href="%s" rel="video"><img src=%s width="400" title="%s"/></a>
+<a href="%s" rel="video"><img src=%s width="%d" height="%d" title="%s"/></a>
 <p>%s</p>
 </span>
 '''
-IMGDCIM = '<a href="file:///%s"><img src="%s" width="300" title="%s"/></a>'
-VIDDCIM = '<a href="file:///%s" rel="video"><img src="%s" width="300" title="%s"/></a>'
+IMGDCIM = '<a href="file:///%s"><img src="%s" width="%d" height="%d" title="%s"/></a>'
+VIDDCIM = '<a href="file:///%s" rel="video"><img src="%s" width="%d" height="%d" title="%s"/></a>'
 
 # diminution de l'espace entre images, on utilise :
 # "display: block;", "margin-bottom: 0em;" et "font-size: 0;"
@@ -214,11 +214,12 @@ class Post:
 
 
 class PostImage:
-    def __init__(self, caption, uri, thumb=None, descr=''):
+    def __init__(self, caption, uri, thumb=None, thumbsize=None, descr=''):
         self.caption = caption
         self.uri = uri
         self.basename = os.path.basename(uri)
         self.thumb = thumb
+        self.thumbsize = thumbsize
         self.descr = descr
         self.resized_url = None
 
@@ -230,12 +231,12 @@ class PostImage:
 
     def to_html_post(self):
         if not self.caption:
-            return IMGPOST % (self.uri, self.thumb, self.descr)
+            return IMGPOST % (self.uri, self.thumb, *self.thumbsize, self.descr)
         else:
-            return IMGPOSTCAPTION % (self.uri, self.thumb, self.descr, self.caption)
+            return IMGPOSTCAPTION % (self.uri, self.thumb, *self.thumbsize, self.descr, self.caption)
 
     def to_html_dcim(self):
-        return IMGDCIM % (self.uri, self.thumb, self.descr)
+        return IMGDCIM % (self.uri, self.thumb, *self.thumbsize, self.descr)
 
     def to_html_blogger(self):
         if not self.caption:
@@ -253,12 +254,12 @@ class PostVideo(PostImage):
 
     def to_html_post(self):
         if not self.caption:
-            return VIDPOST % (self.uri, self.thumb, self.descr)
+            return VIDPOST % (self.uri, self.thumb, *self.thumbsize, self.descr)
         else:
-            return VIDPOSTCAPTION % (self.uri, self.thumb, self.descr, self.caption)
+            return VIDPOSTCAPTION % (self.uri, self.thumb, *self.thumbsize, self.descr, self.caption)
 
     def to_html_dcim(self):
-        return VIDDCIM % (self.uri, self.thumb, self.descr)
+        return VIDDCIM % (self.uri, self.thumb, *self.thumbsize, self.descr)
 
     def to_html_blogger(self):
         x = f'<p style="text-align: center;">{self.iframe}</p>'
@@ -275,37 +276,36 @@ def parse_markdown(filename):
     """
     Generate Post objects from markdown. Posts must be ordrered by date.
     """
-    title = None
-    posts = list()
     if not os.path.exists(filename):
-        print('/!\\', 'File not found:', filename)
-    else:
-        with open(filename, encoding='utf-8') as f:
-            line = next(f)
-            if line.startswith('# '):
-                title = line[2:].strip()
-                record = []
-                next(f)
-            else:
-                title = None
-                record = [line]
-            for line in f:
-                if '___' not in line:
-                    record.append(line)
-                else:
-                    posts.append(Post.from_markdown(record))
-                    record = []
+        error(f'** File not found: {filename}')
 
-        # set rank of posts in date
-        daterank = defaultdict(int)
-        for post in posts:
-            daterank[post.date] += 1
-            post.daterank = daterank[post.date]
-            
-        # check post order
-        for post1, post2 in zip(posts[:-1], posts[1:]):
-            if post1.date > post2.date:
-                error(f'** Posts are not ordered: {post1.date} > {post2.date}')
+    posts = list()
+    with open(filename, encoding='utf-8') as f:
+        line = next(f)
+        if line.startswith('# '):
+            title = line[2:].strip()
+            record = []
+            next(f)
+        else:
+            title = None
+            record = [line]
+        for line in f:
+            if '___' not in line:
+                record.append(line)
+            else:
+                posts.append(Post.from_markdown(record))
+                record = []
+
+    # set rank of posts in date
+    daterank = defaultdict(int)
+    for post in posts:
+        daterank[post.date] += 1
+        post.daterank = daterank[post.date]
+
+    # check post order
+    for post1, post2 in zip(posts[:-1], posts[1:]):
+        if post1.date > post2.date:
+            error(f'** Posts are not ordered: {post1.date} > {post2.date}')
 
     return title, posts
 
@@ -461,8 +461,8 @@ def get_video_info(filename):
     try:
         output = check_output(command, stderr=STDOUT).decode()
         match = re.match(r'(\d+),(\d+),(\d+)/(\d+),(\d+)/(\d+)\s*(\d+\.\d+)', output)
-        width = match.group(1)
-        height = match.group(2)
+        width = int(match.group(1))
+        height = int(match.group(2))
         fps = round(int(match.group(3)) / int(match.group(4)), 1)
         duration = round(float(match.group(7)))
         size = round(os.path.getsize(filename) / 1e6, 1)
@@ -477,6 +477,13 @@ def get_video_info(filename):
 # -- Thumbnails (image and video) ---------------------------------------------
 
 
+def size_thumbnail(width, height, maxdim):
+    if width >= height:
+        return maxdim, int(round(maxdim * height / width))
+    else:
+        return int(round(maxdim * width / height)), maxdim
+
+
 def make_thumbnail(image_name, thumb_name, size):
     if os.path.exists(thumb_name):
         pass
@@ -488,16 +495,13 @@ def make_thumbnail(image_name, thumb_name, size):
 def create_thumbnail(image_name, thumb_name, size):
     imgobj = Image.open(image_name)
 
-    # fix for downscaled images and some GIFs per above [1.7]
-    if (imgobj.mode != 'RGBA' and image_name.endswith('jpg')
-                              and not (image_name.endswith('gif') and imgobj.info.get('transparency'))):
+    if (imgobj.mode != 'RGBA'
+        and image_name.endswith('jpg')
+        and not (image_name.endswith('gif') and imgobj.info.get('transparency'))
+       ):
         imgobj = imgobj.convert('RGBA')
 
-    if hasattr(Image, 'LANCZOS'):                 # best downsize filter [2018]
-        imgobj.thumbnail(size, Image.LANCZOS)     # but newer Pillows only
-    else:
-        imgobj.thumbnail(size, Image.ANTIALIAS)   # original filter
-
+    imgobj.thumbnail(size, Image.LANCZOS)
     imgobj = imgobj.convert('RGB')
     imgobj.save(thumb_name)
 
@@ -535,7 +539,7 @@ def create_thumbnail_video(filename, thumbname, size):
     img1.save(thumbname)
 
 
-def create_item(media_fullname, thumbdir, key):
+def create_item(media_fullname, thumbdir, key, thumbmax):
     media_basename = os.path.basename(media_fullname)
     if media_basename.lower().endswith('.jpg'):
         thumb_basename = key + '-' + media_basename
@@ -543,8 +547,10 @@ def create_item(media_fullname, thumbdir, key):
         try:
             info, infofmt = get_image_info(media_fullname)
             infofmt = media_basename + ': ' + infofmt
-            make_thumbnail(media_fullname, thumb_fullname, (300, 300))
-            item = PostImage(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)), infofmt)
+            thumbsize = size_thumbnail(info[2], info[3], thumbmax)
+            make_thumbnail(media_fullname, thumb_fullname, thumbsize)
+            item = PostImage(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
+                            thumbsize, infofmt)
         except PIL.UnidentifiedImageError:
             # corrupted image
             warning(f'** Unable to read image {media_fullname}')
@@ -554,9 +560,10 @@ def create_item(media_fullname, thumbdir, key):
         thumb_fullname = os.path.join(thumbdir, thumb_basename)
         info, infofmt = get_video_info(media_fullname)
         infofmt = media_basename + ': ' + infofmt
-        thumbheight = int(round(300 * int(info[3]) / int(info[2])))
-        make_thumbnail_video(media_fullname, thumb_fullname, (300, thumbheight))
-        item = PostVideo(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)), infofmt)
+        thumbsize = size_thumbnail(info[2], info[3], thumbmax)
+        make_thumbnail_video(media_fullname, thumb_fullname, thumbsize)
+        item = PostVideo(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
+                        thumbsize, infofmt)
     return item, thumb_fullname
 
 
@@ -616,8 +623,9 @@ def make_basic_index(args):
     for post in posts:
         for media in post.medias:
             media_fullname = os.path.join(args.input, media.uri)
-            item, _ = create_item(media_fullname, thumbdir, 'post')
+            item, _ = create_item(media_fullname, thumbdir, 'post', 400)
             media.thumb = '/'.join(('.thumbnails', os.path.basename(item.thumb)))
+            media.thumbsize = item.thumbsize
             media.descr = item.descr
 
     thumblist = []
@@ -670,7 +678,7 @@ def extend_index(args):
     for media_fullname in medias:
         date = date_from_item(media_fullname)  #  calculé deux fois
         if date in required_dates:
-            item, thumb_fullname = create_item(media_fullname, thumbdir, 'dcim')
+            item, thumb_fullname = create_item(media_fullname, thumbdir, 'dcim', 300)
             if item:
                 bydate[date].append(item)
                 thumbnails.append(thumb_fullname)
