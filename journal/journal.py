@@ -170,6 +170,14 @@ class Post:
 
         return cls(date, text, medias)
 
+    @classmethod
+    def from_date(cls, date):
+        dt = datetime.datetime.strptime(date, '%Y%m%d')
+        datetext = dt.strftime("%A %d %B %Y").capitalize()
+        post = cls(date, text=datetext, medias=[])
+        post.daterank = 1
+        return post
+
     def to_html(self, target='regular'):
         if target == 'regular':
             return self.to_html_regular()
@@ -571,10 +579,7 @@ def create_index(args):
     title = args.imgsource
     posts = list()
     for date in sorted(required_dates):
-        dt = datetime.datetime.strptime(date, '%Y%m%d')
-        datetext = dt.strftime("%A %d %B %Y").capitalize()
-        post = Post(date, text=datetext, medias=[])
-        posts.append(post)
+        posts.append(Post.from_date(date))
 
     os.makedirs(args.output, exist_ok=True)
     print_markdown(posts, title, os.path.join(args.output, 'index.md'))
@@ -653,9 +658,7 @@ def extend_index(args):
         required_dates = set()
         for post in posts:
             if post.date:
-                date = post.date
-                date = date.replace('-', '')
-                required_dates.add(date)
+                required_dates.add(post.date)
 
     bydate = defaultdict(list)
     thumbnails = list()
@@ -672,23 +675,16 @@ def extend_index(args):
         liste.sort(key=lambda item: time_from_item(item.uri))
 
     # make list of extra dates (not in posts)
-    extradates = required_dates - {post.date.replace('-', '') for post in posts}
+    extradates = required_dates - {post.date for post in posts}
 
     # complete posts with extra dates from args.dates
     for date in extradates:
-        dt = datetime.datetime.strptime(date, '%Y%m%d')
-        datetext = dt.strftime("%A %d %B %Y").capitalize()
-        newpost = Post(date, text=datetext, medias=[])
-        newpost.daterank = 1
-        newpost.dcim = bydate[date]  # TODO: refait en dessous
-        bisect.insort(posts, newpost)
+        bisect.insort(posts, Post.from_date(date))
 
     # several posts can have the same date, only the first one is completed with dcim medias
     for post in posts:
         if post.daterank == 1:
-            date = post.date
-            date = date.replace('-', '')
-            post.dcim = bydate[date]
+            post.dcim = bydate[post.date]
 
     thumblist = []
     for post in posts:
