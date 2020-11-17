@@ -39,7 +39,6 @@ USAGE = """
 journal --create     --output <directory> --imgsource <media directory>
 journal --html       --input  <directory>
 journal --extend     --input  <directory> --imgsource <media directory>
-journal --rename_img --input  <directory>
 journal --blogger    --input  <directory> --url <url> [--check] [--full]
 """
 
@@ -54,16 +53,16 @@ ykr+ffNFdd8Ev0NPGIt7GFKKP3xfx+DEILCvhaGEBWiw19IPHMeCGQScJEH2rF36////Kf+/f/+eDG
 QsXcv4f+p1gRfZhkDzz0+V+KCZzQAUfv8fCr4DMcQdSAAA+dJRILrFW04AAAAASUVORK5CYII='''
 
 CAPTION_IMAGE_STYLE = '''\
-    <style type="text/css">
-        span { display:inline-table; }
-     </style>\
+<style type="text/css">
+    span { display:inline-table; }
+ </style>\
 '''
 
 STYLE = '''\
-    <style type="text/css">
-        p { margin-top:0px; margin-bottom:0px; }
-        h3 { font-size: 100%%; font-weight: bold; margin-top:0px; margin-bottom:0px; }
-     </style>\
+<style type="text/css">
+    p { margin-top:0px; margin-bottom:0px; }
+    h3 { font-size: 100%%; font-weight: bold; margin-top:0px; margin-bottom:0px; }
+ </style>
 '''
 
 START = f'''\
@@ -274,7 +273,7 @@ class PostVideo(PostImage):
 
 def parse_markdown(filename):
     """
-    Generate Post objects from markdown. Posts are in chronological order.
+    Generate Post objects from markdown. Posts must be ordrered by date.
     """
     title = None
     posts = list()
@@ -297,10 +296,16 @@ def parse_markdown(filename):
                     posts.append(Post.from_markdown(record))
                     record = []
 
+        # set rank of posts in date
         daterank = defaultdict(int)
         for post in posts:
             daterank[post.date] += 1
             post.daterank = daterank[post.date]
+            
+        # check post order
+        for post1, post2 in zip(posts[:-1], posts[1:]):
+            if post1.date > post2.date:
+                error(f'** Posts are not ordered: {post1.date} > {post2.date}')
 
     return title, posts
 
@@ -647,15 +652,14 @@ def extend_index(args):
 
     # list of required dates (the DCIM directory can contain medias not related
     # with the current page (e.g. two pages for the same image directory)
+    required_dates = set()
     if args.dates:
         date1, date2 = args.dates.split('-')
-        required_dates = set()
         for media in medias:
             date = date_from_item(media)
             if date1 <= date <= date2:
                 required_dates.add(date)
     else:
-        required_dates = set()
         for post in posts:
             if post.date:
                 required_dates.add(post.date)
@@ -833,23 +837,6 @@ def prepare_for_blogger(args):
 # -- Other commands -----------------------------------------------------------
 
 
-def rename_images(posts, path):
-    for post in posts:
-        for image in post.medias:
-            try:
-                seqname = post.date + '-' + post.daterank + os.path.splitext(image.uri)[1]
-                os.rename(os.path.join(path, image.uri), os.path.join(path, seqname))
-                image.uri = image.seqname
-            except IOError:
-                print('Unable to rename:', os.path.join(path, image.uri), '-->', os.path.join(path, seqname))
-
-
-def rename_images_cmd(args):
-    title, posts = parse_markdown(os.path.join(args.input, 'index.md'))
-    rename_images(posts, args.input)
-    print_markdown(posts, title, os.path.join(args.input, 'index.md'))
-
-
 def idempotence(args):
     title, posts = parse_markdown(os.path.join(args.input, 'index.md'))
     print_markdown(posts, title, os.path.join(args.output, 'index.md'))
@@ -870,8 +857,6 @@ def parse_command_line(argstring):
     parser.add_argument('--blogger', dest='blogger',
                         help='input md, html blogger ready in clipboard',
                         action='store_true', default=False)
-    parser.add_argument('--rename_img', help='fix photo names renaming as date+index',
-                        action='store_true', default=None)
 
     parser.add_argument('--idem', help='',
                         action='store_true', default=False)
@@ -945,9 +930,6 @@ def main(argstring=None):
 
     elif args.extend:
         extend_index(args)
-
-    elif args.rename_img:
-        rename_images_cmd(args)
 
     elif args.blogger:
         prepare_for_blogger(args)
