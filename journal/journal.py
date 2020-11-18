@@ -731,7 +731,7 @@ def list_of_medias(imgsource, recursive):
 
 
 def online_images_url(args):
-    if args.urlblogger.startswith('http:'):
+    if args.urlblogger.startswith('http:') or args.urlblogger.startswith('https:'):
         with urlopen(args.urlblogger) as u:
             buffer = u.read()
     else:
