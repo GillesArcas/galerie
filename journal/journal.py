@@ -141,7 +141,7 @@ class Post:
             date = m.group(1).replace('/', '')
             del post[0]
         else:
-            error(f'No date in record {post}')
+            error('No date in record', post)
 
         while post and not post[0].strip():
             del post[0]
@@ -278,7 +278,7 @@ def parse_markdown(filename):
     posts must be ordrered by date.
     """
     if not os.path.exists(filename):
-        error(f'** File not found: {filename}')
+        error('File not found', filename)
 
     posts = list()
     with open(filename, encoding='utf-8') as f:
@@ -306,7 +306,7 @@ def parse_markdown(filename):
     # check post order
     for post1, post2 in zip(posts[:-1], posts[1:]):
         if post1.date > post2.date:
-            error(f'** Posts are not ordered: {post1.date} > {post2.date}')
+            error('Posts are not ordered', f'{post1.date} > {post2.date}')
 
     return title, posts
 
@@ -604,7 +604,7 @@ def make_basic_index(args):
         try:
             check_output([exe, '-version'])
         except FileNotFoundError:
-            error(f'File not found: {exe}')
+            error('File not found', exe)
 
     thumbdir = os.path.join(args.output, '.thumbnails')
     if not os.path.exists(thumbdir):
@@ -622,7 +622,7 @@ def make_basic_index(args):
         title = os.path.basename(args.input)
         posts = list()
     else:
-        error(f'** File not found: {md_filename}')
+        error('File not found', md_filename)
 
     for post in posts:
         for media in post.medias:
@@ -743,7 +743,7 @@ def online_images_url(args):
             with open(args.urlblogger, 'rb') as f:
                 buffer = f.read()
     except:
-        error(f'** Unable to read url {args.urlblogger}')
+        error('Unable to read url', args.urlblogger)
     buffer = buffer.decode('utf-8')
 
     online_images = dict()
@@ -909,7 +909,7 @@ def parse_command_line(argstring):
     if args.input:
         args.input = os.path.abspath(args.input)
         if not os.path.isdir(args.input):
-            error(f'** Directory not found: {args.input}')
+            error('Directory not found', args.input)
     if args.output:
         args.output = os.path.abspath(args.output)
     if args.output is None:
@@ -917,9 +917,9 @@ def parse_command_line(argstring):
     if args.imgsource:
         args.imgsource = os.path.abspath(args.imgsource)
         if not os.path.isdir(args.imgsource):
-            error(f'** Directory not found: {args.imgsource}')
+            error('Directory not found', args.imgsource)
     if args.blogger and args.urlblogger is None:
-        error('** Give blogger url with --url')
+        error('Give blogger url')
 
     return args
 
@@ -928,9 +928,24 @@ def warning(msg):
     print(msg)
 
 
-def error(msg):
-    print(msg)
-    sys.exit(1)
+# Every error message error must be declared here to give a return code to the error
+ERRORS = '''\
+File not found
+Directory not found
+No date in record
+Posts are not ordered
+Unable to read url
+Give blogger url
+'''
+
+
+def errorcode(msg):
+    return ERRORS.splitlines().index(msg) + 1
+
+
+def error(*msg):
+    print('**', ' '.join(msg))
+    sys.exit(errorcode(msg[0]))
 
 
 def main(argstring=None):

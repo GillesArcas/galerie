@@ -53,8 +53,11 @@ def test_01_idem(mode):
 
 
 def test_01_idem_no_md_file(mode):
-    journal.main('--idem --in ./no_md_file')
-    return None
+    try:
+        journal.main('--idem --in ./no_md_file')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == journal.errorcode('File not found')
 
 
 def test_02_html(mode):
@@ -67,8 +70,11 @@ def test_02_html(mode):
 
 
 def test_02_html_no_md_file(mode):
-    journal.main('--html --in ./no_md_file')
-    return None
+    try:
+        journal.main('--html --in ./no_md_file')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == journal.errorcode('File not found')
 
 
 def test_03_ext(mode):
@@ -136,28 +142,35 @@ def test_blogger(mode):
 
 
 def test_dir_input_not_found(mode):
-    journal.main('--html --in foobar --out .')
-    return None
+    try:
+        journal.main('--html --in foobar --out .')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == journal.errorcode('Directory not found')
 
 
 def test_dir_imgsource_not_found(mode):
-    journal.main('--extend --in ./ --out . --imgs foobar')
-    return None
+    try:
+        journal.main('--extend --in ./ --out . --imgs foobar')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == journal.errorcode('Directory not found')
 
 
 def test_url_blogger_not_given(mode):
-    journal.main('--blogger --in ./')
-    return None
+    try:
+        journal.main('--blogger --in ./')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == journal.errorcode('Give blogger url')
 
 
 def test_url_blogger_not_read(mode):
-    journal.main('--blogger --in ./ --url foobar')
-    return None
-
-
-# def test_md_not_found(mode):
-#     journal.main('--html --in ./empty')
-#     return None
+    try:
+        journal.main('--blogger --in ./ --url foobar')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == journal.errorcode('Unable to read url')
 
 
 def testfunctions():
