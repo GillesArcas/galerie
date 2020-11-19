@@ -178,13 +178,6 @@ def testfunctions():
                 if (inspect.isfunction(obj) and name.startswith('test_'))]
 
 
-def run_test(test, mode):
-    try:
-        return test(mode)
-    except SystemExit:
-        return True
-
-
 def main():
     if sys.argv[1:] and sys.argv[1] == 'ref':
         mode = 'ref'
@@ -201,14 +194,14 @@ def main():
                 os.remove(fn)
         for name, test in testfunctions():
             print(f'Test: {name}')
-            run_test(test, 'ref')
+            test('ref')
         shutil.rmtree('tmp')
     else:
         nbtest = len(testfunctions())
         nbcorrect = 0
         for name, test in testfunctions():
             print(f'Test: {name}')
-            nbcorrect += run_test(test, 'go')
+            nbcorrect += test('go')
 
         if nbcorrect == nbtest:
             print('All tests ok (%d/%d)' % (nbcorrect, nbtest))
