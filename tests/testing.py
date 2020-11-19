@@ -1,5 +1,6 @@
 import os
 import sys
+import inspect
 import shutil
 import glob
 # from journal import main
@@ -43,7 +44,8 @@ def directory_compare(dir1, dir2):
     return list_compare(dir1, dir2, list1, list2)
 
 
-def test1(mode):
+def test_01_idem(mode):
+    # test number to keep test order
     if mode == 'ref':
         return None
     else:
@@ -51,7 +53,12 @@ def test1(mode):
         return file_compare('index.md', 'tmp/index.md')
 
 
-def test2(mode):
+def test_01_idem_no_md_file(mode):
+    journal.journal.main('--idem --in ./no_md_file')
+    return None
+
+
+def test_02_html(mode):
     if mode == 'ref':
         journal.journal.main('--html --in ./ --out .')
         return None
@@ -60,7 +67,12 @@ def test2(mode):
         return file_compare('index.htm', 'tmp/index.htm')
 
 
-def test3(mode):
+def test_02_html_no_md_file(mode):
+    journal.journal.main('--html --in ./no_md_file')
+    return None
+
+
+def test_03_ext(mode):
     if mode == 'ref':
         journal.journal.main('--extend --in ./ --out . --imgs . --flat')
         os.rename('index-x.htm', 'index-x-base.htm')
@@ -70,7 +82,7 @@ def test3(mode):
         return file_compare('index-x-base.htm', 'tmp/index-x.htm')
 
 
-def test4(mode):
+def test_03_ext_dates(mode):
     if mode == 'ref':
         journal.journal.main('--extend --in ./ --out . --imgs . --flat --dates 20000101-20000110')
         os.rename('index-x.htm', 'index-x-dates.htm')
@@ -79,12 +91,24 @@ def test4(mode):
         journal.journal.main('--extend --in ./ --out tmp --imgs . --flat --dates 20000101-20000110')
         return (
             file_compare('index-x-dates.htm', 'tmp/index-x.htm') and
-            # .thumbnails is tested after the latter command modifying thumbnails
+            # .thumbnails is tested after the last command modifying thumbnails
             directory_compare('.thumbnails', 'tmp/.thumbnails')
             )
 
 
-def test5(mode):
+def test_03_ext_no_md_file(mode):
+    if mode == 'ref':
+        journal.journal.main('--extend --in no_md_file --out no_md_file --imgs . --flat --dates 20000101-20000110')
+        return None
+    else:
+        journal.journal.main('--extend --in no_md_file --out tmp --imgs . --flat --dates 20000101-20000110')
+        return (
+            directory_compare('no_md_file/.thumbnails', 'tmp/.thumbnails') and
+            file_compare('no_md_file/index-x.htm', 'tmp/index-x.htm')
+            )
+
+
+def test_create(mode):
     journal.journal.main('--create --out tmp --imgs . --flat')
     if mode == 'ref':
         return shutil.copyfile('tmp/index.md', 'index-create-base.md')
@@ -92,7 +116,7 @@ def test5(mode):
         return file_compare('index-create-base.md', 'tmp/index.md')
 
 
-def test6(mode):
+def test_create_date(mode):
     journal.journal.main('--create --out tmp --imgs . --flat --dates 20000101-20000110')
     if mode == 'ref':
         return shutil.copyfile('tmp/index.md', 'index-create-dates.md')
@@ -100,8 +124,8 @@ def test6(mode):
         return file_compare('index-create-dates.md', 'tmp/index.md')
 
 
-def test7(mode):
-    journal.journal.main('--blogger --in ./ --url blogger-medias.htm')
+def test_blogger(mode):
+    journal.journal.main('--blogger --in ./ --url blogger-medias.htm --check')
     if mode == 'ref':
         with open('blogger-output.htm', 'wt') as f:
             f.write(clipboard.paste())
@@ -112,7 +136,41 @@ def test7(mode):
         return file_compare('blogger-output.htm', 'tmp/blogger-output.htm')
 
 
-TESTLIST = [test1, test2, test3, test4, test5, test6, test7]
+def test_dir_input_not_found(mode):
+    journal.journal.main('--html --in foobar --out .')
+    return None
+
+
+def test_dir_imgsource_not_found(mode):
+    journal.journal.main('--extend --in ./ --out . --imgs foobar')
+    return None
+
+
+def test_url_blogger_not_given(mode):
+    journal.journal.main('--blogger --in ./')
+    return None
+
+
+def test_url_blogger_not_read(mode):
+    journal.journal.main('--blogger --in ./ --url foobar')
+    return None
+
+
+# def test_md_not_found(mode):
+#     journal.journal.main('--html --in ./empty')
+#     return None
+
+
+def testfunctions():
+    return [(name, obj) for name, obj in inspect.getmembers(sys.modules[__name__])
+                if (inspect.isfunction(obj) and name.startswith('test_'))]
+
+
+def run_test(test, mode):
+    try:
+        return test(mode)
+    except SystemExit:
+        return True
 
 
 def main():
@@ -129,19 +187,19 @@ def main():
         for fn in glob.glob('index*.*'):
             if fn != 'index.md':
                 os.remove(fn)
-        for idx, test in enumerate(TESTLIST, 1):
-            print(f'Test #{idx}')
-            test('ref')
+        for name, test in testfunctions():
+            print(f'Test: {name}')
+            run_test(test, 'ref')
         shutil.rmtree('tmp')
     else:
-        nbtest = len(TESTLIST)
+        nbtest = len(testfunctions())
         nbcorrect = 0
-        for idx, test in enumerate(TESTLIST, 1):
-            print(f'Test #{idx}')
-            nbcorrect += test('go')
+        for name, test in testfunctions():
+            print(f'Test: {name}')
+            nbcorrect += run_test(test, 'go')
 
-        if nbcorrect == len(TESTLIST):
-            print('All tests ok')
+        if nbcorrect == nbtest:
+            print('All tests ok (%d/%d)' % (nbcorrect, nbtest))
             shutil.rmtree('tmp')
             sys.exit(0)
         else:
