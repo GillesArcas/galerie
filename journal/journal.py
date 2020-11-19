@@ -274,7 +274,8 @@ class PostVideo(PostImage):
 
 def parse_markdown(filename):
     """
-    Generate Post objects from markdown. Posts must be ordrered by date.
+    Generate Post objects from markdown. Date must be present in each post and
+    posts must be ordrered by date.
     """
     if not os.path.exists(filename):
         error(f'** File not found: {filename}')
@@ -614,11 +615,14 @@ def make_basic_index(args):
         photoboxsrc = os.path.join(os.path.dirname(__file__), 'photobox')
         shutil.copytree(photoboxsrc, photoboxdir)
 
-    if os.path.exists(os.path.join(args.input, 'index.md')):
-        title, posts = parse_markdown(os.path.join(args.input, 'index.md'))
-    else:
+    md_filename = os.path.join(args.input, 'index.md')
+    if os.path.exists(md_filename):
+        title, posts = parse_markdown(md_filename)
+    elif args.extend:
         title = os.path.basename(args.input)
         posts = list()
+    else:
+        error(f'** File not found: {md_filename}')
 
     for post in posts:
         for media in post.medias:
@@ -865,7 +869,7 @@ def parse_command_line(argstring):
                         action='store_true', default=False)
     parser.add_argument('--extend', help='extend image set, source in --imgsource',
                         action='store_true', default=False)
-    parser.add_argument('--blogger', dest='blogger',
+    parser.add_argument('--blogger',
                         help='input md, html blogger ready in clipboard',
                         action='store_true', default=False)
 
