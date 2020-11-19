@@ -743,7 +743,7 @@ def online_images_url(args):
             with open(args.urlblogger, 'rb') as f:
                 buffer = f.read()
     except:
-        error('** Unable to read url {args.urlblogger}')
+        error(f'** Unable to read url {args.urlblogger}')
     buffer = buffer.decode('utf-8')
 
     online_images = dict()
