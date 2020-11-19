@@ -3,9 +3,8 @@ import sys
 import inspect
 import shutil
 import glob
-# from journal import main
 import clipboard
-import journal.journal
+import journal
 
 
 def list_compare(tag1, tag2, list1, list2):
@@ -49,46 +48,46 @@ def test_01_idem(mode):
     if mode == 'ref':
         return None
     else:
-        journal.journal.main('--idem --in ./ --out tmp')
+        journal.main('--idem --in ./ --out tmp')
         return file_compare('index.md', 'tmp/index.md')
 
 
 def test_01_idem_no_md_file(mode):
-    journal.journal.main('--idem --in ./no_md_file')
+    journal.main('--idem --in ./no_md_file')
     return None
 
 
 def test_02_html(mode):
     if mode == 'ref':
-        journal.journal.main('--html --in ./ --out .')
+        journal.main('--html --in ./ --out .')
         return None
     else:
-        journal.journal.main('--html --in ./ --out tmp')
+        journal.main('--html --in ./ --out tmp')
         return file_compare('index.htm', 'tmp/index.htm')
 
 
 def test_02_html_no_md_file(mode):
-    journal.journal.main('--html --in ./no_md_file')
+    journal.main('--html --in ./no_md_file')
     return None
 
 
 def test_03_ext(mode):
     if mode == 'ref':
-        journal.journal.main('--extend --in ./ --out . --imgs . --flat')
+        journal.main('--extend --in ./ --out . --imgs . --flat')
         os.rename('index-x.htm', 'index-x-base.htm')
         return None
     else:
-        journal.journal.main('--extend --in ./ --out tmp --imgs . --flat')
+        journal.main('--extend --in ./ --out tmp --imgs . --flat')
         return file_compare('index-x-base.htm', 'tmp/index-x.htm')
 
 
 def test_03_ext_dates(mode):
     if mode == 'ref':
-        journal.journal.main('--extend --in ./ --out . --imgs . --flat --dates 20000101-20000110')
+        journal.main('--extend --in ./ --out . --imgs . --flat --dates 20000101-20000110')
         os.rename('index-x.htm', 'index-x-dates.htm')
         return None
     else:
-        journal.journal.main('--extend --in ./ --out tmp --imgs . --flat --dates 20000101-20000110')
+        journal.main('--extend --in ./ --out tmp --imgs . --flat --dates 20000101-20000110')
         return (
             file_compare('index-x-dates.htm', 'tmp/index-x.htm') and
             # .thumbnails is tested after the last command modifying thumbnails
@@ -98,10 +97,10 @@ def test_03_ext_dates(mode):
 
 def test_03_ext_no_md_file(mode):
     if mode == 'ref':
-        journal.journal.main('--extend --in no_md_file --out no_md_file --imgs . --flat --dates 20000101-20000110')
+        journal.main('--extend --in no_md_file --out no_md_file --imgs . --flat --dates 20000101-20000110')
         return None
     else:
-        journal.journal.main('--extend --in no_md_file --out tmp --imgs . --flat --dates 20000101-20000110')
+        journal.main('--extend --in no_md_file --out tmp --imgs . --flat --dates 20000101-20000110')
         return (
             directory_compare('no_md_file/.thumbnails', 'tmp/.thumbnails') and
             file_compare('no_md_file/index-x.htm', 'tmp/index-x.htm')
@@ -109,7 +108,7 @@ def test_03_ext_no_md_file(mode):
 
 
 def test_create(mode):
-    journal.journal.main('--create --out tmp --imgs . --flat')
+    journal.main('--create --out tmp --imgs . --flat')
     if mode == 'ref':
         return shutil.copyfile('tmp/index.md', 'index-create-base.md')
     else:
@@ -117,7 +116,7 @@ def test_create(mode):
 
 
 def test_create_date(mode):
-    journal.journal.main('--create --out tmp --imgs . --flat --dates 20000101-20000110')
+    journal.main('--create --out tmp --imgs . --flat --dates 20000101-20000110')
     if mode == 'ref':
         return shutil.copyfile('tmp/index.md', 'index-create-dates.md')
     else:
@@ -125,7 +124,7 @@ def test_create_date(mode):
 
 
 def test_blogger(mode):
-    journal.journal.main('--blogger --in ./ --url blogger-medias.htm --check')
+    journal.main('--blogger --in ./ --url blogger-medias.htm --check')
     if mode == 'ref':
         with open('blogger-output.htm', 'wt') as f:
             f.write(clipboard.paste())
@@ -137,27 +136,27 @@ def test_blogger(mode):
 
 
 def test_dir_input_not_found(mode):
-    journal.journal.main('--html --in foobar --out .')
+    journal.main('--html --in foobar --out .')
     return None
 
 
 def test_dir_imgsource_not_found(mode):
-    journal.journal.main('--extend --in ./ --out . --imgs foobar')
+    journal.main('--extend --in ./ --out . --imgs foobar')
     return None
 
 
 def test_url_blogger_not_given(mode):
-    journal.journal.main('--blogger --in ./')
+    journal.main('--blogger --in ./')
     return None
 
 
 def test_url_blogger_not_read(mode):
-    journal.journal.main('--blogger --in ./ --url foobar')
+    journal.main('--blogger --in ./ --url foobar')
     return None
 
 
 # def test_md_not_found(mode):
-#     journal.journal.main('--html --in ./empty')
+#     journal.main('--html --in ./empty')
 #     return None
 
 
