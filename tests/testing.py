@@ -48,13 +48,13 @@ def test_01_idem(mode):
     if mode == 'ref':
         return None
     else:
-        journal.main('--idem --in ./ --out tmp')
+        journal.main('--idem ./ --dest tmp')
         return file_compare('index.md', 'tmp/index.md')
 
 
 def test_01_idem_no_md_file(mode):
     try:
-        journal.main('--idem --in ./no_md_file')
+        journal.main('--idem ./no_md_file')
         return False
     except SystemExit as exception:
         return exception.args[0] == journal.errorcode('File not found')
@@ -62,16 +62,16 @@ def test_01_idem_no_md_file(mode):
 
 def test_02_html(mode):
     if mode == 'ref':
-        journal.main('--html --in ./ --out .')
+        journal.main('--html .')
         return None
     else:
-        journal.main('--html --in ./ --out tmp')
+        journal.main('--html . --dest tmp')
         return file_compare('index.htm', 'tmp/index.htm')
 
 
 def test_02_html_no_md_file(mode):
     try:
-        journal.main('--html --in ./no_md_file')
+        journal.main('--html no_md_file')
         return False
     except SystemExit as exception:
         return exception.args[0] == journal.errorcode('File not found')
@@ -79,21 +79,21 @@ def test_02_html_no_md_file(mode):
 
 def test_03_ext(mode):
     if mode == 'ref':
-        journal.main('--extend --in ./ --out . --imgs . --flat')
+        journal.main('--extend . --imgs . --flat')
         os.rename('index-x.htm', 'index-x-base.htm')
         return None
     else:
-        journal.main('--extend --in ./ --out tmp --imgs . --flat')
+        journal.main('--extend . --dest tmp --imgs . --flat')
         return file_compare('index-x-base.htm', 'tmp/index-x.htm')
 
 
 def test_03_ext_dates(mode):
     if mode == 'ref':
-        journal.main('--extend --in ./ --out . --imgs . --flat --dates 20000101-20000110')
+        journal.main('--extend . --imgs . --flat --dates 20000101-20000110')
         os.rename('index-x.htm', 'index-x-dates.htm')
         return None
     else:
-        journal.main('--extend --in ./ --out tmp --imgs . --flat --dates 20000101-20000110')
+        journal.main('--extend . --dest tmp --imgs . --flat --dates 20000101-20000110')
         return (
             file_compare('index-x-dates.htm', 'tmp/index-x.htm') and
             # .thumbnails is tested after the last command modifying thumbnails
@@ -103,10 +103,10 @@ def test_03_ext_dates(mode):
 
 def test_03_ext_no_md_file(mode):
     if mode == 'ref':
-        journal.main('--extend --in no_md_file --out no_md_file --imgs . --flat --dates 20000101-20000110')
+        journal.main('--extend no_md_file --imgs . --flat --dates 20000101-20000110')
         return None
     else:
-        journal.main('--extend --in no_md_file --out tmp --imgs . --flat --dates 20000101-20000110')
+        journal.main('--extend no_md_file --dest tmp --imgs . --flat --dates 20000101-20000110')
         return (
             directory_compare('no_md_file/.thumbnails', 'tmp/.thumbnails') and
             file_compare('no_md_file/index-x.htm', 'tmp/index-x.htm')
@@ -114,7 +114,7 @@ def test_03_ext_no_md_file(mode):
 
 
 def test_create(mode):
-    journal.main('--create --out tmp --imgs . --flat')
+    journal.main('--create tmp --imgs . --flat')
     if mode == 'ref':
         return shutil.copyfile('tmp/index.md', 'index-create-base.md')
     else:
@@ -122,7 +122,7 @@ def test_create(mode):
 
 
 def test_create_date(mode):
-    journal.main('--create --out tmp --imgs . --flat --dates 20000101-20000110')
+    journal.main('--create tmp --imgs . --flat --dates 20000101-20000110')
     if mode == 'ref':
         return shutil.copyfile('tmp/index.md', 'index-create-dates.md')
     else:
@@ -130,7 +130,7 @@ def test_create_date(mode):
 
 
 def test_blogger(mode):
-    journal.main('--blogger --in ./ --url blogger-medias.htm --check')
+    journal.main('--blogger . --url blogger-medias.htm --check')
     if mode == 'ref':
         with open('blogger-output.htm', 'wt') as f:
             f.write(clipboard.paste())
@@ -143,7 +143,7 @@ def test_blogger(mode):
 
 def test_dir_input_not_found(mode):
     try:
-        journal.main('--html --in foobar --out .')
+        journal.main('--html foobar')
         return False
     except SystemExit as exception:
         return exception.args[0] == journal.errorcode('Directory not found')
@@ -151,7 +151,7 @@ def test_dir_input_not_found(mode):
 
 def test_dir_imgsource_not_given(mode):
     try:
-        journal.main('--extend --in ./ --out .')
+        journal.main('--extend .')
         return False
     except SystemExit as exception:
         return exception.args[0] == journal.errorcode('No image source (--imgsource)')
@@ -159,7 +159,7 @@ def test_dir_imgsource_not_given(mode):
 
 def test_dir_imgsource_not_found(mode):
     try:
-        journal.main('--extend --in ./ --out . --imgs foobar')
+        journal.main('--extend . --imgs foobar')
         return False
     except SystemExit as exception:
         return exception.args[0] == journal.errorcode('Directory not found')
@@ -167,7 +167,7 @@ def test_dir_imgsource_not_found(mode):
 
 def test_url_blogger_not_given(mode):
     try:
-        journal.main('--blogger --in ./')
+        journal.main('--blogger .')
         return False
     except SystemExit as exception:
         return exception.args[0] == journal.errorcode('No blogger url (--url)')
@@ -175,7 +175,7 @@ def test_url_blogger_not_given(mode):
 
 def test_url_blogger_not_read(mode):
     try:
-        journal.main('--blogger --in ./ --url foobar')
+        journal.main('--blogger . --url foobar')
         return False
     except SystemExit as exception:
         return exception.args[0] == journal.errorcode('Unable to read url')

@@ -36,10 +36,10 @@ import markdown
 
 
 USAGE = """
-journal --create     --output <directory> --imgsource <media directory>
-journal --html       --input  <directory>
-journal --extend     --input  <directory> --imgsource <media directory>
-journal --blogger    --input  <directory> --url <url> [--check] [--full]
+journal --create  <root-dir> --imgsource <media-dir> [--dates <yyyymmdd-yyyymmdd>]
+journal --html    <root-dir> [--dest <dir>]
+journal --extend  <root-dir> --imgsource <media-dir> [--dates <yyyymmdd-yyyymmdd>] [--dest <dir>]
+journal --blogger <root-dir> --url <url> [--check] [--full]
 """
 
 
@@ -568,7 +568,7 @@ def create_item(media_fullname, thumbdir, key, thumbmax):
     return item, thumb_fullname
 
 
-# -- Markdown format ----------------------------------------------------------
+# -- Creation of diary from medias --------------------------------------------
 
 
 def create_index(args):
@@ -576,7 +576,7 @@ def create_index(args):
     medias = list_of_medias(args.imgsource, args.recursive)
 
     # list of required dates (the DCIM directory can contain images not related
-    # with the desired index (e.g. two indexes for the same image directory)
+    # with the desired index, e.g. two indexes for the same image directory)
     required_dates = set()
     if args.dates:
         date1, date2 = args.dates.split('-')
@@ -594,8 +594,11 @@ def create_index(args):
     for date in sorted(required_dates):
         posts.append(Post.from_date(date))
 
-    os.makedirs(args.output, exist_ok=True)
-    print_markdown(posts, title, os.path.join(args.output, 'index.md'))
+    os.makedirs(args.root, exist_ok=True)
+    print_markdown(posts, title, os.path.join(args.root, 'index.md'))
+
+
+# -- Conversion to html page --------------------------------------------------
 
 
 def make_basic_index(args):
@@ -606,27 +609,27 @@ def make_basic_index(args):
         except FileNotFoundError:
             error('File not found', exe)
 
-    thumbdir = os.path.join(args.output, '.thumbnails')
+    thumbdir = os.path.join(args.dest, '.thumbnails')
     if not os.path.exists(thumbdir):
         os.mkdir(thumbdir)
 
-    photoboxdir = os.path.join(args.output, 'photobox')
+    photoboxdir = os.path.join(args.dest, 'photobox')
     if not os.path.exists(photoboxdir):
         photoboxsrc = os.path.join(os.path.dirname(__file__), 'photobox')
         shutil.copytree(photoboxsrc, photoboxdir)
 
-    md_filename = os.path.join(args.input, 'index.md')
+    md_filename = os.path.join(args.root, 'index.md')
     if os.path.exists(md_filename):
         title, posts = parse_markdown(md_filename)
     elif args.extend:
-        title = os.path.basename(args.input)
+        title = os.path.basename(args.root)
         posts = list()
     else:
         error('File not found', md_filename)
 
     for post in posts:
         for media in post.medias:
-            media_fullname = os.path.join(args.input, media.uri)
+            media_fullname = os.path.join(args.root, media.uri)
             item, _ = create_item(media_fullname, thumbdir, 'post', 400)
             media.thumb = '/'.join(('.thumbnails', os.path.basename(item.thumb)))
             media.thumbsize = item.thumbsize
@@ -650,7 +653,7 @@ def purge_thumbnails(thumbdir, thumblist, key):
 
 def markdown_to_html(args):
     title, posts = make_basic_index(args)
-    print_html(posts, title, os.path.join(args.output, 'index.htm'), 'regular')
+    print_html(posts, title, os.path.join(args.dest, 'index.htm'), 'regular')
 
 
 # -- Addition of DCIM medias --------------------------------------------------
@@ -678,7 +681,7 @@ def extend_index(args):
 
     bydate = defaultdict(list)
     thumbnails = list()
-    thumbdir = os.path.join(args.output, '.thumbnails')
+    thumbdir = os.path.join(args.dest, '.thumbnails')
     for media_fullname in medias:
         date = date_from_item(media_fullname)  #  calculé deux fois
         if date in required_dates:
@@ -707,7 +710,7 @@ def extend_index(args):
         thumblist.extend([os.path.basename(media.thumb) for media in post.dcim])
     purge_thumbnails(thumbdir, thumblist, 'dcim')
 
-    print_html(posts, title, os.path.join(args.output, 'index-x.htm'), 'regular')
+    print_html(posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
 
 
 def list_of_files(sourcedir, recursive):
@@ -779,7 +782,7 @@ def check_images(args, posts, online_images):
         for media in post.medias:
             if type(media) is PostImage:
                 if media.basename in online_images:
-                    with open(os.path.join(args.input, media.uri), 'rb') as f:
+                    with open(os.path.join(args.root, media.uri), 'rb') as f:
                         imgbuf1 = f.read()
                     try:
                         with urlopen(online_images[media.basename][0]) as u:
@@ -833,7 +836,7 @@ def prepare_for_blogger(args):
     If --full, export complete html, otherwise export html extract ready to
     paste into blogger edit mode.
     """
-    title, posts = parse_markdown(os.path.join(args.input, 'index.md'))
+    title, posts = parse_markdown(os.path.join(args.root, 'index.md'))
     online_images, online_videos = online_images_url(args)
 
     if args.check_images and check_images(args, posts, online_images) is False:
@@ -853,8 +856,8 @@ def prepare_for_blogger(args):
 
 
 def idempotence(args):
-    title, posts = parse_markdown(os.path.join(args.input, 'index.md'))
-    print_markdown(posts, title, os.path.join(args.output, 'index.md'))
+    title, posts = parse_markdown(os.path.join(args.root, 'index.md'))
+    print_markdown(posts, title, os.path.join(args.dest, 'index.md'))
 
 
 # -- Main ---------------------------------------------------------------------
@@ -863,41 +866,41 @@ def idempotence(args):
 def parse_command_line(argstring):
     parser = argparse.ArgumentParser(description=None, usage=USAGE)
 
-    parser.add_argument('--create', help='create journal from medias in --imgsource',
-                        action='store_true', default=False)
-    parser.add_argument('--html', help='input md, output html',
-                        action='store_true', default=False)
-    parser.add_argument('--extend', help='extend image set, source in --imgsource',
-                        action='store_true', default=False)
-    parser.add_argument('--blogger',
+    agroup = parser.add_argument_group('Commands')
+    xgroup = agroup.add_mutually_exclusive_group()
+    xgroup.add_argument('--create', help='create journal from medias in --imgsource',
+                        action='store', metavar='<root-dir>')
+    xgroup.add_argument('--html', help='input md, output html',
+                        action='store', metavar='<root-dir>')
+    xgroup.add_argument('--extend', help='extend image set, source in --imgsource',
+                        action='store', metavar='<root-dir>')
+    xgroup.add_argument('--blogger',
                         help='input md, html blogger ready in clipboard',
-                        action='store_true', default=False)
+                        action='store', metavar='<root-dir>')
+    xgroup.add_argument('--idem', help='test idempotence',
+                        action='store', metavar='<root-dir>')
+    xgroup.add_argument('--test', help=argparse.SUPPRESS,
+                        action='store')
 
-    parser.add_argument('--idem', help='',
-                        action='store_true', default=False)
-    parser.add_argument('--test', help='',
-                        action='store_true', default=False)
-
-    parser.add_argument('-i', '--input', help='input parameter',
+    agroup = parser.add_argument_group('Parameters')
+    agroup.add_argument('--dest', help='output directory',
+                        action='store')
+    agroup.add_argument('--year', help='year',
                         action='store', default=None)
-    parser.add_argument('-o', '--output', help='output parameter',
+    agroup.add_argument('--dates', help='dates interval for extended index',
                         action='store', default=None)
-    parser.add_argument('--year', help='year',
+    agroup.add_argument('--imgsource', help='image source for extended index',
                         action='store', default=None)
-    parser.add_argument('--dates', help='dates interval for extended index',
-                        action='store', default=None)
-    parser.add_argument('--imgsource', help='image source for extended index',
-                        action='store', default=None)
-    parser.add_argument('--recursive', help='--imgsource scans recursively',
+    agroup.add_argument('--recursive', help='--imgsource scans recursively',
                         action='store_true', default=True)
-    parser.add_argument('--flat', dest='recursive', help='--imgsource does not recurse',
+    agroup.add_argument('--flat', dest='recursive', help='--imgsource does not recurse',
                         action='store_false')
 
-    parser.add_argument('--full', help='full html (versus blogger ready html)',
+    agroup.add_argument('--full', help='full html (versus blogger ready html)',
                         action='store_true', default=False)
-    parser.add_argument('--check', dest='check_images', help='check availability of medias on blogger',
+    agroup.add_argument('--check', dest='check_images', help='check availability of medias on blogger',
                         action='store_true')
-    parser.add_argument('--url', dest='urlblogger', help='blogger post url',
+    agroup.add_argument('--url', dest='urlblogger', help='blogger post url',
                         action='store')
 
     if argstring is None:
@@ -905,18 +908,20 @@ def parse_command_line(argstring):
     else:
         args = parser.parse_args(argstring.split())
 
+    args.root = args.create or args.html or args.extend or args.blogger or args.idem
+
    # check and normalize paths
 
-    if args.input:
-        args.input = os.path.abspath(args.input)
-        if not os.path.isdir(args.input):
-            error('Directory not found', args.input)
+    if args.root:
+        args.root = os.path.abspath(args.root)
+        if not os.path.isdir(args.root):
+            error('Directory not found', args.root)
 
-    if args.output:
-        args.output = os.path.abspath(args.output)
+    if args.dest:
+        args.dest = os.path.abspath(args.dest)
 
-    if args.output is None:
-        args.output = args.input
+    if args.dest is None:
+        args.dest = args.root
 
     if args.extend and args.imgsource is None:
         error('No image source (--imgsource)')
