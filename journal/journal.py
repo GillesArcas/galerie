@@ -906,20 +906,28 @@ def parse_command_line(argstring):
         args = parser.parse_args(argstring.split())
 
    # check and normalize paths
+
     if args.input:
         args.input = os.path.abspath(args.input)
         if not os.path.isdir(args.input):
             error('Directory not found', args.input)
+
     if args.output:
         args.output = os.path.abspath(args.output)
+
     if args.output is None:
         args.output = args.input
+
+    if args.extend and args.imgsource is None:
+        error('No image source (--imgsource)')
+
     if args.imgsource:
         args.imgsource = os.path.abspath(args.imgsource)
         if not os.path.isdir(args.imgsource):
             error('Directory not found', args.imgsource)
+
     if args.blogger and args.urlblogger is None:
-        error('Give blogger url')
+        error('No blogger url (--url)')
 
     return args
 
@@ -935,7 +943,8 @@ Directory not found
 No date in record
 Posts are not ordered
 Unable to read url
-Give blogger url
+No image source (--imgsource)
+No blogger url (--url)
 '''
 
 

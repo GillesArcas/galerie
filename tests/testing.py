@@ -149,6 +149,14 @@ def test_dir_input_not_found(mode):
         return exception.args[0] == journal.errorcode('Directory not found')
 
 
+def test_dir_imgsource_not_given(mode):
+    try:
+        journal.main('--extend --in ./ --out .')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == journal.errorcode('No image source (--imgsource)')
+
+
 def test_dir_imgsource_not_found(mode):
     try:
         journal.main('--extend --in ./ --out . --imgs foobar')
@@ -162,7 +170,7 @@ def test_url_blogger_not_given(mode):
         journal.main('--blogger --in ./')
         return False
     except SystemExit as exception:
-        return exception.args[0] == journal.errorcode('Give blogger url')
+        return exception.args[0] == journal.errorcode('No blogger url (--url)')
 
 
 def test_url_blogger_not_read(mode):
