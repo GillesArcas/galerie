@@ -581,7 +581,63 @@ def create_thumbnail_subdir(subdir_name, thumb_name, size):
     shutil.copyfile(name, thumb_name)
 
 
-# --
+# -- List of medias helpers ---------------------------------------------------
+
+
+def list_of_files(sourcedir, recursive):
+    """ return the list of full paths for files in source directory
+    """
+    result = list()
+    if recursive is False:
+        for basename in os.listdir(sourcedir):
+            result.append(os.path.join(sourcedir, basename))
+    else:
+        for root, dirs, files in os.walk(sourcedir):
+            if '.thumbnails' not in root:
+                for basename in files:
+                    result.append(os.path.join(root, basename))
+    return result
+
+
+def list_of_medias(imgsource, recursive):
+    """ return the list of full paths for pictures and movies in source directory
+    """
+    files = list_of_files(imgsource, recursive)
+    return [_ for _ in files if is_media(_)]
+
+
+def list_of_medias_ext(sourcedir):
+    """ return the list of full paths for pictures and movies in source directory
+    plus subdirectories containing media
+    """
+    result = list()
+    for basename in os.listdir(sourcedir):
+        fullname = os.path.join(sourcedir, basename)
+        if os.path.isdir(fullname) and basename != '.thumbnails' and basename != '$RECYCLE.BIN' and contains_media(fullname):
+            result.append(fullname)
+        else:
+            if is_media(basename):
+                result.append(fullname)
+    return result
+
+
+def contains_media(fullname):
+    for root, dirs, files in os.walk(fullname):
+        if '.thumbnails' not in root:
+            for basename in files:
+                if is_media(basename):
+                    return True
+    else:
+        return False
+
+
+def dispatch_medias(list_of_medias):
+    subdirs = [_ for _ in list_of_medias if type(_) is PostSubdir]
+    medias = [_ for _ in list_of_medias if type(_) is not PostSubdir]
+    return subdirs, medias
+
+
+# -- Creation of gallery element ----------------------------------------------
 
 
 def create_item(media_fullname, thumbdir, key, thumbmax):
@@ -629,12 +685,6 @@ def create_item(media_fullname, thumbdir, key, thumbmax):
         item.sublist = items
 
     return item
-
-
-def dispatch_medias(list_of_medias):
-    subdirs = [_ for _ in list_of_medias if type(_) is PostSubdir]
-    medias = [_ for _ in list_of_medias if type(_) is not PostSubdir]
-    return subdirs, medias
 
 
 # -- Creation of diary from medias --------------------------------------------
@@ -764,53 +814,6 @@ def extend_index(args):
     purge_thumbnails(args.thumbdir, thumblist, 'dcim')
 
     print_html(posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
-
-
-def list_of_files(sourcedir, recursive):
-    """ return the list of full paths for files in source directory
-    """
-    result = list()
-    if recursive is False:
-        for basename in os.listdir(sourcedir):
-            result.append(os.path.join(sourcedir, basename))
-    else:
-        for root, dirs, files in os.walk(sourcedir):
-            if '.thumbnails' not in root:
-                for basename in files:
-                    result.append(os.path.join(root, basename))
-    return result
-
-
-def list_of_medias(imgsource, recursive):
-    """ return the list of full paths for pictures and movies in source directory
-    """
-    files = list_of_files(imgsource, recursive)
-    return [_ for _ in files if is_media(_)]
-
-
-def list_of_medias_ext(sourcedir):
-    """ return the list of full paths for pictures and movies in source directory
-    plus subdirectories containing media
-    """
-    result = list()
-    for basename in os.listdir(sourcedir):
-        fullname = os.path.join(sourcedir, basename)
-        if os.path.isdir(fullname) and basename != '.thumbnails' and basename != '$RECYCLE.BIN' and contains_media(fullname):
-            result.append(fullname)
-        else:
-            if is_media(basename):
-                result.append(fullname)
-    return result
-
-
-def contains_media(fullname):
-    for root, dirs, files in os.walk(fullname):
-        if '.thumbnails' not in root:
-            for basename in files:
-                if is_media(basename):
-                    return True
-    else:
-        return False
 
 
 # -- Creation of html page from directory tree --------------------------------
@@ -967,6 +970,34 @@ def idempotence(args):
     print_markdown(posts, title, os.path.join(args.dest, 'index.md'))
 
 
+# -- Error handling -----------------------------------------------------------
+
+
+def warning(msg):
+    print(msg)
+
+
+# Every error message error must be declared here to give a return code to the error
+ERRORS = '''\
+File not found
+Directory not found
+No date in record
+Posts are not ordered
+Unable to read url
+No image source (--imgsource)
+No blogger url (--url)
+'''
+
+
+def errorcode(msg):
+    return ERRORS.splitlines().index(msg) + 1
+
+
+def error(*msg):
+    print('**', ' '.join(msg))
+    sys.exit(errorcode(msg[0]))
+
+
 # -- Main ---------------------------------------------------------------------
 
 
@@ -1061,31 +1092,6 @@ def parse_command_line(argstring):
             shutil.copytree(photoboxsrc, photoboxdir)
 
     return args
-
-
-def warning(msg):
-    print(msg)
-
-
-# Every error message error must be declared here to give a return code to the error
-ERRORS = '''\
-File not found
-Directory not found
-No date in record
-Posts are not ordered
-Unable to read url
-No image source (--imgsource)
-No blogger url (--url)
-'''
-
-
-def errorcode(msg):
-    return ERRORS.splitlines().index(msg) + 1
-
-
-def error(*msg):
-    print('**', ' '.join(msg))
-    sys.exit(errorcode(msg[0]))
 
 
 def main(argstring=None):
