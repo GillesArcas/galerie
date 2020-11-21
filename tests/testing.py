@@ -128,6 +128,17 @@ def test_04_ext_no_md_file(mode):
             )
 
 
+def test_gallery(mode):
+    if mode == 'ref':
+        journal.main('--gallery gallery --imgs .')
+        return None
+    else:
+         journal.main('--gallery tmp --imgs .')
+         return (
+            file_compare('gallery/index-x.htm', 'tmp/index-x.htm')
+        )
+
+
 def test_create(mode):
     journal.main('--create tmp --imgs . --flat')
     if mode == 'ref':

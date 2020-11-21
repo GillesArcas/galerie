@@ -109,6 +109,9 @@ VIDDCIM = '<a href="file:///%s" rel="video"><img src="%s" width="%d" height="%d"
 # "display: block;" dans img : espacement correct ordi mais pas centré téléphone
 # "display: block;" dans a   : ok
 
+DIRPOST = '<a href="%s"><img src="%s" width="%d" height="%d" /></a>'
+DIRPOSTCAPTION = ''
+
 BIMGPAT = '''\
 <div class="separator" style="clear: both; text-align: center;">
 <a href="%s" style="clear: left; margin-bottom: 0em; margin-right: 1em; font-size: 0; display: block;">
@@ -194,10 +197,14 @@ class Post:
                 html.append(media.to_html_post())
             html.append('</div>')
 
+        subdirs, dcim = dispatch_medias(self.dcim)
         if self.dcim:
             html.append(SEP)
+        for media in subdirs:
+            html.append(media.to_html_dcim())
+        if dcim:
             html.append(f'<div id="gallery-{self.date}-dcim-{self.daterank}">')
-            for media in self.dcim:
+            for media in dcim:
                 html.append(media.to_html_dcim())
             html.append('</div>')
 
@@ -269,6 +276,19 @@ class PostVideo(PostItem):
             return x
         else:
             return f'%s\n{CAPTION_PAT}' % (x, self.caption)
+
+
+class PostSubdir(PostItem):
+    def to_html_dcim(self):
+        post = Post(None, '', [])
+        post.dcim = self.sublist
+        posts = [post]
+        print_html(posts, 'TITLE', self.htmname)
+        if True or not self.caption:
+            return DIRPOST % (os.path.basename(self.htmname), self.thumb, *self.thumbsize)
+        else:
+            # TODO
+            return DIRPOSTCAPTION % (self.uri, self.thumb, *self.thumbsize, self.descr, self.caption)
 
 
 # -- Markdown parser ----------------------------------------------------------
@@ -478,6 +498,7 @@ def get_video_info(filename):
         output = f'{date} {time}, dim={width}x{height}, m:s={mn:02}:{sec:02}, fps={fps}, {size} MB'
     except CalledProcessError as e:
         output = e.output.decode()
+    # TODO: referenced before assignment if exception
     return (date, time, width, height, size, duration, fps), output
 
 
@@ -546,32 +567,74 @@ def create_thumbnail_video(filename, thumbname, size):
     img1.save(thumbname)
 
 
+def make_thumbnail_subdir(subdir_name, thumb_name, size):
+    if os.path.exists(thumb_name):
+        pass
+    else:
+        print('Making thumbnail:', thumb_name)
+        create_thumbnail_subdir(subdir_name, thumb_name, size)
+
+
+def create_thumbnail_subdir(subdir_name, thumb_name, size):
+    # TODO
+    name = 'd:/gilles/dev/journal/journal/folder.jpg'
+    shutil.copyfile(name, thumb_name)
+
+
+# --
+
+
 def create_item(media_fullname, thumbdir, key, thumbmax):
     media_basename = os.path.basename(media_fullname)
-    if media_basename.lower().endswith('.jpg'):
-        thumb_basename = key + '-' + media_basename
-        thumb_fullname = os.path.join(thumbdir, thumb_basename)
-        try:
-            info, infofmt = get_image_info(media_fullname)
+    if os.path.isfile(media_fullname):
+        if media_basename.lower().endswith('.jpg'):
+            thumb_basename = key + '-' + media_basename
+            thumb_fullname = os.path.join(thumbdir, thumb_basename)
+            try:
+                info, infofmt = get_image_info(media_fullname)
+                infofmt = media_basename + ': ' + infofmt
+                thumbsize = size_thumbnail(info[2], info[3], thumbmax)
+                make_thumbnail(media_fullname, thumb_fullname, thumbsize)
+                item = PostImage(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
+                                thumbsize, infofmt)
+            except PIL.UnidentifiedImageError:
+                # corrupted image
+                warning(f'** Unable to read image {media_fullname}')
+                return None
+        else:
+            thumb_basename = key + '-' + media_basename.replace('.mp4', '.jpg')
+            thumb_fullname = os.path.join(thumbdir, thumb_basename)
+            info, infofmt = get_video_info(media_fullname)
             infofmt = media_basename + ': ' + infofmt
             thumbsize = size_thumbnail(info[2], info[3], thumbmax)
-            make_thumbnail(media_fullname, thumb_fullname, thumbsize)
-            item = PostImage(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
+            make_thumbnail_video(media_fullname, thumb_fullname, thumbsize)
+            item = PostVideo(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
                             thumbsize, infofmt)
-        except PIL.UnidentifiedImageError:
-            # corrupted image
-            warning(f'** Unable to read image {media_fullname}')
-            return None, ''
     else:
-        thumb_basename = key + '-' + media_basename.replace('.mp4', '.jpg')
+        # media_fullname est un sous-répertoire
+        startpath = os.path.dirname(thumbdir)
+        x = os.path.relpath(media_fullname, startpath)
+        x = os.path.basename(x.replace('\\', '_').replace('/', '_')).replace('#', '_')
+        thumb_basename = key + '-' + x +'.jpg'
         thumb_fullname = os.path.join(thumbdir, thumb_basename)
-        info, infofmt = get_video_info(media_fullname)
-        infofmt = media_basename + ': ' + infofmt
-        thumbsize = size_thumbnail(info[2], info[3], thumbmax)
-        make_thumbnail_video(media_fullname, thumb_fullname, thumbsize)
-        item = PostVideo(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
+        info, infofmt = None, None
+        thumbsize = (thumbmax, thumbmax)  # TODO: plus proportions
+        make_thumbnail_subdir(media_fullname, thumb_fullname, thumbsize)
+        item = PostSubdir(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
                         thumbsize, infofmt)
+        medias_ext = list_of_medias_ext(media_fullname)
+        items = [create_item(_, thumbdir, 'dcim', 300) for _ in medias_ext]
+        item.subdir = media_fullname
+        item.htmname = os.path.join(os.path.dirname(thumbdir), x + '.htm')
+        item.sublist = items
+
     return item
+
+
+def dispatch_medias(list_of_medias):
+    subdirs = [_ for _ in list_of_medias if type(_) is PostSubdir]
+    medias = [_ for _ in list_of_medias if type(_) is not PostSubdir]
+    return subdirs, medias
 
 
 # -- Creation of diary from medias --------------------------------------------
@@ -725,6 +788,58 @@ def list_of_medias(imgsource, recursive):
     return [_ for _ in files if is_media(_)]
 
 
+def list_of_medias_ext(sourcedir):
+    """ return the list of full paths for pictures and movies in source directory
+    plus subdirectories containing media
+    """
+    result = list()
+    for basename in os.listdir(sourcedir):
+        fullname = os.path.join(sourcedir, basename)
+        if os.path.isdir(fullname) and basename != '.thumbnails' and basename != '$RECYCLE.BIN' and contains_media(fullname):
+            result.append(fullname)
+        else:
+            if is_media(basename):
+                result.append(fullname)
+    return result
+
+
+def contains_media(fullname):
+    for root, dirs, files in os.walk(fullname):
+        if '.thumbnails' not in root:
+            for basename in files:
+                if is_media(basename):
+                    return True
+    else:
+        return False
+
+
+# -- Creation of html page from directory tree --------------------------------
+
+
+def create_gallery(args):
+    title, posts = '', list()
+
+    # list of pictures and movies plus subdirectories
+    medias_ext = list_of_medias_ext(args.imgsource)
+
+    # complete posts
+    postmedias = list()
+    for item in medias_ext:
+        postmedia = create_item(item, args.thumbdir, 'dcim', 300)
+        postmedias.append(postmedia)
+
+    post = Post('00000000', 'TITLE', [])
+    post.dcim = postmedias
+    posts.append(post)
+
+    # TODO: purge à voir
+    # thumblist = []
+    # for post in posts:
+    #     thumblist.extend([os.path.basename(media.thumb) for media in post.dcim])
+    # purge_thumbnails(args.thumbdir, thumblist, 'dcim')
+
+    print_html(posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
+
 
 # -- Export to blogger---------------------------------------------------------
 
@@ -866,6 +981,8 @@ def parse_command_line(argstring):
                         action='store', metavar='<root-dir>')
     xgroup.add_argument('--extend', help='extend image set, source in --imgsource',
                         action='store', metavar='<root-dir>')
+    xgroup.add_argument('--gallery', help=' source in --imgsource',
+                        action='store', metavar='<root-dir>')
     xgroup.add_argument('--blogger',
                         help='input md, html blogger ready in clipboard',
                         action='store', metavar='<root-dir>')
@@ -900,7 +1017,7 @@ def parse_command_line(argstring):
     else:
         args = parser.parse_args(argstring.split())
 
-    args.root = args.create or args.html or args.extend or args.blogger or args.idem
+    args.root = args.create or args.html or args.extend or args.gallery or args.blogger or args.idem
 
    # check and normalize paths
 
@@ -926,7 +1043,7 @@ def parse_command_line(argstring):
     if args.blogger and args.urlblogger is None:
         error('No blogger url (--url)')
 
-    if args.html or args.extend:
+    if args.html or args.extend or args.gallery:
         # check for ffmpeg and ffprobe in path
         for exe in ('ffmpeg', 'ffprobe'):
             try:
@@ -983,6 +1100,9 @@ def main(argstring=None):
 
     elif args.extend:
         extend_index(args)
+
+    elif args.gallery:
+        create_gallery(args)
 
     elif args.blogger:
         prepare_for_blogger(args)
