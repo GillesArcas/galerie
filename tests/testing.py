@@ -3,11 +3,12 @@ import sys
 import inspect
 import shutil
 import glob
+import colorama
 import clipboard
 import journal
 
 
-def list_compare(tag1, tag2, list1, list2):
+def list_compare(tag1, tag2, list1, list2, source1='<list1>', source2='<list2>'):
 
     # make sure both lists have same length
     maxlen = max(len(list1), len(list2))
@@ -23,8 +24,11 @@ def list_compare(tag1, tag2, list1, list2):
             res = False
 
     if diff:
+        print(colorama.Fore.RED)
+        print('Diff:', tag1, source1, tag2, source2)
         for line in diff[:10]:
             print(line)
+        print(colorama.Style.RESET_ALL)
 
     return res
 
@@ -34,13 +38,13 @@ def file_compare(fn1, fn2):
         lines1 = [line.strip('\n') for line in f.readlines()]
     with open(fn2) as f:
         lines2 = [line.strip('\n') for line in f.readlines()]
-    return list_compare(fn1, fn2, lines1, lines2)
+    return list_compare('ref', 'res', lines1, lines2, fn1, fn2)
 
 
 def directory_compare(dir1, dir2):
     list1 = os.listdir(dir1)
     list2 = os.listdir(dir2)
-    return list_compare(dir1, dir2, list1, list2)
+    return list_compare('ref', 'res', list1, list2, dir1, dir2)
 
 
 def test_01_idem(mode):
@@ -94,14 +98,25 @@ def test_03_ext_dates(mode):
         return None
     else:
         journal.main('--extend . --dest tmp --imgs . --flat --dates 20000101-20000110')
+        return file_compare('index-x-dates.htm', 'tmp/index-x.htm')
+
+
+def test_03_ext_rec(mode):
+    if mode == 'ref':
+        journal.main('--extend . --imgs . --rec')
+        os.rename('index-x.htm', 'index-x-rec.htm')
+        return None
+    else:
+        journal.main('--extend . --dest tmp --imgs . --rec')
+        return file_compare('index-x-rec.htm', 'tmp/index-x.htm')
         return (
-            file_compare('index-x-dates.htm', 'tmp/index-x.htm') and
+            file_compare('index-x-rec.htm', 'tmp/index-x.htm') and
             # .thumbnails is tested after the last command modifying thumbnails
             directory_compare('.thumbnails', 'tmp/.thumbnails')
             )
 
 
-def test_03_ext_no_md_file(mode):
+def test_04_ext_no_md_file(mode):
     if mode == 'ref':
         journal.main('--extend no_md_file --imgs . --flat --dates 20000101-20000110')
         return None
@@ -201,14 +216,14 @@ def main():
             if fn != 'index.md':
                 os.remove(fn)
         for name, test in testfunctions():
-            print(f'Test: {name}')
+            print(f'{colorama.Fore.YELLOW}Test: {name}{colorama.Style.RESET_ALL}')
             test('ref')
         shutil.rmtree('tmp')
     else:
         nbtest = len(testfunctions())
         nbcorrect = 0
         for name, test in testfunctions():
-            print(f'Test: {name}')
+            print(f'{colorama.Fore.YELLOW}Test: {name}{colorama.Style.RESET_ALL}')
             nbcorrect += test('go')
 
         if nbcorrect == nbtest:
@@ -220,4 +235,5 @@ def main():
             sys.exit(1)
 
 
+colorama.init()
 main()

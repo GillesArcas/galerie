@@ -213,7 +213,7 @@ class Post:
         return html
 
 
-class PostImage:
+class PostItem:
     def __init__(self, caption, uri, thumb=None, thumbsize=None, descr=''):
         self.caption = caption
         self.uri = uri
@@ -223,6 +223,8 @@ class PostImage:
         self.descr = descr
         self.resized_url = None
 
+
+class PostImage(PostItem):
     def to_markdown(self):
         if not self.caption:
             return '![](%s)' % (self.uri,)
@@ -245,7 +247,7 @@ class PostImage:
             return f'{BIMGPAT}\n{CAPTION_PAT}' % (self.uri, self.resized_url, self.caption)
 
 
-class PostVideo(PostImage):
+class PostVideo(PostItem):
     def to_markdown(self):
         if not self.caption:
             return '[](%s)' % (self.uri,)
@@ -395,6 +397,10 @@ def print_html(posts, title, html_name, target='regular'):
 # -- Media description --------------------------------------------------------
 
 
+def is_media(name):
+    return os.path.splitext(name)[1].lower() in ('.jpg', '.mp4')
+
+
 def date_from_name(name):
     # heuristics
     if match := re.search(r'(?:[^0-9]|^)(\d{8})([^0-9]|$)', name):
@@ -497,8 +503,8 @@ def create_thumbnail(image_name, thumb_name, size):
     imgobj = Image.open(image_name)
 
     if (imgobj.mode != 'RGBA'
-        and image_name.endswith('jpg')
-        and not (image_name.endswith('gif') and imgobj.info.get('transparency'))
+        and image_name.endswith('.jpg')
+        and not (image_name.endswith('.gif') and imgobj.info.get('transparency'))
        ):
         imgobj = imgobj.convert('RGBA')
 
@@ -565,7 +571,7 @@ def create_item(media_fullname, thumbdir, key, thumbmax):
         make_thumbnail_video(media_fullname, thumb_fullname, thumbsize)
         item = PostVideo(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
                         thumbsize, infofmt)
-    return item, thumb_fullname
+    return item
 
 
 # -- Creation of diary from medias --------------------------------------------
@@ -602,22 +608,6 @@ def create_index(args):
 
 
 def make_basic_index(args):
-    # check for ffmpeg and ffprobe in path
-    for exe in ('ffmpeg', 'ffprobe'):
-        try:
-            check_output([exe, '-version'])
-        except FileNotFoundError:
-            error('File not found', exe)
-
-    thumbdir = os.path.join(args.dest, '.thumbnails')
-    if not os.path.exists(thumbdir):
-        os.mkdir(thumbdir)
-
-    photoboxdir = os.path.join(args.dest, 'photobox')
-    if not os.path.exists(photoboxdir):
-        photoboxsrc = os.path.join(os.path.dirname(__file__), 'photobox')
-        shutil.copytree(photoboxsrc, photoboxdir)
-
     md_filename = os.path.join(args.root, 'index.md')
     if os.path.exists(md_filename):
         title, posts = parse_markdown(md_filename)
@@ -630,15 +620,15 @@ def make_basic_index(args):
     for post in posts:
         for media in post.medias:
             media_fullname = os.path.join(args.root, media.uri)
-            item, _ = create_item(media_fullname, thumbdir, 'post', 400)
-            media.thumb = '/'.join(('.thumbnails', os.path.basename(item.thumb)))
+            item = create_item(media_fullname, args.thumbdir, 'post', 400)
+            media.thumb = item.thumb
             media.thumbsize = item.thumbsize
             media.descr = item.descr
 
     thumblist = []
     for post in posts:
         thumblist.extend([os.path.basename(media.thumb) for media in post.medias])
-    purge_thumbnails(thumbdir, thumblist, 'post')
+    purge_thumbnails(args.thumbdir, thumblist, 'post')
 
     return title, posts
 
@@ -681,12 +671,12 @@ def extend_index(args):
 
     bydate = defaultdict(list)
     thumbnails = list()
-    thumbdir = os.path.join(args.dest, '.thumbnails')
     for media_fullname in medias:
         date = date_from_item(media_fullname)  #  calculé deux fois
         if date in required_dates:
-            item, thumb_fullname = create_item(media_fullname, thumbdir, 'dcim', 300)
+            item = create_item(media_fullname, args.thumbdir, 'dcim', 300)
             if item:
+                thumb_fullname = os.path.join(args.dest, item.thumb)
                 bydate[date].append(item)
                 thumbnails.append(thumb_fullname)
 
@@ -708,7 +698,7 @@ def extend_index(args):
     thumblist = []
     for post in posts:
         thumblist.extend([os.path.basename(media.thumb) for media in post.dcim])
-    purge_thumbnails(thumbdir, thumblist, 'dcim')
+    purge_thumbnails(args.thumbdir, thumblist, 'dcim')
 
     print_html(posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
 
@@ -722,8 +712,9 @@ def list_of_files(sourcedir, recursive):
             result.append(os.path.join(sourcedir, basename))
     else:
         for root, dirs, files in os.walk(sourcedir):
-            for basename in files:
-                result.append(os.path.join(root, basename))
+            if '.thumbnails' not in root:
+                for basename in files:
+                    result.append(os.path.join(root, basename))
     return result
 
 
@@ -731,7 +722,8 @@ def list_of_medias(imgsource, recursive):
     """ return the list of full paths for pictures and movies in source directory
     """
     files = list_of_files(imgsource, recursive)
-    return [_ for _ in files if os.path.splitext(_)[1].lower() in ('.jpg', '.mp4')]
+    return [_ for _ in files if is_media(_)]
+
 
 
 # -- Export to blogger---------------------------------------------------------
@@ -933,6 +925,23 @@ def parse_command_line(argstring):
 
     if args.blogger and args.urlblogger is None:
         error('No blogger url (--url)')
+
+    if args.html or args.extend:
+        # check for ffmpeg and ffprobe in path
+        for exe in ('ffmpeg', 'ffprobe'):
+            try:
+                check_output([exe, '-version'])
+            except FileNotFoundError:
+                error('File not found', exe)
+
+        args.thumbdir = os.path.join(args.dest, '.thumbnails')
+        if not os.path.exists(args.thumbdir):
+            os.mkdir(args.thumbdir)
+
+        photoboxdir = os.path.join(args.dest, 'photobox')
+        if not os.path.exists(photoboxdir):
+            photoboxsrc = os.path.join(os.path.dirname(__file__), 'photobox')
+            shutil.copytree(photoboxsrc, photoboxdir)
 
     return args
 
