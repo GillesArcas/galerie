@@ -581,11 +581,41 @@ def create_thumbnail_subdir(subdir_name, thumb_name, size):
     shutil.copyfile(name, thumb_name)
 
 
+def list_of_thumbnails(posts):
+    def __list_of_thumbnails(itemlist):
+        thumblist = list()
+        for item in itemlist:
+            if type(item) == PostSubdir:
+                thumblist.append(os.path.basename(item.thumb))
+                thumblist.extend(__list_of_thumbnails(item.sublist))
+            else:
+                thumblist.append(os.path.basename(item.thumb))
+        return thumblist
+
+    thumblist = list()
+    for post in posts:
+        thumblist.extend(__list_of_thumbnails(post.medias))
+        thumblist.extend(__list_of_thumbnails(post.dcim))
+    return thumblist
+
+
+def purge_thumbnails(thumbdir, posts):
+    """
+    Purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
+    """
+    thumblist = list_of_thumbnails(posts)
+    for fullname in glob.glob(os.path.join(thumbdir, '*.jpg')):
+        if os.path.basename(fullname) not in thumblist:
+            print('Removing thumbnail', fullname)
+            os.remove(fullname)
+
+
 # -- List of medias helpers ---------------------------------------------------
 
 
 def list_of_files(sourcedir, recursive):
-    """ return the list of full paths for files in source directory
+    """
+    Return the list of full paths for files in source directory
     """
     result = list()
     if recursive is False:
@@ -600,14 +630,16 @@ def list_of_files(sourcedir, recursive):
 
 
 def list_of_medias(imgsource, recursive):
-    """ return the list of full paths for pictures and movies in source directory
+    """
+    Return the list of full paths for pictures and movies in source directory
     """
     files = list_of_files(imgsource, recursive)
     return [_ for _ in files if is_media(_)]
 
 
 def list_of_medias_ext(sourcedir):
-    """ return the list of full paths for pictures and movies in source directory
+    """
+    Return the list of full paths for pictures and movies in source directory
     plus subdirectories containing media
     """
     result = list()
@@ -738,24 +770,12 @@ def make_basic_index(args):
             media.thumbsize = item.thumbsize
             media.descr = item.descr
 
-    thumblist = []
-    for post in posts:
-        thumblist.extend([os.path.basename(media.thumb) for media in post.medias])
-    purge_thumbnails(args.thumbdir, thumblist, 'post')
-
     return title, posts
-
-
-def purge_thumbnails(thumbdir, thumblist, key):
-    # purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
-    for fullname in glob.glob(os.path.join(thumbdir, f'{key}*.jpg')):
-        if os.path.basename(fullname) not in thumblist:
-            print('Removing thumbnail', fullname)
-            os.remove(fullname)
 
 
 def markdown_to_html(args):
     title, posts = make_basic_index(args)
+    purge_thumbnails(args.thumbdir, posts)
     print_html(posts, title, os.path.join(args.dest, 'index.htm'), 'regular')
 
 
@@ -808,11 +828,7 @@ def extend_index(args):
         if post.daterank == 1:
             post.dcim = bydate[post.date]
 
-    thumblist = []
-    for post in posts:
-        thumblist.extend([os.path.basename(media.thumb) for media in post.dcim])
-    purge_thumbnails(args.thumbdir, thumblist, 'dcim')
-
+    purge_thumbnails(args.thumbdir, posts)
     print_html(posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
 
 
@@ -835,12 +851,7 @@ def create_gallery(args):
     post.dcim = postmedias
     posts.append(post)
 
-    # TODO: purge à voir
-    # thumblist = []
-    # for post in posts:
-    #     thumblist.extend([os.path.basename(media.thumb) for media in post.dcim])
-    # purge_thumbnails(args.thumbdir, thumblist, 'dcim')
-
+    purge_thumbnails(args.thumbdir, posts)
     print_html(posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
 
 
@@ -1035,7 +1046,6 @@ def parse_command_line(argstring):
                         action='store_true', default=True)
     agroup.add_argument('--flat', dest='recursive', help='--imgsource does not recurse',
                         action='store_false')
-
     agroup.add_argument('--full', help='full html (versus blogger ready html)',
                         action='store_true', default=False)
     agroup.add_argument('--check', dest='check_images', help='check availability of medias on blogger',
@@ -1050,8 +1060,13 @@ def parse_command_line(argstring):
 
     args.root = args.create or args.html or args.extend or args.gallery or args.blogger or args.idem
 
-   # check and normalize paths
+    return args
 
+
+def setup_context(args):
+    """
+    Check and normalize paths
+    """
     if args.root:
         args.root = os.path.abspath(args.root)
         if not os.path.isdir(args.root):
@@ -1091,12 +1106,11 @@ def parse_command_line(argstring):
             photoboxsrc = os.path.join(os.path.dirname(__file__), 'photobox')
             shutil.copytree(photoboxsrc, photoboxdir)
 
-    return args
-
 
 def main(argstring=None):
     locale.setlocale(locale.LC_TIME, '')
     args = parse_command_line(argstring)
+    setup_context(args)
 
     if args.create:
         create_index(args)
