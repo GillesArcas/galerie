@@ -567,35 +567,51 @@ def create_thumbnail_video(filename, thumbname, size):
     img1.save(thumbname)
 
 
-def make_thumbnail_subdir(subdir_name, thumb_name, size):
-    if os.path.exists(thumb_name):
+def make_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir):
+    if False and os.path.exists(thumb_name):
         pass
     else:
         print('Making thumbnail:', thumb_name)
-        create_thumbnail_subdir(subdir_name, thumb_name, size)
+        create_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir)
 
 
-def create_thumbnail_subdir(subdir_name, thumb_name, size):
-    # TODO
-    name = 'd:/gilles/dev/journal/journal/folder.jpg'
-    shutil.copyfile(name, thumb_name)
+def create_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir):
+    thumblist = list_of_thumbnails_in_medias(items)
+    img = Image.new('RGB', size, (255, 255, 255))
+    width, height = size[0] // 2, size[1] // 2
+    for ind, thumb in enumerate(thumblist[:min(4, len(thumblist))]):
+        img2 = Image.open(os.path.join(thumbdir, thumb))
+        img2.thumbnail((width, height))
+        img.paste(img2, (width * (ind % 2), height * (ind // 2)))
+    img.save(thumb_name)
 
 
 def list_of_thumbnails(posts):
-    def __list_of_thumbnails(itemlist):
-        thumblist = list()
-        for item in itemlist:
-            if type(item) == PostSubdir:
-                thumblist.append(os.path.basename(item.thumb))
-                thumblist.extend(__list_of_thumbnails(item.sublist))
-            else:
-                thumblist.append(os.path.basename(item.thumb))
-        return thumblist
-
     thumblist = list()
     for post in posts:
-        thumblist.extend(__list_of_thumbnails(post.medias))
-        thumblist.extend(__list_of_thumbnails(post.dcim))
+        thumblist.extend(list_of_thumbnails_in_items(post.medias))
+        thumblist.extend(list_of_thumbnails_in_items(post.dcim))
+    return thumblist
+
+
+def list_of_thumbnails_in_items(itemlist):
+    thumblist = list()
+    for item in itemlist:
+        if type(item) == PostSubdir:
+            thumblist.append(os.path.basename(item.thumb))
+            thumblist.extend(list_of_thumbnails_in_items(item.sublist))
+        else:
+            thumblist.append(os.path.basename(item.thumb))
+    return thumblist
+
+
+def list_of_thumbnails_in_medias(itemlist):
+    thumblist = list()
+    for item in itemlist:
+        if type(item) == PostSubdir:
+            thumblist.extend(list_of_thumbnails_in_medias(item.sublist))
+        else:
+            thumblist.append(os.path.basename(item.thumb))
     return thumblist
 
 
@@ -706,12 +722,12 @@ def create_item(media_fullname, thumbdir, key, thumbmax):
         thumb_basename = key + '-' + x +'.jpg'
         thumb_fullname = os.path.join(thumbdir, thumb_basename)
         info, infofmt = None, None
-        thumbsize = (thumbmax, thumbmax)  # TODO: plus proportions
-        make_thumbnail_subdir(media_fullname, thumb_fullname, thumbsize)
+        thumbsize = (thumbmax,  int(round(thumbmax / 640 * 480)))
+        medias_ext = list_of_medias_ext(media_fullname)
+        items = [create_item(_, thumbdir, 'dcim', thumbmax) for _ in medias_ext]
+        make_thumbnail_subdir(media_fullname, thumb_fullname, thumbsize, items, thumbdir)
         item = PostSubdir(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
                         thumbsize, infofmt)
-        medias_ext = list_of_medias_ext(media_fullname)
-        items = [create_item(_, thumbdir, 'dcim', 300) for _ in medias_ext]
         item.subdir = media_fullname
         item.htmname = os.path.join(os.path.dirname(thumbdir), x + '.htm')
         item.sublist = items
