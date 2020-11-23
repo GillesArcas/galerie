@@ -109,7 +109,7 @@ VIDDCIM = '<a href="file:///%s" rel="video"><img src="%s" width="%d" height="%d"
 # "display: block;" dans img : espacement correct ordi mais pas centré téléphone
 # "display: block;" dans a   : ok
 
-DIRPOST = '<a href="%s"><img src="%s" width="%d" height="%d" /></a>'
+DIRPOST = '<a href="%s"><img src="%s" width="%d" height="%d" style="border: 1px solid #C0C0C0;" /></a>'
 DIRPOSTCAPTION = ''
 
 BIMGPAT = '''\
@@ -576,13 +576,29 @@ def make_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir):
 
 
 def create_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir):
+
+    def size_thumbnail(width, height, xmax, ymax):
+        width2 = xmax
+        height2 = int(round(xmax * height / width))
+        if height2 > ymax:
+            width2 = int(round(ymax * width / height))
+            height2 = ymax
+        return width2, height2
+
     thumblist = list_of_thumbnails_in_medias(items)
     img = Image.new('RGB', size, (255, 255, 255))
-    width, height = size[0] // 2, size[1] // 2
+    width = size[0] // 2 - 2, size[0] - (size[0] // 2 - 2) - 3
+    height = size[1] // 2 - 2, size[1] - (size[1] // 2 - 2) - 3
+    height = min(height), min(height)
+    offsetx = 1, 1 + width[0] + 1
+    offsety = 1, 1 + height[0] + 1
     for ind, thumb in enumerate(thumblist[:min(4, len(thumblist))]):
+        row = ind // 2
+        col = ind % 2
         img2 = Image.open(os.path.join(thumbdir, thumb))
-        img2.thumbnail((width, height))
-        img.paste(img2, (width * (ind % 2), height * (ind // 2)))
+        w, h = size_thumbnail(*img2.size, width[col], height[row])
+        img2 = img2.resize((w, h), Image.LANCZOS)
+        img.paste(img2, (offsetx[col], offsety[row]))
     img.save(thumb_name)
 
 
@@ -659,13 +675,17 @@ def list_of_medias_ext(sourcedir):
     plus subdirectories containing media
     """
     result = list()
-    for basename in os.listdir(sourcedir):
-        fullname = os.path.join(sourcedir, basename)
-        if os.path.isdir(fullname) and basename != '.thumbnails' and basename != '$RECYCLE.BIN' and contains_media(fullname):
-            result.append(fullname)
-        else:
-            if is_media(basename):
+    listdir = os.listdir(sourcedir)
+    if '.nomedia' in listdir:
+        pass
+    else:
+        for basename in listdir:
+            fullname = os.path.join(sourcedir, basename)
+            if os.path.isdir(fullname) and basename != '$RECYCLE.BIN' and contains_media(fullname):
                 result.append(fullname)
+            else:
+                if is_media(basename):
+                    result.append(fullname)
     return result
 
 
@@ -688,51 +708,70 @@ def dispatch_medias(list_of_medias):
 # -- Creation of gallery element ----------------------------------------------
 
 
-def create_item(media_fullname, thumbdir, key, thumbmax):
-    media_basename = os.path.basename(media_fullname)
+def create_item(media_fullname, sourcedir, thumbdir, key, thumbmax):
     if os.path.isfile(media_fullname):
-        if media_basename.lower().endswith('.jpg'):
-            thumb_basename = key + '-' + media_basename
-            thumb_fullname = os.path.join(thumbdir, thumb_basename)
-            try:
-                info, infofmt = get_image_info(media_fullname)
-                infofmt = media_basename + ': ' + infofmt
-                thumbsize = size_thumbnail(info[2], info[3], thumbmax)
-                make_thumbnail(media_fullname, thumb_fullname, thumbsize)
-                item = PostImage(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
-                                thumbsize, infofmt)
-            except PIL.UnidentifiedImageError:
-                # corrupted image
-                warning(f'** Unable to read image {media_fullname}')
-                return None
+        if media_fullname.lower().endswith('.jpg'):
+            return create_item_image(media_fullname, sourcedir, thumbdir, key, thumbmax)
         else:
-            thumb_basename = key + '-' + media_basename.replace('.mp4', '.jpg')
-            thumb_fullname = os.path.join(thumbdir, thumb_basename)
-            info, infofmt = get_video_info(media_fullname)
-            infofmt = media_basename + ': ' + infofmt
-            thumbsize = size_thumbnail(info[2], info[3], thumbmax)
-            make_thumbnail_video(media_fullname, thumb_fullname, thumbsize)
-            item = PostVideo(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
-                            thumbsize, infofmt)
+            return create_item_video(media_fullname, sourcedir, thumbdir, key, thumbmax)
     else:
-        # media_fullname est un sous-répertoire
-        startpath = os.path.dirname(thumbdir)
-        x = os.path.relpath(media_fullname, startpath)
-        x = os.path.basename(x.replace('\\', '_').replace('/', '_')).replace('#', '_')
-        thumb_basename = key + '-' + x +'.jpg'
-        thumb_fullname = os.path.join(thumbdir, thumb_basename)
-        info, infofmt = None, None
-        thumbsize = (thumbmax,  int(round(thumbmax / 640 * 480)))
-        medias_ext = list_of_medias_ext(media_fullname)
-        items = [create_item(_, thumbdir, 'dcim', thumbmax) for _ in medias_ext]
+        return create_item_subdir(media_fullname, sourcedir, thumbdir, key, thumbmax)
+
+
+def create_item_image(media_fullname, sourcedir, thumbdir, key, thumbmax):
+    media_basename = os.path.basename(media_fullname)
+    thumb_basename = key + '-' + media_basename
+    thumb_fullname = os.path.join(thumbdir, thumb_basename)
+    try:
+        info, infofmt = get_image_info(media_fullname)
+        infofmt = media_basename + ': ' + infofmt
+        thumbsize = size_thumbnail(info[2], info[3], thumbmax)
+        make_thumbnail(media_fullname, thumb_fullname, thumbsize)
+        return PostImage(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
+                         thumbsize, infofmt)
+    except PIL.UnidentifiedImageError:
+        # corrupted image
+        warning(f'** Unable to read image {media_fullname}')
+        return None
+
+def create_item_video(media_fullname, sourcedir, thumbdir, key, thumbmax):
+    media_basename = os.path.basename(media_fullname)
+    thumb_basename = key + '-' + media_basename.replace('.mp4', '.jpg')
+    thumb_fullname = os.path.join(thumbdir, thumb_basename)
+    info, infofmt = get_video_info(media_fullname)
+    infofmt = media_basename + ': ' + infofmt
+    thumbsize = size_thumbnail(info[2], info[3], thumbmax)
+    make_thumbnail_video(media_fullname, thumb_fullname, thumbsize)
+    return PostVideo(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
+                     thumbsize, infofmt)
+
+
+def create_item_subdir(media_fullname, sourcedir, thumbdir, key, thumbmax):
+    # media_fullname est un sous-répertoire
+    media_basename = os.path.basename(media_fullname)
+    x = os.path.relpath(media_fullname, sourcedir)
+    x = os.path.basename(x.replace('\\', '_').replace('/', '_')).replace('#', '_')
+    thumb_basename = key + '-' + x +'.jpg'
+    thumb_fullname = os.path.join(thumbdir, thumb_basename)
+    info, infofmt = None, None
+    thumbsize = (thumbmax,  int(round(thumbmax / 640 * 480)))
+    medias_ext = list_of_medias_ext(media_fullname)
+    if not medias_ext:
+        return None
+    else:
+        items = list()
+        for media_ext in medias_ext:
+            item = create_item(media_ext, sourcedir, thumbdir, 'dcim', thumbmax)
+            if item is not None:
+                items.append(item)
         make_thumbnail_subdir(media_fullname, thumb_fullname, thumbsize, items, thumbdir)
         item = PostSubdir(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
                         thumbsize, infofmt)
         item.subdir = media_fullname
         item.htmname = os.path.join(os.path.dirname(thumbdir), x + '.htm')
         item.sublist = items
-
-    return item
+        assert None not in items
+        return item
 
 
 # -- Creation of diary from medias --------------------------------------------
@@ -781,7 +820,7 @@ def make_basic_index(args):
     for post in posts:
         for media in post.medias:
             media_fullname = os.path.join(args.root, media.uri)
-            item = create_item(media_fullname, args.thumbdir, 'post', 400)
+            item = create_item(media_fullname, args.imgsource, args.thumbdir, 'post', 400)
             media.thumb = item.thumb
             media.thumbsize = item.thumbsize
             media.descr = item.descr
@@ -823,7 +862,7 @@ def extend_index(args):
     for media_fullname in medias:
         date = date_from_item(media_fullname)  #  calculé deux fois
         if date in required_dates:
-            item = create_item(media_fullname, args.thumbdir, 'dcim', 300)
+            item = create_item(media_fullname, args.imgsource, args.thumbdir, 'dcim', 300)
             if item:
                 thumb_fullname = os.path.join(args.dest, item.thumb)
                 bydate[date].append(item)
@@ -860,8 +899,9 @@ def create_gallery(args):
     # complete posts
     postmedias = list()
     for item in medias_ext:
-        postmedia = create_item(item, args.thumbdir, 'dcim', 300)
-        postmedias.append(postmedia)
+        postmedia = create_item(item, args.imgsource, args.thumbdir, 'dcim', 300)
+        if postmedia is not None:
+            postmedias.append(postmedia)
 
     post = Post('00000000', 'TITLE', [])
     post.dcim = postmedias
@@ -1105,6 +1145,10 @@ def setup_context(args):
     if args.blogger and args.urlblogger is None:
         error('No blogger url (--url)')
 
+    if args.extend or args.gallery:
+        if not os.path.exists(args.root):
+            os.mkdir(args.root)
+
     if args.html or args.extend or args.gallery:
         # check for ffmpeg and ffprobe in path
         for exe in ('ffmpeg', 'ffprobe'):
@@ -1116,6 +1160,7 @@ def setup_context(args):
         args.thumbdir = os.path.join(args.dest, '.thumbnails')
         if not os.path.exists(args.thumbdir):
             os.mkdir(args.thumbdir)
+            open(os.path.join(args.thumbdir, '.nomedia'), 'a').close()
 
         photoboxdir = os.path.join(args.dest, 'photobox')
         if not os.path.exists(photoboxdir):

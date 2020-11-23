@@ -113,7 +113,7 @@ def test_03_ext_rec(mode):
             file_compare('index-x-rec.htm', 'tmp/index-x.htm') and
             # .thumbnails is tested after the last command modifying thumbnails
             directory_compare('.thumbnails', 'tmp/.thumbnails')
-            )
+        )
 
 
 def test_04_ext_no_md_file(mode):
@@ -125,7 +125,7 @@ def test_04_ext_no_md_file(mode):
         return (
             directory_compare('no_md_file/.thumbnails', 'tmp/.thumbnails') and
             file_compare('no_md_file/index-x.htm', 'tmp/index-x.htm')
-            )
+        )
 
 
 def test_gallery(mode):
@@ -133,9 +133,14 @@ def test_gallery(mode):
         journal.main('--gallery gallery --imgs .')
         return None
     else:
-         journal.main('--gallery tmp --imgs .')
-         return (
-            file_compare('gallery/index-x.htm', 'tmp/index-x.htm')
+        journal.main('--gallery tmp --imgs .')
+        return (
+            directory_compare('gallery/.thumbnails', 'tmp/.thumbnails')
+            and file_compare('gallery/index-x.htm', 'tmp/index-x.htm')
+            and file_compare('gallery/subdir.htm', 'tmp/subdir.htm')
+            and file_compare('gallery/subdir_deeper1.htm', 'tmp/subdir_deeper1.htm')
+            and file_compare('gallery/subdir_deeper2.htm', 'tmp/subdir_deeper2.htm')
+            and file_compare('gallery/subdir_deeper2_deepest.htm', 'tmp/subdir_deeper2_deepest.htm')
         )
 
 
