@@ -243,7 +243,9 @@ def main():
             nbcorrect += test('go')
 
         if nbcorrect == nbtest:
-            print('All tests ok (%d/%d)' % (nbcorrect, nbtest))
+            print(colorama.Fore.GREEN + colorama.Style.BRIGHT +
+                  'All tests ok (%d/%d)' % (nbcorrect, nbtest),
+                  colorama.Style.RESET_ALL)
             shutil.rmtree('tmp')
             sys.exit(0)
         else:

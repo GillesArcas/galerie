@@ -28,6 +28,7 @@ from collections import defaultdict
 from subprocess import check_output, CalledProcessError, STDOUT
 from urllib.request import urlopen
 
+import colorama
 import clipboard
 import PIL
 from PIL import Image, ImageChops
@@ -417,8 +418,16 @@ def print_html(posts, title, html_name, target='regular'):
 # -- Media description --------------------------------------------------------
 
 
+def is_image_file(name):
+    return os.path.splitext(name)[1].lower() in ('.jpg', '.gif')
+
+
+def is_video_file(name):
+    return os.path.splitext(name)[1].lower() in ('.mp4', '.webm', '.mkv', '.flv', '.m4v', '.avi', '.wmv')
+
+
 def is_media(name):
-    return os.path.splitext(name)[1].lower() in ('.jpg', '.mp4')
+    return is_image_file(name) or is_video_file(name)
 
 
 def date_from_name(name):
@@ -498,7 +507,8 @@ def get_video_info(filename):
         output = f'{date} {time}, dim={width}x{height}, m:s={mn:02}:{sec:02}, fps={fps}, {size} MB'
     except CalledProcessError as e:
         output = e.output.decode()
-    # TODO: referenced before assignment if exception
+        warning(output)
+        raise
     return (date, time, width, height, size, duration, fps), output
 
 
@@ -709,7 +719,7 @@ def dispatch_medias(list_of_medias):
 
 def create_item(media_fullname, sourcedir, thumbdir, key, thumbmax):
     if os.path.isfile(media_fullname):
-        if media_fullname.lower().endswith('.jpg'):
+        if is_image_file(media_fullname):
             return create_item_image(media_fullname, sourcedir, thumbdir, key, thumbmax)
         else:
             return create_item_video(media_fullname, sourcedir, thumbdir, key, thumbmax)
@@ -730,7 +740,7 @@ def create_item_image(media_fullname, sourcedir, thumbdir, key, thumbmax):
                          thumbsize, infofmt)
     except PIL.UnidentifiedImageError:
         # corrupted image
-        warning(f'** Unable to read image {media_fullname}')
+        warning(f'Unable to read image {media_fullname}')
         return None
 
 
@@ -738,12 +748,17 @@ def create_item_video(media_fullname, sourcedir, thumbdir, key, thumbmax):
     media_basename = os.path.basename(media_fullname)
     thumb_basename = key + '-' + media_basename + '.jpg'
     thumb_fullname = os.path.join(thumbdir, thumb_basename)
-    info, infofmt = get_video_info(media_fullname)
-    infofmt = media_basename + ': ' + infofmt
-    thumbsize = size_thumbnail(info[2], info[3], thumbmax)
-    make_thumbnail_video(media_fullname, thumb_fullname, thumbsize)
-    return PostVideo(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
-                     thumbsize, infofmt)
+    try:
+        info, infofmt = get_video_info(media_fullname)
+        infofmt = media_basename + ': ' + infofmt
+        thumbsize = size_thumbnail(info[2], info[3], thumbmax)
+        make_thumbnail_video(media_fullname, thumb_fullname, thumbsize)
+        return PostVideo(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
+                         thumbsize, infofmt)
+    except CalledProcessError:
+        # corrupted video
+        warning(f'Unable to read video {media_fullname}')
+        return None
 
 
 def create_item_subdir(media_fullname, sourcedir, thumbdir, key, thumbmax):
@@ -1041,7 +1056,9 @@ def idempotence(args):
 
 
 def warning(msg):
-    print(msg)
+    print(colorama.Fore.YELLOW + colorama.Style.BRIGHT +
+          msg,
+          colorama.Style.RESET_ALL)
 
 
 # Every error message error must be declared here to give a return code to the error
@@ -1061,7 +1078,9 @@ def errorcode(msg):
 
 
 def error(*msg):
-    print('**', ' '.join(msg))
+    print(colorama.Fore.RED + colorama.Style.BRIGHT +
+          ' '.join(msg),
+          colorama.Style.RESET_ALL)
     sys.exit(errorcode(msg[0]))
 
 
@@ -1126,7 +1145,11 @@ def setup_context(args):
     if args.root:
         args.root = os.path.abspath(args.root)
         if not os.path.isdir(args.root):
-            error('Directory not found', args.root)
+            if args.extend or args.gallery:
+                if not os.path.exists(args.root):
+                    os.mkdir(args.root)
+            else:
+                error('Directory not found', args.root)
 
     if args.dest:
         args.dest = os.path.abspath(args.dest)
@@ -1144,10 +1167,6 @@ def setup_context(args):
 
     if args.blogger and args.urlblogger is None:
         error('No blogger url (--url)')
-
-    if args.extend or args.gallery:
-        if not os.path.exists(args.root):
-            os.mkdir(args.root)
 
     if args.html or args.extend or args.gallery:
         # check for ffmpeg and ffprobe in path
@@ -1169,6 +1188,7 @@ def setup_context(args):
 
 
 def main(argstring=None):
+    colorama.init()
     locale.setlocale(locale.LC_TIME, '')
     args = parse_command_line(argstring)
     setup_context(args)
