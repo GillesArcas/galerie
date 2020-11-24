@@ -719,7 +719,7 @@ def create_item(media_fullname, sourcedir, thumbdir, key, thumbmax):
 
 def create_item_image(media_fullname, sourcedir, thumbdir, key, thumbmax):
     media_basename = os.path.basename(media_fullname)
-    thumb_basename = key + '-' + media_basename
+    thumb_basename = key + '-' + media_basename + '.jpg'
     thumb_fullname = os.path.join(thumbdir, thumb_basename)
     try:
         info, infofmt = get_image_info(media_fullname)
@@ -733,9 +733,10 @@ def create_item_image(media_fullname, sourcedir, thumbdir, key, thumbmax):
         warning(f'** Unable to read image {media_fullname}')
         return None
 
+
 def create_item_video(media_fullname, sourcedir, thumbdir, key, thumbmax):
     media_basename = os.path.basename(media_fullname)
-    thumb_basename = key + '-' + media_basename.replace('.mp4', '.jpg')
+    thumb_basename = key + '-' + media_basename + '.jpg'
     thumb_fullname = os.path.join(thumbdir, thumb_basename)
     info, infofmt = get_video_info(media_fullname)
     infofmt = media_basename + ': ' + infofmt
