@@ -568,11 +568,10 @@ def create_thumbnail_video(filename, thumbname, size):
 
 
 def make_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir):
-    if False and os.path.exists(thumb_name):
-        pass
-    else:
-        print('Making thumbnail:', thumb_name)
-        create_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir)
+    # subdir thumbnails are always created as they depend on the content of the
+    # directory
+    print('Making thumbnail:', thumb_name)
+    create_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir)
 
 
 def create_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir):
@@ -691,7 +690,7 @@ def list_of_medias_ext(sourcedir):
 
 def contains_media(fullname):
     for root, dirs, files in os.walk(fullname):
-        if '.thumbnails' not in root:
+        if '.nomedia' not in files:
             for basename in files:
                 if is_media(basename):
                     return True
