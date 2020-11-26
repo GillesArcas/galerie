@@ -240,7 +240,10 @@ def main():
         nbcorrect = 0
         for name, test in testfunctions():
             print(f'{colorama.Fore.YELLOW}Test: {name}{colorama.Style.RESET_ALL}')
-            nbcorrect += test('go')
+            if test('go'):
+                nbcorrect += 1
+            elif sys.argv[1:] and sys.argv[1] == 'abort':
+                break
 
         if nbcorrect == nbtest:
             print(colorama.Fore.GREEN + colorama.Style.BRIGHT +
