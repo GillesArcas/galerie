@@ -422,7 +422,7 @@ def print_html(posts, title, html_name, target='regular'):
 
 
 def is_image_file(name):
-    return os.path.splitext(name)[1].lower() in ('.jpg', '.gif', '.webp')
+    return os.path.splitext(name)[1].lower() in ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tif')
 
 
 def is_video_file(name):
