@@ -111,8 +111,12 @@ VIDDCIM = '<a href="file:///%s" rel="video"><img src="%s" width="%d" height="%d"
 # "display: block;" dans a   : ok
 
 DIRPOST = '<a href="%s"><img src="%s" width="%d" height="%d" style="border: 1px solid #C0C0C0;" /></a>'
-DIRPOSTCAPTION = ''
-
+DIRPOSTCAPTION = '''
+<span>
+<a href="%s"><img src="%s" width="%d" height="%d" style="border: 1px solid #C0C0C0;" /></a>
+<p>%s</p>
+</span>
+'''
 BIMGPAT = '''\
 <div class="separator" style="clear: both; text-align: center;">
 <a href="%s" style="clear: left; margin-bottom: 0em; margin-right: 1em; font-size: 0; display: block;">
@@ -285,11 +289,10 @@ class PostSubdir(PostItem):
         post.dcim = self.sublist
         posts = [post]
         print_html(posts, 'TITLE', self.htmname)
-        if True or not self.caption:
+        if not self.caption:
             return DIRPOST % (os.path.basename(self.htmname), self.thumb, *self.thumbsize)
         else:
-            # TODO
-            return DIRPOSTCAPTION % (self.uri, self.thumb, *self.thumbsize, self.descr, self.caption)
+            return DIRPOSTCAPTION % (os.path.basename(self.htmname), self.thumb, *self.thumbsize, self.caption)
 
 
 # -- Markdown parser ----------------------------------------------------------
@@ -419,7 +422,7 @@ def print_html(posts, title, html_name, target='regular'):
 
 
 def is_image_file(name):
-    return os.path.splitext(name)[1].lower() in ('.jpg', '.gif')
+    return os.path.splitext(name)[1].lower() in ('.jpg', '.gif', '.webp')
 
 
 def is_video_file(name):
@@ -684,7 +687,7 @@ def list_of_medias_ext(sourcedir):
     plus subdirectories containing media
     """
     result = list()
-    listdir = os.listdir(sourcedir)
+    listdir = sorted(os.listdir(sourcedir))
     if '.nomedia' in listdir:
         pass
     else:
@@ -769,7 +772,7 @@ def create_item_subdir(media_fullname, sourcedir, thumbdir, key, thumbmax):
     thumb_basename = key + '-' + media_relname +'.jpg'
     thumb_fullname = os.path.join(thumbdir, thumb_basename)
     info, infofmt = None, None
-    thumbsize = (thumbmax,  int(round(thumbmax / 640 * 480)))
+    thumbsize = (thumbmax, int(round(thumbmax / 640 * 480)))
     medias_ext = list_of_medias_ext(media_fullname)
     if not medias_ext:
         return None
@@ -782,10 +785,10 @@ def create_item_subdir(media_fullname, sourcedir, thumbdir, key, thumbmax):
         make_thumbnail_subdir(media_fullname, thumb_fullname, thumbsize, items, thumbdir)
         item = PostSubdir(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
                         thumbsize, infofmt)
-        item.subdir = media_fullname
         item.htmname = os.path.join(os.path.dirname(thumbdir), media_relname + '.htm')
         item.sublist = items
-        assert None not in items
+        # TODO: should be an option
+        # item.caption = media_basename
         return item
 
 
