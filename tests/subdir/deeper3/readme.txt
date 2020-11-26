@@ -1,0 +1,1 @@
+Almost an empty folder as tortoise or git do not let me add an empty folder.
