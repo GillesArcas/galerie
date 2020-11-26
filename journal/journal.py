@@ -522,7 +522,7 @@ def size_thumbnail(width, height, maxdim):
         return int(round(maxdim * width / height)), maxdim
 
 
-def make_thumbnail(image_name, thumb_name, size):
+def make_thumbnail_image(image_name, thumb_name, size):
     if os.path.exists(thumb_name):
         pass
     else:
@@ -729,13 +729,14 @@ def create_item(media_fullname, sourcedir, thumbdir, key, thumbmax):
 
 def create_item_image(media_fullname, sourcedir, thumbdir, key, thumbmax):
     media_basename = os.path.basename(media_fullname)
-    thumb_basename = key + '-' + media_basename + '.jpg'
+    media_relname = relative_name(media_fullname, sourcedir)
+    thumb_basename = key + '-' + media_relname +'.jpg'
     thumb_fullname = os.path.join(thumbdir, thumb_basename)
     try:
         info, infofmt = get_image_info(media_fullname)
         infofmt = media_basename + ': ' + infofmt
         thumbsize = size_thumbnail(info[2], info[3], thumbmax)
-        make_thumbnail(media_fullname, thumb_fullname, thumbsize)
+        make_thumbnail_image(media_fullname, thumb_fullname, thumbsize)
         return PostImage(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
                          thumbsize, infofmt)
     except PIL.UnidentifiedImageError:
@@ -746,7 +747,8 @@ def create_item_image(media_fullname, sourcedir, thumbdir, key, thumbmax):
 
 def create_item_video(media_fullname, sourcedir, thumbdir, key, thumbmax):
     media_basename = os.path.basename(media_fullname)
-    thumb_basename = key + '-' + media_basename + '.jpg'
+    media_relname = relative_name(media_fullname, sourcedir)
+    thumb_basename = key + '-' + media_relname +'.jpg'
     thumb_fullname = os.path.join(thumbdir, thumb_basename)
     try:
         info, infofmt = get_video_info(media_fullname)
@@ -762,11 +764,9 @@ def create_item_video(media_fullname, sourcedir, thumbdir, key, thumbmax):
 
 
 def create_item_subdir(media_fullname, sourcedir, thumbdir, key, thumbmax):
-    # media_fullname est un sous-répertoire
     media_basename = os.path.basename(media_fullname)
-    x = os.path.relpath(media_fullname, sourcedir)
-    x = os.path.basename(x.replace('\\', '_').replace('/', '_')).replace('#', '_')
-    thumb_basename = key + '-' + x +'.jpg'
+    media_relname = relative_name(media_fullname, sourcedir)
+    thumb_basename = key + '-' + media_relname +'.jpg'
     thumb_fullname = os.path.join(thumbdir, thumb_basename)
     info, infofmt = None, None
     thumbsize = (thumbmax,  int(round(thumbmax / 640 * 480)))
@@ -783,10 +783,24 @@ def create_item_subdir(media_fullname, sourcedir, thumbdir, key, thumbmax):
         item = PostSubdir(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
                         thumbsize, infofmt)
         item.subdir = media_fullname
-        item.htmname = os.path.join(os.path.dirname(thumbdir), x + '.htm')
+        item.htmname = os.path.join(os.path.dirname(thumbdir), media_relname + '.htm')
         item.sublist = items
         assert None not in items
         return item
+
+
+def relative_name(media_fullname, sourcedir):
+    """
+    D:\Gilles\Dev\journal\tests\subdir\deeper2\deepest\OCT_20000112_000004.jpg
+    -->
+    deeper2_deepest_OCT_20000112_000004.jpg
+
+    D:\Gilles\Dev\journal\tests\subdir\deeper2\deepest
+    -->
+    deeper2_deepest
+    """
+    x = os.path.relpath(media_fullname, sourcedir)
+    return x.replace('\\', '_').replace('/', '_').replace('#', '_')
 
 
 # -- Creation of diary from medias --------------------------------------------
