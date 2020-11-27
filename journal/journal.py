@@ -24,6 +24,8 @@ import locale
 import textwrap
 import base64
 import datetime
+
+from configparser import ConfigParser
 from collections import defaultdict
 from subprocess import check_output, CalledProcessError, STDOUT
 from urllib.request import urlopen
@@ -84,7 +86,6 @@ START = f'''\
 <body>\
 '''
 
-GALLERYCALL = "$('#%s').photobox('a', { thumbs:true, time:0, history:false, loop:false });"
 
 END = '</body>\n</html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
@@ -185,13 +186,13 @@ class Post:
         post.daterank = 1
         return post
 
-    def to_html(self, target='regular'):
+    def to_html(self, args, target='regular'):
         if target == 'regular':
-            return self.to_html_regular()
+            return self.to_html_regular(args)
         if target == 'blogger':
             return self.to_html_blogger()
 
-    def to_html_regular(self):
+    def to_html_regular(self, args):
         html = list()
         if self.text:
             html.append(markdown.markdown(self.text))
@@ -206,11 +207,11 @@ class Post:
         if self.dcim:
             html.append(SEP)
         for media in subdirs:
-            html.append(media.to_html_dcim())
+            html.append(media.to_html_dcim(args))
         if dcim:
             html.append(f'<div id="gallery-{self.date}-dcim-{self.daterank}">')
             for media in dcim:
-                html.append(media.to_html_dcim())
+                html.append(media.to_html_dcim(args))
             html.append('</div>')
 
         html.append(SEP)
@@ -249,7 +250,7 @@ class PostImage(PostItem):
         else:
             return IMGPOSTCAPTION % (self.uri, self.thumb, *self.thumbsize, self.descr, self.caption)
 
-    def to_html_dcim(self):
+    def to_html_dcim(self, args):
         return IMGDCIM % (self.uri, self.thumb, *self.thumbsize, self.descr)
 
     def to_html_blogger(self):
@@ -272,7 +273,7 @@ class PostVideo(PostItem):
         else:
             return VIDPOSTCAPTION % (self.uri, self.thumb, *self.thumbsize, self.descr, self.caption)
 
-    def to_html_dcim(self):
+    def to_html_dcim(self, args):
         return VIDDCIM % (self.uri, self.thumb, *self.thumbsize, self.descr)
 
     def to_html_blogger(self):
@@ -284,11 +285,11 @@ class PostVideo(PostItem):
 
 
 class PostSubdir(PostItem):
-    def to_html_dcim(self):
+    def to_html_dcim(self, args):
         post = Post(None, '', [])
         post.dcim = self.sublist
         posts = [post]
-        print_html(posts, 'TITLE', self.htmname)
+        print_html(args, posts, 'TITLE', self.htmname)
         if not self.caption:
             return DIRPOST % (os.path.basename(self.htmname), self.thumb, *self.thumbsize)
         else:
@@ -363,12 +364,12 @@ def print_markdown(posts, title, fullname):
 # -- html printer -------------------------------------------------------------
 
 
-def compose_html_reduced(posts, title, target):
+def compose_html_reduced(args, posts, title, target):
     html = list()
     html.append(START % title)
 
     for post in posts:
-        for line in post.to_html(target):
+        for line in post.to_html(args, target):
             html.append(line.strip())
         html.append('')
 
@@ -376,46 +377,73 @@ def compose_html_reduced(posts, title, target):
     return html
 
 
-def compose_html_full(posts, title, target):
+def compose_html_full(args, posts, title, target):
     html = list()
     html.append(START % title)
 
     for post in posts:
-        for line in post.to_html(target):
+        for line in post.to_html(args, target):
             html.append(line.strip())
         html.append('')
 
     html.append('<script>')
     for post in posts:
         if post.medias:
-            html.append(GALLERYCALL % f'gallery-{post.date}-blog-{post.daterank}')
+            gallery_id = f'gallery-{post.date}-blog-{post.daterank}'
+            html.append(gallery_call(args, gallery_id))
         if post.dcim:
-            html.append(GALLERYCALL % f'gallery-{post.date}-dcim-{post.daterank}')
+            gallery_id =  f'gallery-{post.date}-dcim-{post.daterank}'
+            html.append(gallery_call(args, gallery_id))
     html.append('</script>')
 
     html.append(END)
     return html
 
 
-def print_html_to_stream(posts, title, stream, target):
+def print_html_to_stream(args, posts, title, stream, target):
     if target == 'regular':
-        for line in compose_html_full(posts, title, target):
+        for line in compose_html_full(args, posts, title, target):
             print(line, file=stream)
     else:
-        for line in compose_html_reduced(posts, title, target):
+        for line in compose_html_reduced(args, posts, title, target):
             print(line, file=stream)
 
 
-def print_html(posts, title, html_name, target='regular'):
+def print_html(args, posts, title, html_name, target='regular'):
     assert target in ('regular', 'blogger')
     if html_name:
         with open(html_name, 'wt', encoding='utf-8') as f:
-            print_html_to_stream(posts, title, f, target)
+            print_html_to_stream(args, posts, title, f, target)
             return None
     else:
         with io.StringIO() as f:
-            print_html_to_stream(posts, title, f, target)
+            print_html_to_stream(args, posts, title, f, target)
             return f.getvalue()
+
+
+GALLERYCALL = """
+$('#%s').photobox('a', {
+loop:%s,
+thumbs:%s,
+autoplay:%s,
+time:%d,
+zoomable:%s ,
+rotatable:%s,
+wheelNextPrev:%s
+});
+"""
+
+def gallery_call(args, gallery_id):
+    return GALLERYCALL.replace('\n', '') % (
+        gallery_id,
+        str(args.photobox.loop).lower(),
+        str(args.photobox.thumbs).lower(),
+        str(args.photobox.autoplay).lower(),
+        args.photobox.time,
+        str(args.photobox.zoomable).lower(),
+        str(args.photobox.rotatable).lower(),
+        str(args.photobox.wheelNextPrev).lower(),
+    )
 
 
 # -- Media description --------------------------------------------------------
@@ -863,7 +891,7 @@ def make_basic_index(args):
 def markdown_to_html(args):
     title, posts = make_basic_index(args)
     purge_thumbnails(args.thumbdir, posts)
-    print_html(posts, title, os.path.join(args.dest, 'index.htm'), 'regular')
+    print_html(args, posts, title, os.path.join(args.dest, 'index.htm'), 'regular')
 
 
 # -- Addition of DCIM medias --------------------------------------------------
@@ -916,7 +944,7 @@ def extend_index(args):
             post.dcim = bydate[post.date]
 
     purge_thumbnails(args.thumbdir, posts)
-    print_html(posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
+    print_html(args, posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
 
 
 # -- Creation of html page from directory tree --------------------------------
@@ -940,7 +968,7 @@ def create_gallery(args):
     posts.append(post)
 
     purge_thumbnails(args.thumbdir, posts)
-    print_html(posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
+    print_html(args, posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
 
 
 # -- Export to blogger---------------------------------------------------------
@@ -1015,7 +1043,7 @@ def check_images(args, posts, online_images):
     return result
 
 
-def compose_blogger_html(title, posts, imgdata, online_videos):
+def compose_blogger_html(args, title, posts, imgdata, online_videos):
     """ Compose html with blogger image urls
     """
     for post in posts:
@@ -1036,7 +1064,7 @@ def compose_blogger_html(title, posts, imgdata, online_videos):
             else:
                 assert False
 
-    return print_html(posts, title, '', target='blogger')
+    return print_html(args, posts, title, '', target='blogger')
 
 
 def prepare_for_blogger(args):
@@ -1051,7 +1079,7 @@ def prepare_for_blogger(args):
     if args.check_images and check_images(args, posts, online_images) is False:
         pass
 
-    html = compose_blogger_html(title, posts, online_images, online_videos)
+    html = compose_blogger_html(args, title, posts, online_images, online_videos)
 
     if args.full is False:
         html = re.search('<body>(.*)?</body>', html, flags=re.DOTALL).group(1)
@@ -1067,6 +1095,121 @@ def prepare_for_blogger(args):
 def idempotence(args):
     title, posts = parse_markdown(os.path.join(args.root, 'index.md'))
     print_markdown(posts, title, os.path.join(args.dest, 'index.md'))
+
+
+# -- Configuration file ------------------------------------------------------
+
+
+# The following docstring is used to create the configuration file.
+DEFAULTS = \
+"""
+[thumbnails]
+; timestamp of thumbnail in video
+thumbdelay = 5000                       ; milliseconds
+
+[photobox]
+; Allows to navigate between first and last images
+loop = False                            ; True or False
+; Show gallery thumbnails below the presented photo
+thumbs = True                           ; True or False
+; Should autoplay on first time or not
+autoplay = False                        ; True or False
+; Autoplay interval (less than 1000 will hide the autoplay button)
+time = 3000                             ; milliseconds
+; Disable/enable mousewheel image zooming
+zoomable = True                         ; True or False
+; Allow rotation of the image
+rotatable = True                        ; True or False
+; Change image using mousewheel left/right
+wheelNextPrev = True                    ; True or False
+"""
+
+
+class MyConfigParser (ConfigParser):
+    """Add input checking."""
+    def __init__(self):
+        ConfigParser.__init__(self, inline_comment_prefixes=(';',))
+
+    def error(self, section, entry):
+        error('missing or incorrect config value:', '[%s]%s' % (section, entry))
+
+    def getint(self, section, entry):
+        try:
+            return ConfigParser.getint(self, section, entry)
+        except Exception as e:
+            print(e)
+            self.error(section, entry)
+
+    def getboolean(self, section, entry):
+        try:
+            return ConfigParser.getboolean(self, section, entry)
+        except Exception as e:
+            print(e)
+            self.error(section, entry)
+
+    def getcolor(self, section, entry, n):
+        try:
+            s = ConfigParser.get(self, section, entry)
+            x = tuple([int(x) for x in s.split()])
+        except:
+            self.error(section, entry)
+        if len(x) == n:
+            return x
+        else:
+            self.error(section, entry)
+
+
+def configfilename(params):
+    return os.path.join(params.root, '.config.ini')
+
+
+def createconfig(config_filename, defaults):
+    with open(config_filename, 'wt') as f:
+        f.writelines(defaults)
+
+
+def read_config(params):
+    config_filename = configfilename(params)
+
+    try:
+        if not os.path.exists(config_filename):
+            createconfig(config_filename, DEFAULTS)
+    except:
+        error('error creating configuration file')
+
+    try:
+        getconfig(params, config_filename)
+    except Exception as e:
+        error('error reading configuration file :' + str(e))
+
+
+def getconfig(options, config_filename):
+    class Section: pass
+    options.thumbnails = Section()
+    options.photobox = Section()
+
+    config = MyConfigParser()
+    config.read(config_filename)
+
+    # [thumbnails]
+    options.thumbnails.thumbdelay = config.getint('thumbnails', 'thumbdelay')
+
+    # [photobox]
+    options.photobox.loop = config.getboolean('photobox', 'loop')
+    options.photobox.thumbs = config.getboolean('photobox', 'thumbs')
+    options.photobox.autoplay = config.getboolean('photobox', 'autoplay')
+    options.photobox.time = config.getint('photobox', 'time')
+    options.photobox.zoomable = config.getboolean('photobox', 'zoomable')
+    options.photobox.rotatable = config.getboolean('photobox', 'rotatable')
+    options.photobox.wheelNextPrev = config.getboolean('photobox', 'wheelNextPrev')
+
+
+def setconfig(cfgname, section, key, value):
+    config = MyConfigParser()
+    config.read(cfgname)
+    config.set(section, key, value)
+    with open(cfgname, 'wt') as configfile:
+        config.write(configfile)
 
 
 # -- Error handling -----------------------------------------------------------
@@ -1087,6 +1230,7 @@ Posts are not ordered
 Unable to read url
 No image source (--imgsource)
 No blogger url (--url)
+missing or incorrect config value:
 '''
 
 
@@ -1209,6 +1353,7 @@ def main(argstring=None):
     locale.setlocale(locale.LC_TIME, '')
     args = parse_command_line(argstring)
     setup_context(args)
+    read_config(args)
 
     if args.create:
         create_index(args)
