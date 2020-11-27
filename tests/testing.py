@@ -47,12 +47,66 @@ def directory_compare(dir1, dir2):
     return list_compare('ref', 'res', list1, list2, dir1, dir2)
 
 
+def test_00_Config_00(mode):
+    if mode == 'ref':
+        journal.main('--gallery gallery --imgs subdir/deeper1')
+        shutil.copyfile('gallery/index-x.htm', 'gallery/index-config1.htm')
+        return None
+    else:
+        journal.main('--gallery tmp --imgs subdir/deeper1')
+        return file_compare('gallery/index-config1.htm', 'tmp/index-x.htm')
+
+
+def test_00_Config_01(mode):
+    if mode == 'ref':
+        journal.setconfig('gallery/.config.ini', 'photobox', 'loop', 'True')
+        journal.setconfig('gallery/.config.ini', 'photobox', 'time', '2000')
+        journal.main('--gallery gallery --imgs subdir/deeper1')
+        os.remove('gallery/.config.ini')
+        shutil.copyfile('gallery/index-x.htm', 'gallery/index-config2.htm')
+        return None
+    else:
+        journal.setconfig('tmp/.config.ini', 'photobox', 'loop', 'True')
+        journal.setconfig('tmp/.config.ini', 'photobox', 'time', '2000')
+        journal.main('--gallery tmp --imgs subdir/deeper1')
+        ##os.remove('tmp/.config.ini')
+        return file_compare('gallery/index-config2.htm', 'tmp/index-x.htm')
+
+
+def test_00_Config_02(mode):
+    if mode == 'ref':
+        return None
+    else:
+        try:
+            journal.setconfig('tmp/.config.ini', 'photobox', 'loop', 'foobar')
+            journal.main('--gallery tmp --imgs subdir/deeper1')
+            return False
+        except SystemExit as exception:
+            return exception.args[0] == journal.errorcode('missing or incorrect config value:')
+        finally:
+            journal.setconfig('tmp/.config.ini', 'photobox', 'loop', 'false')
+
+
+def test_00_Config_03(mode):
+    if mode == 'ref':
+        return None
+    else:
+        try:
+            journal.setconfig('tmp/.config.ini', 'photobox', 'time', 'abc')
+            journal.main('--gallery tmp --imgs subdir/deeper1')
+            return False
+        except SystemExit as exception:
+            return exception.args[0] == journal.errorcode('missing or incorrect config value:')
+        finally:
+            journal.setconfig('tmp/.config.ini', 'photobox', 'time', '3000')
+
+
 def test_01_idem(mode):
     # test number to keep test order
     if mode == 'ref':
         return None
     else:
-        journal.main('--idem ./ --dest tmp')
+        journal.main('--idem . --dest tmp')
         return file_compare('index.md', 'tmp/index.md')
 
 
@@ -136,7 +190,7 @@ def test_gallery(mode):
         journal.main('--gallery tmp --imgs .')
         return (
             directory_compare('gallery/.thumbnails', 'tmp/.thumbnails')
-            and file_compare('gallery/index-x.htm', 'tmp/index-x.htm')
+            and file_compare('gallery/index-gallery.htm', 'tmp/index-x.htm')
             and file_compare('gallery/subdir.htm', 'tmp/subdir.htm')
             and file_compare('gallery/subdir_deeper1.htm', 'tmp/subdir_deeper1.htm')
             and file_compare('gallery/subdir_deeper2.htm', 'tmp/subdir_deeper2.htm')
