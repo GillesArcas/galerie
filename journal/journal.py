@@ -553,15 +553,15 @@ def size_thumbnail(width, height, maxdim):
         return int(round(maxdim * width / height)), maxdim
 
 
-def make_thumbnail_image(image_name, thumb_name, size):
-    if os.path.exists(thumb_name):
+def make_thumbnail_image(args, image_name, thumb_name, size):
+    if os.path.exists(thumb_name) and args.forcethumb is False:
         pass
     else:
         print('Making thumbnail:', thumb_name)
-        create_thumbnail(image_name, thumb_name, size)
+        create_thumbnail_image(image_name, thumb_name, size)
 
 
-def create_thumbnail(image_name, thumb_name, size):
+def create_thumbnail_image(image_name, thumb_name, size):
     imgobj = Image.open(image_name)
 
     if (imgobj.mode != 'RGBA'
@@ -575,12 +575,12 @@ def create_thumbnail(image_name, thumb_name, size):
     imgobj.save(thumb_name)
 
 
-def make_thumbnail_video(video_name, thumb_name, size):
-    if os.path.exists(thumb_name):
+def make_thumbnail_video(args, video_name, thumb_name, size, duration):
+    if os.path.exists(thumb_name) and args.forcethumb is False:
         pass
     else:
         print('Making thumbnail:', thumb_name)
-        create_thumbnail_video(video_name, thumb_name, size)
+        create_thumbnail_video(args, video_name, thumb_name, size, duration)
 
 
 # base64 video.png
@@ -593,11 +593,12 @@ PxqDcH6p1swXBC4l6yZskACkTN1WrQr2SlIFhTtgqeZa+zsOogLXegvEocZ5c/W5BcoVNNCg3hSudV
 TkSuQmCC'''
 
 
-def create_thumbnail_video(filename, thumbname, size):
+def create_thumbnail_video(args, filename, thumbname, size, duration):
     # ffmpeg must be in path
+    delay = min(duration - 1, args.thumbnails.thumbdelay)
     sizearg = '%dx%d' % size
-    command = 'ffmpeg -v error -i "%s" -vcodec mjpeg -vframes 1 -an -f rawvideo -s %s "%s"'
-    command = command % (filename, sizearg, thumbname)
+    command = 'ffmpeg -y -v error -itsoffset -%d -i "%s" -vcodec mjpeg -vframes 1 -an -f rawvideo -s %s "%s"'
+    command = command % (delay, filename, sizearg, thumbname)
     result = os.system(command)
 
     # add a movie icon to the thumbnail to identify videos
@@ -608,7 +609,7 @@ def create_thumbnail_video(filename, thumbname, size):
     img1.save(thumbname)
 
 
-def make_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir):
+def make_thumbnail_subdir(args, subdir_name, thumb_name, size, items, thumbdir):
     # subdir thumbnails are always created as they depend on the content of the
     # directory
     print('Making thumbnail:', thumb_name)
@@ -748,17 +749,17 @@ def dispatch_medias(list_of_medias):
 # -- Creation of gallery element ----------------------------------------------
 
 
-def create_item(media_fullname, sourcedir, thumbdir, key, thumbmax):
+def create_item(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
     if os.path.isfile(media_fullname):
         if is_image_file(media_fullname):
-            return create_item_image(media_fullname, sourcedir, thumbdir, key, thumbmax)
+            return create_item_image(args, media_fullname, sourcedir, thumbdir, key, thumbmax)
         else:
-            return create_item_video(media_fullname, sourcedir, thumbdir, key, thumbmax)
+            return create_item_video(args, media_fullname, sourcedir, thumbdir, key, thumbmax)
     else:
-        return create_item_subdir(media_fullname, sourcedir, thumbdir, key, thumbmax)
+        return create_item_subdir(args, media_fullname, sourcedir, thumbdir, key, thumbmax)
 
 
-def create_item_image(media_fullname, sourcedir, thumbdir, key, thumbmax):
+def create_item_image(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
     media_basename = os.path.basename(media_fullname)
     media_relname = relative_name(media_fullname, sourcedir)
     thumb_basename = key + '-' + media_relname +'.jpg'
@@ -767,7 +768,7 @@ def create_item_image(media_fullname, sourcedir, thumbdir, key, thumbmax):
         info, infofmt = get_image_info(media_fullname)
         infofmt = media_basename + ': ' + infofmt
         thumbsize = size_thumbnail(info[2], info[3], thumbmax)
-        make_thumbnail_image(media_fullname, thumb_fullname, thumbsize)
+        make_thumbnail_image(args, media_fullname, thumb_fullname, thumbsize)
         return PostImage(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
                          thumbsize, infofmt)
     except PIL.UnidentifiedImageError:
@@ -776,7 +777,7 @@ def create_item_image(media_fullname, sourcedir, thumbdir, key, thumbmax):
         return None
 
 
-def create_item_video(media_fullname, sourcedir, thumbdir, key, thumbmax):
+def create_item_video(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
     media_basename = os.path.basename(media_fullname)
     media_relname = relative_name(media_fullname, sourcedir)
     thumb_basename = key + '-' + media_relname +'.jpg'
@@ -785,7 +786,7 @@ def create_item_video(media_fullname, sourcedir, thumbdir, key, thumbmax):
         info, infofmt = get_video_info(media_fullname)
         infofmt = media_basename + ': ' + infofmt
         thumbsize = size_thumbnail(info[2], info[3], thumbmax)
-        make_thumbnail_video(media_fullname, thumb_fullname, thumbsize)
+        make_thumbnail_video(args, media_fullname, thumb_fullname, thumbsize, duration=info[5])
         return PostVideo(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
                          thumbsize, infofmt)
     except CalledProcessError:
@@ -794,7 +795,7 @@ def create_item_video(media_fullname, sourcedir, thumbdir, key, thumbmax):
         return None
 
 
-def create_item_subdir(media_fullname, sourcedir, thumbdir, key, thumbmax):
+def create_item_subdir(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
     media_basename = os.path.basename(media_fullname)
     media_relname = relative_name(media_fullname, sourcedir)
     thumb_basename = key + '-' + media_relname +'.jpg'
@@ -807,10 +808,10 @@ def create_item_subdir(media_fullname, sourcedir, thumbdir, key, thumbmax):
     else:
         items = list()
         for media_ext in medias_ext:
-            item = create_item(media_ext, sourcedir, thumbdir, 'dcim', thumbmax)
+            item = create_item(args, media_ext, sourcedir, thumbdir, 'dcim', thumbmax)
             if item is not None:
                 items.append(item)
-        make_thumbnail_subdir(media_fullname, thumb_fullname, thumbsize, items, thumbdir)
+        make_thumbnail_subdir(args, media_fullname, thumb_fullname, thumbsize, items, thumbdir)
         item = PostSubdir(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
                         thumbsize, infofmt)
         item.htmname = os.path.join(os.path.dirname(thumbdir), media_relname + '.htm')
@@ -880,7 +881,7 @@ def make_basic_index(args):
     for post in posts:
         for media in post.medias:
             media_fullname = os.path.join(args.root, media.uri)
-            item = create_item(media_fullname, args.imgsource, args.thumbdir, 'post', 400)
+            item = create_item(args, media_fullname, args.imgsource, args.thumbdir, 'post', 400)
             media.thumb = item.thumb
             media.thumbsize = item.thumbsize
             media.descr = item.descr
@@ -922,7 +923,7 @@ def extend_index(args):
     for media_fullname in medias:
         date = date_from_item(media_fullname)  #  calculé deux fois
         if date in required_dates:
-            item = create_item(media_fullname, args.imgsource, args.thumbdir, 'dcim', 300)
+            item = create_item(args, media_fullname, args.imgsource, args.thumbdir, 'dcim', 300)
             if item:
                 thumb_fullname = os.path.join(args.dest, item.thumb)
                 bydate[date].append(item)
@@ -959,7 +960,7 @@ def create_gallery(args):
     # complete posts
     postmedias = list()
     for item in medias_ext:
-        postmedia = create_item(item, args.imgsource, args.thumbdir, 'dcim', 300)
+        postmedia = create_item(args, item, args.imgsource, args.thumbdir, 'dcim', 300)
         if postmedia is not None:
             postmedias.append(postmedia)
 
@@ -1105,7 +1106,7 @@ DEFAULTS = \
 """
 [thumbnails]
 ; timestamp of thumbnail in video
-thumbdelay = 5000                       ; milliseconds
+thumbdelay = 5                          ; seconds
 
 [photobox]
 ; Allows to navigate between first and last images
@@ -1283,6 +1284,8 @@ def parse_command_line(argstring):
     agroup.add_argument('--flat', dest='recursive', help='--imgsource does not recurse',
                         action='store_false')
     agroup.add_argument('--full', help='full html (versus blogger ready html)',
+                        action='store_true', default=False)
+    agroup.add_argument('--forcethumb', help='force calculation of thumbnails',
                         action='store_true', default=False)
     agroup.add_argument('--check', dest='check_images', help='check availability of medias on blogger',
                         action='store_true')
