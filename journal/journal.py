@@ -816,8 +816,10 @@ def create_item_subdir(args, media_fullname, sourcedir, thumbdir, key, thumbmax)
                         thumbsize, infofmt)
         item.htmname = os.path.join(os.path.dirname(thumbdir), media_relname + '.htm')
         item.sublist = items
-        # TODO: should be an option
-        # item.caption = media_basename
+        if args.thumbnails.subdir_caption:
+            item.caption = media_basename
+        else:
+            item.caption = ''
         return item
 
 
@@ -1105,6 +1107,8 @@ def idempotence(args):
 DEFAULTS = \
 """
 [thumbnails]
+; Subdir caption is empty or name of subdir
+subdir_caption = true                   ; true or false
 ; timestamp of thumbnail in video
 thumbdelay = 5                          ; seconds
 
@@ -1193,6 +1197,7 @@ def getconfig(options, config_filename):
     config.read(config_filename)
 
     # [thumbnails]
+    options.thumbnails.subdir_caption = config.getboolean('thumbnails', 'subdir_caption')
     options.thumbnails.thumbdelay = config.getint('thumbnails', 'thumbdelay')
 
     # [photobox]
@@ -1357,27 +1362,29 @@ def main(argstring=None):
     args = parse_command_line(argstring)
     setup_context(args)
     read_config(args)
+    try:
+        if args.create:
+            create_index(args)
 
-    if args.create:
-        create_index(args)
+        elif args.html:
+            markdown_to_html(args)
 
-    elif args.html:
-        markdown_to_html(args)
+        elif args.extend:
+            extend_index(args)
 
-    elif args.extend:
-        extend_index(args)
+        elif args.gallery:
+            create_gallery(args)
 
-    elif args.gallery:
-        create_gallery(args)
+        elif args.blogger:
+            prepare_for_blogger(args)
 
-    elif args.blogger:
-        prepare_for_blogger(args)
+        elif args.idem:
+            idempotence(args)
 
-    elif args.idem:
-        idempotence(args)
-
-    elif args.test:
-        pass
+        elif args.test:
+            pass
+    except KeyboardInterrupt:
+        warning('Interrupted by user.')
 
 
 if __name__ == '__main__':
