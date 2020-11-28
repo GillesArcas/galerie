@@ -49,12 +49,6 @@ journal --blogger <root-dir> --url <url> [--check] [--full]
 # -- Post objects -------------------------------------------------------------
 
 
-FAVICON_BASE64 = '''\
-iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAAAAAA6mKC9AAAArUlEQVR42mP8z4AKmBjIF/ix7jhCYG
-rrdSC5FigKFdC8xnH/OYMRAwMHAwPjf5BIyX0rhnM/1oKYjP+X7ROwun99DkOKouaxD05RzHqvW8ym
-ykr+ffNFdd8Ev0NPGIt7GFKKP3xfx+DEILCvhaGEBWiw19IPHMeCGQScJEH2rF36////Kf+/f/+eDG
-QsXcv4f+p1gRfZhkDzz0+V+KCZzQAUfv8fCr4DMcQdSAAA+dJRILrFW04AAAAASUVORK5CYII='''
-
 CAPTION_IMAGE_STYLE = '''\
 <style type="text/css">
     span { display:inline-table; }
@@ -74,7 +68,7 @@ START = f'''\
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>%s</title>
-    <link rel="icon" href="data:image/png;base64,\n{FAVICON_BASE64}" />
+    <link rel="icon" href="favicon.ico" />
     <meta name="viewport" content="width=device-width">
     <link rel="stylesheet" href="photobox/photobox.css">
     <script src="photobox/jquery.min.js"></script>
@@ -1104,7 +1098,7 @@ def idempotence(args):
 
 
 # The following docstring is used to create the configuration file.
-DEFAULTS = \
+CONFIG_DEFAULTS = \
 """
 [thumbnails]
 ; Subdir caption is empty or name of subdir
@@ -1177,8 +1171,8 @@ def read_config(params):
     config_filename = configfilename(params)
 
     try:
-        if not os.path.exists(config_filename):
-            createconfig(config_filename, DEFAULTS)
+        if not os.path.exists(config_filename) or params.resetcfg:
+            createconfig(config_filename, CONFIG_DEFAULTS)
     except:
         error('error creating configuration file')
 
@@ -1270,6 +1264,8 @@ def parse_command_line(argstring):
     xgroup.add_argument('--blogger',
                         help='input md, html blogger ready in clipboard',
                         action='store', metavar='<root-dir>')
+    xgroup.add_argument('--resetcfg', help='reset config file to defaults',
+                        action='store', metavar='<root-dir>')
     xgroup.add_argument('--idem', help='test idempotence',
                         action='store', metavar='<root-dir>')
     xgroup.add_argument('--test', help=argparse.SUPPRESS,
@@ -1302,7 +1298,10 @@ def parse_command_line(argstring):
     else:
         args = parser.parse_args(argstring.split())
 
-    args.root = args.create or args.html or args.extend or args.gallery or args.blogger or args.idem
+    args.root = (
+        args.create or args.html or args.extend or args.gallery
+        or args.blogger or args.idem or args.resetcfg
+    )
 
     return args
 
@@ -1349,6 +1348,11 @@ def setup_context(args):
         if not os.path.exists(args.thumbdir):
             os.mkdir(args.thumbdir)
             open(os.path.join(args.thumbdir, '.nomedia'), 'a').close()
+
+        favicondst = os.path.join(args.dest, 'favicon.ico')
+        if not os.path.isfile(favicondst):
+            faviconsrc = os.path.join(os.path.dirname(__file__), 'favicon.ico')
+            shutil.copyfile(faviconsrc, favicondst)
 
         photoboxdir = os.path.join(args.dest, 'photobox')
         if not os.path.exists(photoboxdir):
