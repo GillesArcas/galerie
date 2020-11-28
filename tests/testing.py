@@ -49,27 +49,30 @@ def directory_compare(dir1, dir2):
 
 def test_00_Config_00(mode):
     if mode == 'ref':
-        journal.main('--gallery gallery --imgs subdir/deeper1')
+        journal.main('--resetcfg gallery')
+        journal.main('--gallery gallery --imgs subdir')
         shutil.copyfile('gallery/index-x.htm', 'gallery/index-config1.htm')
         return None
     else:
-        journal.main('--gallery tmp --imgs subdir/deeper1')
+        journal.main('--resetcfg tmp')
+        journal.main('--gallery tmp --imgs subdir')
         return file_compare('gallery/index-config1.htm', 'tmp/index-x.htm')
 
 
 def test_00_Config_01(mode):
     if mode == 'ref':
+        journal.setconfig('gallery/.config.ini', 'thumbnails', 'subdir_caption', 'False')
         journal.setconfig('gallery/.config.ini', 'photobox', 'loop', 'True')
         journal.setconfig('gallery/.config.ini', 'photobox', 'time', '2000')
-        journal.main('--gallery gallery --imgs subdir/deeper1')
+        journal.main('--gallery gallery --imgs subdir')
         os.remove('gallery/.config.ini')
         shutil.copyfile('gallery/index-x.htm', 'gallery/index-config2.htm')
         return None
     else:
+        journal.setconfig('tmp/.config.ini', 'thumbnails', 'subdir_caption', 'False')
         journal.setconfig('tmp/.config.ini', 'photobox', 'loop', 'True')
         journal.setconfig('tmp/.config.ini', 'photobox', 'time', '2000')
-        journal.main('--gallery tmp --imgs subdir/deeper1')
-        ##os.remove('tmp/.config.ini')
+        journal.main('--gallery tmp --imgs subdir')
         return file_compare('gallery/index-config2.htm', 'tmp/index-x.htm')
 
 
@@ -112,7 +115,8 @@ def test_01_idem(mode):
 
 def test_01_idem_no_md_file(mode):
     try:
-        journal.main('--idem ./no_md_file')
+        journal.main('--resetcfg no_md_file')
+        journal.main('--idem no_md_file')
         return False
     except SystemExit as exception:
         return exception.args[0] == journal.errorcode('File not found')
@@ -120,9 +124,11 @@ def test_01_idem_no_md_file(mode):
 
 def test_02_html(mode):
     if mode == 'ref':
+        journal.main('--resetcfg .')
         journal.main('--html .')
         return None
     else:
+        journal.main('--resetcfg .')
         journal.main('--html . --dest tmp')
         return file_compare('index.htm', 'tmp/index.htm')
 
@@ -184,9 +190,12 @@ def test_04_ext_no_md_file(mode):
 
 def test_gallery(mode):
     if mode == 'ref':
+        journal.main('--resetcfg gallery')
         journal.main('--gallery gallery --imgs .')
+        shutil.copyfile('gallery/index-x.htm', 'gallery/index-gallery.htm')
         return None
     else:
+        journal.main('--resetcfg tmp')
         journal.main('--gallery tmp --imgs .')
         return (
             directory_compare('gallery/.thumbnails', 'tmp/.thumbnails')
