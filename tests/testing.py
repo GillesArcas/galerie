@@ -67,6 +67,7 @@ def test_00_Config_00(mode):
 
 def test_00_Config_01(mode):
     if mode == 'ref':
+        journal.setconfig('gallery/.config.ini', 'thumbnails', 'media_description', 'False')
         journal.setconfig('gallery/.config.ini', 'thumbnails', 'subdir_caption', 'False')
         journal.setconfig('gallery/.config.ini', 'photobox', 'loop', 'True')
         journal.setconfig('gallery/.config.ini', 'photobox', 'time', '2000')
@@ -75,6 +76,7 @@ def test_00_Config_01(mode):
         shutil.copyfile('gallery/index-x.htm', 'gallery/index-config2.htm')
         return None
     else:
+        journal.setconfig('tmp/.config.ini', 'thumbnails', 'media_description', 'False')
         journal.setconfig('tmp/.config.ini', 'thumbnails', 'subdir_caption', 'False')
         journal.setconfig('tmp/.config.ini', 'photobox', 'loop', 'True')
         journal.setconfig('tmp/.config.ini', 'photobox', 'time', '2000')
@@ -115,6 +117,7 @@ def test_01_idem(mode):
     if mode == 'ref':
         return None
     else:
+        journal.main('--resetcfg .')
         journal.main('--idem . --dest tmp')
         return file_compare('index.md', 'tmp/index.md')
 

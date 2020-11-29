@@ -39,6 +39,7 @@ import markdown
 
 
 USAGE = """
+journal --gallery <root-dir> --imgsource <media-dir>
 journal --create  <root-dir> --imgsource <media-dir> [--dates <yyyymmdd-yyyymmdd>]
 journal --html    <root-dir> [--dest <dir>]
 journal --extend  <root-dir> --imgsource <media-dir> [--dates <yyyymmdd-yyyymmdd>] [--dest <dir>]
@@ -194,7 +195,7 @@ class Post:
         if self.medias:
             html.append(f'<div id="gallery-{self.date}-blog-{self.daterank}">')
             for media in self.medias:
-                html.append(media.to_html_post())
+                html.append(media.to_html_post(args))
             html.append('</div>')
 
         subdirs, dcim = dispatch_medias(self.dcim)
@@ -238,14 +239,16 @@ class PostImage(PostItem):
         else:
             return '![](%s)\n%s' % (self.uri, self.caption)
 
-    def to_html_post(self):
+    def to_html_post(self, args):
+        descr = self.descr if args.thumbnails.media_description else ''
         if not self.caption:
-            return IMGPOST % (self.uri, self.thumb, *self.thumbsize, self.descr)
+            return IMGPOST % (self.uri, self.thumb, *self.thumbsize, descr)
         else:
-            return IMGPOSTCAPTION % (self.uri, self.thumb, *self.thumbsize, self.descr, self.caption)
+            return IMGPOSTCAPTION % (self.uri, self.thumb, *self.thumbsize, descr, self.caption)
 
     def to_html_dcim(self, args):
-        return IMGDCIM % (self.uri, self.thumb, *self.thumbsize, self.descr)
+        descr = self.descr if args.thumbnails.media_description else ''
+        return IMGDCIM % (self.uri, self.thumb, *self.thumbsize, descr)
 
     def to_html_blogger(self):
         if not self.caption:
@@ -261,14 +264,16 @@ class PostVideo(PostItem):
         else:
             return '[](%s)\n%s' % (self.uri, self.caption)
 
-    def to_html_post(self):
+    def to_html_post(self, args):
+        descr = self.descr if args.thumbnails.media_description else ''
         if not self.caption:
-            return VIDPOST % (self.uri, self.thumb, *self.thumbsize, self.descr)
+            return VIDPOST % (self.uri, self.thumb, *self.thumbsize, descr)
         else:
-            return VIDPOSTCAPTION % (self.uri, self.thumb, *self.thumbsize, self.descr, self.caption)
+            return VIDPOSTCAPTION % (self.uri, self.thumb, *self.thumbsize, descr, self.caption)
 
     def to_html_dcim(self, args):
-        return VIDDCIM % (self.uri, self.thumb, *self.thumbsize, self.descr)
+        descr = self.descr if args.thumbnails.media_description else ''
+        return VIDDCIM % (self.uri, self.thumb, *self.thumbsize, descr)
 
     def to_html_blogger(self):
         x = f'<p style="text-align: center;">{self.iframe}</p>'
@@ -1098,6 +1103,8 @@ def idempotence(args):
 CONFIG_DEFAULTS = \
 """
 [thumbnails]
+; Gallery displays media description (size, dimension, etc)
+media_description = true                ; true or false
 ; Subdir caption is empty or name of subdir
 subdir_caption = true                   ; true or false
 ; timestamp of thumbnail in video
@@ -1188,6 +1195,7 @@ def getconfig(options, config_filename):
     config.read(config_filename)
 
     # [thumbnails]
+    options.thumbnails.media_description = config.getboolean('thumbnails', 'media_description')
     options.thumbnails.subdir_caption = config.getboolean('thumbnails', 'subdir_caption')
     options.thumbnails.thumbdelay = config.getint('thumbnails', 'thumbdelay')
 
