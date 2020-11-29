@@ -708,7 +708,7 @@ def list_of_medias_ext(sourcedir):
     plus subdirectories containing media
     """
     result = list()
-    listdir = sorted(os.listdir(sourcedir))
+    listdir = sorted(os.listdir(sourcedir), key=str.lower)
     if '.nomedia' in listdir:
         pass
     else:
