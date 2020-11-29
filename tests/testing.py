@@ -8,6 +8,9 @@ import clipboard
 import journal
 
 
+# -- Helpers ------------------------------------------------------------------
+
+
 def list_compare(tag1, tag2, list1, list2, source1='<list1>', source2='<list2>'):
 
     # make sure both lists have same length
@@ -45,6 +48,9 @@ def directory_compare(dir1, dir2):
     list1 = os.listdir(dir1)
     list2 = os.listdir(dir2)
     return list_compare('ref', 'res', list1, list2, dir1, dir2)
+
+
+# -- Tests --------------------------------------------------------------------
 
 
 def test_00_Config_00(mode):
@@ -278,6 +284,9 @@ def test_url_blogger_not_read(mode):
 def testfunctions():
     return [(name, obj) for name, obj in inspect.getmembers(sys.modules[__name__])
                 if (inspect.isfunction(obj) and name.startswith('test_'))]
+
+
+# -- Main ---------------------------------------------------------------------
 
 
 def main():

@@ -280,14 +280,18 @@ class PostVideo(PostItem):
 
 class PostSubdir(PostItem):
     def to_html_dcim(self, args):
-        post = Post(None, '', [])
+        basename = os.path.basename(self.htmname)
+
+        post = Post(date='00000000', text='', medias=[])
         post.dcim = self.sublist
         posts = [post]
-        print_html(args, posts, 'TITLE', self.htmname)
+        title = self.caption
+        print_html(args, posts, title, self.htmname)
+
         if not self.caption:
-            return DIRPOST % (os.path.basename(self.htmname), self.thumb, *self.thumbsize)
+            return DIRPOST % (basename, self.thumb, *self.thumbsize)
         else:
-            return DIRPOSTCAPTION % (os.path.basename(self.htmname), self.thumb, *self.thumbsize, self.caption)
+            return DIRPOSTCAPTION % (basename, self.thumb, *self.thumbsize, self.caption)
 
 
 # -- Markdown parser ----------------------------------------------------------
@@ -942,8 +946,6 @@ def extend_index(args):
 
 
 def create_gallery(args):
-    title, posts = '', list()
-
     # list of pictures and movies plus subdirectories
     medias_ext = list_of_medias_ext(args.imgsource)
 
@@ -954,12 +956,13 @@ def create_gallery(args):
         if postmedia is not None:
             postmedias.append(postmedia)
 
-    post = Post('00000000', 'TITLE', [])
+    post = Post(date='00000000', text='', medias=[])
     post.dcim = postmedias
-    posts.append(post)
+    posts = [post]
+    title = os.path.basename(args.imgsource) or os.path.splitdrive(args.imgsource)[0]
+    print_html(args, posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
 
     purge_thumbnails(args.thumbdir, posts)
-    print_html(args, posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
 
 
 # -- Export to blogger---------------------------------------------------------
