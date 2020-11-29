@@ -462,10 +462,7 @@ def date_from_name(name):
         year, month, day = int(digits[0:4]), int(digits[4:6]), int(digits[6:8])
         if 2000 <= year <= datetime.date.today().year and 1 <= month <= 12 and 1 <= day <= 31:
             return digits
-        else:
-            return None
-    else:
-        return None
+    return None
 
 
 def date_from_item(filename):
@@ -483,10 +480,7 @@ def time_from_name(name):
         hour, minute, second = int(digits[0:2]), int(digits[2:4]), int(digits[4:6])
         if 0 <= hour < 24 and 0 <= minute < 60 and 0 <= second < 60:
             return digits
-        else:
-            return None
-    else:
-        return None
+    return None
 
 
 def time_from_item(filename):
