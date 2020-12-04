@@ -812,22 +812,10 @@ def create_item_subdir(args, media_fullname, sourcedir, thumbdir, key, thumbmax)
     else:
         item.caption = ''
 
-    if 0:
-        items = list()
-        for media_ext in medias_ext:
-            item2 = create_item(args, media_ext, sourcedir, thumbdir, 'dcim', thumbmax)
-            if item2 is not None:
-                items.append(item2)
-
-        item.sublist = items
-        post = Post(date='00000000', text='', medias=[])
-        post.dcim = items
-        item.posts = [post]
-    else:
-        posts = make_posts(args, media_fullname)
-        item.posts = posts
-        items = [item for post in posts for item in post.dcim]
-        item.sublist = items
+    posts = make_posts(args, media_fullname)
+    item.posts = posts
+    items = [item for post in posts for item in post.dcim]
+    item.sublist = items
 
     make_thumbnail_subdir(args, media_fullname, thumb_fullname, thumbsize, items, thumbdir)
     return item
@@ -844,7 +832,8 @@ def relative_name(media_fullname, sourcedir):
     deeper2_deepest
     """
     x = os.path.relpath(media_fullname, sourcedir)
-    return x.replace('\\', '_').replace('/', '_').replace('#', '_')
+    x = x.replace('\\', '_').replace('/', '_').replace('#', '_')
+    return x
 
 
 # -- Creation of diary from medias --------------------------------------------
@@ -977,7 +966,10 @@ def make_posts(args, dirname):
 
 def make_posts_from_subdir(args, dirname):
     # list of pictures and movies plus subdirectories
-    medias_ext = list_of_medias_ext(dirname)
+    if args.bydir is False:
+        medias_ext = list_of_medias(dirname, args.recursive)
+    else:
+        medias_ext = list_of_medias_ext(dirname)
 
     # complete posts
     postmedias = list()
@@ -995,7 +987,10 @@ def make_posts_from_subdir(args, dirname):
 
 def make_posts_from_subdir_and_date(args, dirname):
     # list of all pictures and movies
-    medias = list_of_medias_ext(dirname)
+    if args.bydir is False:
+        medias = list_of_medias(dirname, args.recursive)
+    else:
+        medias = list_of_medias_ext(dirname)
 
     # list of required dates
     required_dates = {date_from_item(media) for media in medias if is_media(media)}
@@ -1008,7 +1003,7 @@ def make_posts_from_subdir_and_date(args, dirname):
         if is_media(media_fullname):
             date = date_from_item(media_fullname)
             if date in required_dates:
-                item = create_item(args, media_fullname, dirname, args.thumbdir, 'dcim', 300)
+                item = create_item(args, media_fullname, args.imgsource, args.thumbdir, 'dcim', 300)
                 if item:
                     bydate[date].append(item)
 
@@ -1025,7 +1020,7 @@ def make_posts_from_subdir_and_date(args, dirname):
     items = list()
     for media_fullname in medias:
         if not is_media(media_fullname):
-            item = create_item(args, media_fullname, dirname, args.thumbdir, 'dcim', 300)
+            item = create_item(args, media_fullname, args.imgsource, args.thumbdir, 'dcim', 300)
             if item:
                 items.append(item)
     if items:
@@ -1352,7 +1347,7 @@ def parse_command_line(argstring):
     agroup.add_argument('--dest', help='output directory',
                         action='store')
     agroup.add_argument('--bydir', help='organize gallery by subdirectory',
-                        action='store', default='false', choices=('true', 'false'))
+                        action='store', default='true', choices=('true', 'false'))
     agroup.add_argument('--bydate', help='organize gallery by date',
                         action='store', default='false', choices=('true', 'false'))
     agroup.add_argument('--year', help='year',
