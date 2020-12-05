@@ -686,11 +686,13 @@ def list_of_files(sourcedir, recursive):
     """
     result = list()
     if recursive is False:
-        for basename in os.listdir(sourcedir):
-            result.append(os.path.join(sourcedir, basename))
+        listdir = sorted(os.listdir(sourcedir), key=str.lower)
+        if '.nomedia' not in listdir:
+            for basename in os.listdir(sourcedir):
+                result.append(os.path.join(sourcedir, basename))
     else:
         for root, dirs, files in os.walk(sourcedir):
-            if '.thumbnails' not in root:
+            if '.nomedia' not in files:
                 for basename in files:
                     result.append(os.path.join(root, basename))
     return result
@@ -711,9 +713,7 @@ def list_of_medias_ext(sourcedir):
     """
     result = list()
     listdir = sorted(os.listdir(sourcedir), key=str.lower)
-    if '.nomedia' in listdir:
-        pass
-    else:
+    if '.nomedia' not in listdir:
         for basename in listdir:
             fullname = os.path.join(sourcedir, basename)
             if os.path.isdir(fullname) and basename != '$RECYCLE.BIN' and contains_media(fullname):
@@ -1320,6 +1320,9 @@ def error(*msg):
 # -- Main ---------------------------------------------------------------------
 
 
+BOOL = ('true', 'false')
+
+
 def parse_command_line(argstring):
     parser = argparse.ArgumentParser(description=None, usage=USAGE)
 
@@ -1347,19 +1350,17 @@ def parse_command_line(argstring):
     agroup.add_argument('--dest', help='output directory',
                         action='store')
     agroup.add_argument('--bydir', help='organize gallery by subdirectory',
-                        action='store', default='true', choices=('true', 'false'))
+                        action='store', default='false', choices=BOOL)
     agroup.add_argument('--bydate', help='organize gallery by date',
-                        action='store', default='false', choices=('true', 'false'))
+                        action='store', default='false', choices=BOOL)
+    agroup.add_argument('--recursive', help='--imgsource scans recursively',
+                        action='store', default='false', choices=BOOL)
     agroup.add_argument('--year', help='year',
                         action='store', default=None)
     agroup.add_argument('--dates', help='dates interval for extended index',
                         action='store', default=None)
     agroup.add_argument('--imgsource', help='image source for extended index',
                         action='store', default=None)
-    agroup.add_argument('--recursive', help='--imgsource scans recursively',
-                        action='store_true', default=True)
-    agroup.add_argument('--flat', dest='recursive', help='--imgsource does not recurse',
-                        action='store_false')
     agroup.add_argument('--full', help='full html (versus blogger ready html)',
                         action='store_true', default=False)
     agroup.add_argument('--forcethumb', help='force calculation of thumbnails',
@@ -1437,6 +1438,7 @@ def setup_context(args):
 
     args.bydir = args.bydir == 'true'
     args.bydate = args.bydate == 'true'
+    args.recursive = args.recursive == 'true'
 
 
 def main(argstring=None):
