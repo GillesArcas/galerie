@@ -53,15 +53,90 @@ def directory_compare(dir1, dir2):
 # -- Tests --------------------------------------------------------------------
 
 
+def generic_test(mode, refdir, options):
+    refdir = f'reference/{refdir}'
+    if os.path.isdir('tmp'):
+        shutil.rmtree('tmp')
+    os.makedirs('tmp')
+    journal.main(options)
+    with open('tmp/files.txt', 'wt') as f:
+        for fn in glob.glob('tmp/*.htm'):
+            print(os.path.basename(fn), file=f)
+        for fn in glob.glob('tmp/.thumbnails/*.jpg'):
+            print(os.path.basename(fn), file=f)
+
+    if mode == 'ref':
+        if os.path.isdir(refdir):
+            shutil.rmtree(refdir)
+        os.makedirs(refdir)
+        shutil.copy('tmp/files.txt', refdir)
+        for fn in glob.glob('tmp/*.htm'):
+            shutil.copy(fn, refdir)
+    else:
+        for fn in glob.glob(os.path.join(refdir, '.*')):
+            if file_compare(fn, os.path.join('tmp', os.path.basename(fn))) is False:
+                return False
+        else:
+            return True
+
+
+def test__00_gallery(mode):
+    return generic_test(
+        mode,
+        'test_00_gallery',
+        '--gallery tmp --imgs . --bydir false --bydate false --recursive false'
+        )
+
+
+def test__01_gallery(mode):
+    return generic_test(
+        mode,
+        'test_01_gallery',
+        '--gallery tmp --imgs . --bydir false --bydate false --recursive true'
+        )
+
+
+def test__02_gallery(mode):
+    return generic_test(
+        mode,
+        'test_02_gallery',
+        '--gallery tmp --imgs . --bydir false --bydate true --recursive false'
+        )
+
+
+def test__03_gallery(mode):
+    return generic_test(
+        mode,
+        'test_03_gallery',
+        '--gallery tmp --imgs . --bydir false --bydate true --recursive true'
+        )
+
+
+def test__04_gallery(mode):
+    return generic_test(
+        mode,
+        'test_04_gallery',
+        '--gallery tmp --imgs . --bydir true --bydate false'
+        )
+
+
+def test__05_gallery(mode):
+    return generic_test(
+        mode,
+        'test_05_gallery',
+        '--gallery tmp --imgs . --bydir true --bydate true'
+        )
+
+
 def test_00_Config_00(mode):
     if mode == 'ref':
         journal.main('--resetcfg gallery')
-        journal.main('--gallery gallery --imgs subdir')
+        journal.main('--gallery gallery --imgs subdir --bydir true')
         shutil.copyfile('gallery/index-x.htm', 'gallery/index-config1.htm')
         return None
     else:
         journal.main('--resetcfg tmp')
-        journal.main('--gallery tmp --imgs subdir')
+        journal.main('--gallery tmp --imgs subdir --bydir true')
         return file_compare('gallery/index-config1.htm', 'tmp/index-x.htm')
 
 
@@ -71,7 +146,7 @@ def test_00_Config_01(mode):
         journal.setconfig('gallery/.config.ini', 'thumbnails', 'subdir_caption', 'False')
         journal.setconfig('gallery/.config.ini', 'photobox', 'loop', 'True')
         journal.setconfig('gallery/.config.ini', 'photobox', 'time', '2000')
-        journal.main('--gallery gallery --imgs subdir')
+        journal.main('--gallery gallery --imgs subdir --bydir true')
         os.remove('gallery/.config.ini')
         shutil.copyfile('gallery/index-x.htm', 'gallery/index-config2.htm')
         return None
@@ -80,7 +155,7 @@ def test_00_Config_01(mode):
         journal.setconfig('tmp/.config.ini', 'thumbnails', 'subdir_caption', 'False')
         journal.setconfig('tmp/.config.ini', 'photobox', 'loop', 'True')
         journal.setconfig('tmp/.config.ini', 'photobox', 'time', '2000')
-        journal.main('--gallery tmp --imgs subdir')
+        journal.main('--gallery tmp --imgs subdir --bydir true')
         return file_compare('gallery/index-config2.htm', 'tmp/index-x.htm')
 
 
@@ -90,7 +165,7 @@ def test_00_Config_02(mode):
     else:
         try:
             journal.setconfig('tmp/.config.ini', 'photobox', 'loop', 'foobar')
-            journal.main('--gallery tmp --imgs subdir/deeper1')
+            journal.main('--gallery tmp --imgs subdir/deeper1 --bydir true')
             return False
         except SystemExit as exception:
             return exception.args[0] == journal.errorcode('missing or incorrect config value:')
@@ -104,7 +179,7 @@ def test_00_Config_03(mode):
     else:
         try:
             journal.setconfig('tmp/.config.ini', 'photobox', 'time', 'abc')
-            journal.main('--gallery tmp --imgs subdir/deeper1')
+            journal.main('--gallery tmp --imgs subdir/deeper1 --bydir true')
             return False
         except SystemExit as exception:
             return exception.args[0] == journal.errorcode('missing or incorrect config value:')
@@ -152,31 +227,31 @@ def test_02_html_no_md_file(mode):
 
 def test_03_ext(mode):
     if mode == 'ref':
-        journal.main('--extend . --imgs . --flat')
+        journal.main('--extend . --imgs .')
         os.rename('index-x.htm', 'index-x-base.htm')
         return None
     else:
-        journal.main('--extend . --dest tmp --imgs . --flat')
+        journal.main('--extend . --dest tmp --imgs . ')
         return file_compare('index-x-base.htm', 'tmp/index-x.htm')
 
 
 def test_03_ext_dates(mode):
     if mode == 'ref':
-        journal.main('--extend . --imgs . --flat --dates 20000101-20000110')
+        journal.main('--extend . --imgs . --dates 20000101-20000110')
         os.rename('index-x.htm', 'index-x-dates.htm')
         return None
     else:
-        journal.main('--extend . --dest tmp --imgs . --flat --dates 20000101-20000110')
+        journal.main('--extend . --dest tmp --imgs . --dates 20000101-20000110')
         return file_compare('index-x-dates.htm', 'tmp/index-x.htm')
 
 
 def test_03_ext_rec(mode):
     if mode == 'ref':
-        journal.main('--extend . --imgs . --rec')
+        journal.main('--extend . --imgs . --recursive true')
         os.rename('index-x.htm', 'index-x-rec.htm')
         return None
     else:
-        journal.main('--extend . --dest tmp --imgs . --rec')
+        journal.main('--extend . --dest tmp --imgs . --recursive true')
         return file_compare('index-x-rec.htm', 'tmp/index-x.htm')
         return (
             file_compare('index-x-rec.htm', 'tmp/index-x.htm') and
@@ -187,10 +262,10 @@ def test_03_ext_rec(mode):
 
 def test_04_ext_no_md_file(mode):
     if mode == 'ref':
-        journal.main('--extend no_md_file --imgs . --flat --dates 20000101-20000110')
+        journal.main('--extend no_md_file --imgs . --dates 20000101-20000110')
         return None
     else:
-        journal.main('--extend no_md_file --dest tmp --imgs . --flat --dates 20000101-20000110')
+        journal.main('--extend no_md_file --dest tmp --imgs . --dates 20000101-20000110')
         return (
             directory_compare('no_md_file/.thumbnails', 'tmp/.thumbnails') and
             file_compare('no_md_file/index-x.htm', 'tmp/index-x.htm')
@@ -200,12 +275,12 @@ def test_04_ext_no_md_file(mode):
 def test_gallery(mode):
     if mode == 'ref':
         journal.main('--resetcfg gallery')
-        journal.main('--gallery gallery --imgs .')
+        journal.main('--gallery gallery --imgs . --bydir true')
         shutil.copyfile('gallery/index-x.htm', 'gallery/index-gallery.htm')
         return None
     else:
         journal.main('--resetcfg tmp')
-        journal.main('--gallery tmp --imgs .')
+        journal.main('--gallery tmp --imgs . --bydir true')
         return (
             directory_compare('gallery/.thumbnails', 'tmp/.thumbnails')
             and file_compare('gallery/index-gallery.htm', 'tmp/index-x.htm')
@@ -217,7 +292,7 @@ def test_gallery(mode):
 
 
 def test_create(mode):
-    journal.main('--create tmp --imgs . --flat')
+    journal.main('--create tmp --imgs . ')
     if mode == 'ref':
         return shutil.copyfile('tmp/index.md', 'index-create-base.md')
     else:
@@ -225,7 +300,7 @@ def test_create(mode):
 
 
 def test_create_date(mode):
-    journal.main('--create tmp --imgs . --flat --dates 20000101-20000110')
+    journal.main('--create tmp --imgs . --dates 20000101-20000110')
     if mode == 'ref':
         return shutil.copyfile('tmp/index.md', 'index-create-dates.md')
     else:
