@@ -1463,7 +1463,6 @@ def setup_context(args, root_only):
         args.bydate = args.source.bydate
         args.recursive = args.source.recursive
         args.dates = args.source.dates
-        print('-----------------', args.bydir)
     elif args.gallery:
         args.source.sourcedir = args.imgsource
         args.source.bydir = args.bydir
