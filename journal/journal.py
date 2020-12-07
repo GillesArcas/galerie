@@ -1169,6 +1169,18 @@ def idempotence(args):
 # The following docstring is used to create the configuration file.
 CONFIG_DEFAULTS = \
 """
+[source]
+; source directory
+sourcedir = .
+; one web page per directory
+bydir = false                           ; true or false
+; if bydir false, consider only src directory or also its subdirectories
+recursive = false                       ; true or false
+; dispatch medias by date, dates as titles
+bydate = false                          ; true or false
+; interval of dates to include
+dates =                                 ; yyyymmdd-yyyymmdd or empty
+
 [thumbnails]
 ; Gallery displays media description (size, dimension, etc)
 media_description = true                ; true or false
@@ -1255,11 +1267,19 @@ def read_config(params):
 
 def getconfig(options, config_filename):
     class Section: pass
+    options.source = Section()
     options.thumbnails = Section()
     options.photobox = Section()
 
     config = MyConfigParser()
     config.read(config_filename)
+
+    # [source]
+    options.source.sourcedir = config.get('source', 'sourcedir')
+    options.source.bydir = config.getboolean('source', 'bydir')
+    options.source.bydate = config.getboolean('source', 'bydate')
+    options.source.recursive = config.getboolean('source', 'recursive')
+    options.source.dates = config.get('source', 'dates')
 
     # [thumbnails]
     options.thumbnails.media_description = config.getboolean('thumbnails', 'media_description')
@@ -1284,6 +1304,36 @@ def setconfig(cfgname, section, key, value):
         config.write(configfile)
 
 
+def update_config(args):
+    # update only entries which can be modified from the command line (source section)
+    # manual update to keep comments
+    cfgname = configfilename(args)
+    with open(cfgname) as f:
+        cfglines = [_.strip() for _ in f.readlines()]
+    updates = (
+        ('sourcedir', args.imgsource),
+        ('bydir', args.bydir),
+        ('bydate', args.bydate),
+        ('recursive', args.recursive),
+        ('dates', args.dates),
+    )
+
+    for key, value in updates:
+        print(key, value)
+        for iline, line in enumerate(cfglines):
+            if line.startswith(key):
+                m = re.search('(; .*)', line)
+                s = f'{key} = {value}'
+                if m:
+                    s = s.ljust(40) + m.group(1)
+                cfglines[iline] = s
+                break
+
+    with open(cfgname, 'wt') as f:
+        for line in cfglines:
+            print(line, file=f)
+
+
 # -- Error handling -----------------------------------------------------------
 
 
@@ -1303,6 +1353,7 @@ Unable to read url
 No image source (--imgsource)
 No blogger url (--url)
 missing or incorrect config value:
+error creating configuration file
 '''
 
 
@@ -1347,20 +1398,21 @@ def parse_command_line(argstring):
                         action='store')
 
     agroup = parser.add_argument_group('Parameters')
-    agroup.add_argument('--dest', help='output directory',
-                        action='store')
     agroup.add_argument('--bydir', help='organize gallery by subdirectory',
                         action='store', default='false', choices=BOOL)
     agroup.add_argument('--bydate', help='organize gallery by date',
                         action='store', default='false', choices=BOOL)
     agroup.add_argument('--recursive', help='--imgsource scans recursively',
                         action='store', default='false', choices=BOOL)
-    agroup.add_argument('--year', help='year',
-                        action='store', default=None)
     agroup.add_argument('--dates', help='dates interval for extended index',
-                        action='store', default=None)
+                        action='store', default='')
     agroup.add_argument('--imgsource', help='image source for extended index',
                         action='store', default=None)
+    agroup.add_argument('--update', help='updates thumbnails with parameters in config file',
+                        action='store_true', default=False)
+
+    agroup.add_argument('--dest', help='output directory',
+                        action='store')
     agroup.add_argument('--full', help='full html (versus blogger ready html)',
                         action='store_true', default=False)
     agroup.add_argument('--forcethumb', help='force calculation of thumbnails',
@@ -1383,7 +1435,7 @@ def parse_command_line(argstring):
     return args
 
 
-def setup_context(args):
+def setup_context(args, root_only):
     """
     Check and normalize paths
     """
@@ -1396,6 +1448,30 @@ def setup_context(args):
             else:
                 error('Directory not found', args.root)
 
+    if args.imgsource:
+        args.imgsource = os.path.abspath(args.imgsource)
+        if not os.path.isdir(args.imgsource):
+            error('Directory not found', args.imgsource)
+
+    if root_only:
+        return
+
+    # reading config must have been done
+    if args.update:
+        args.imgsource = args.source.sourcedir
+        args.bydir = args.source.bydir
+        args.bydate = args.source.bydate
+        args.recursive = args.source.recursive
+        args.dates = args.source.dates
+        print('-----------------', args.bydir)
+    elif args.gallery:
+        args.source.sourcedir = args.imgsource
+        args.source.bydir = args.bydir
+        args.source.bydate = args.bydate
+        args.source.recursive = args.recursive
+        args.source.dates = args.dates
+        update_config(args)
+
     if args.dest:
         args.dest = os.path.abspath(args.dest)
 
@@ -1404,11 +1480,6 @@ def setup_context(args):
 
     if args.extend and args.imgsource is None:
         error('No image source (--imgsource)')
-
-    if args.imgsource:
-        args.imgsource = os.path.abspath(args.imgsource)
-        if not os.path.isdir(args.imgsource):
-            error('Directory not found', args.imgsource)
 
     if args.blogger and args.urlblogger is None:
         error('No blogger url (--url)')
@@ -1436,17 +1507,18 @@ def setup_context(args):
             photoboxsrc = os.path.join(os.path.dirname(__file__), 'photobox')
             shutil.copytree(photoboxsrc, photoboxdir)
 
-    args.bydir = args.bydir == 'true'
-    args.bydate = args.bydate == 'true'
-    args.recursive = args.recursive == 'true'
+    args.bydir = args.bydir or args.bydir == 'true'
+    args.bydate = args.bydate or args.bydate == 'true'
+    args.recursive = args.recursive or args.recursive == 'true'
 
 
 def main(argstring=None):
     colorama.init()
     locale.setlocale(locale.LC_TIME, '')
     args = parse_command_line(argstring)
-    setup_context(args)
+    setup_context(args, root_only=True)
     read_config(args)
+    setup_context(args, root_only=False)
     try:
         if args.create:
             create_index(args)
