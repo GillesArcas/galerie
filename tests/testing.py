@@ -73,14 +73,14 @@ def generic_test(mode, refdir, options):
         for fn in glob.glob('tmp/*.htm'):
             shutil.copy(fn, refdir)
     else:
-        for fn in glob.glob(os.path.join(refdir, '.*')):
+        for fn in glob.glob(os.path.join(refdir, '*.*')):
             if file_compare(fn, os.path.join('tmp', os.path.basename(fn))) is False:
                 return False
         else:
             return True
 
 
-def test__00_gallery(mode):
+def test_00_gallery(mode):
     return generic_test(
         mode,
         'test_00_gallery',
@@ -88,7 +88,7 @@ def test__00_gallery(mode):
         )
 
 
-def test__01_gallery(mode):
+def test_01_gallery(mode):
     return generic_test(
         mode,
         'test_01_gallery',
@@ -96,7 +96,7 @@ def test__01_gallery(mode):
         )
 
 
-def test__02_gallery(mode):
+def test_02_gallery(mode):
     return generic_test(
         mode,
         'test_02_gallery',
@@ -104,7 +104,7 @@ def test__02_gallery(mode):
         )
 
 
-def test__03_gallery(mode):
+def test_03_gallery(mode):
     return generic_test(
         mode,
         'test_03_gallery',
@@ -112,7 +112,7 @@ def test__03_gallery(mode):
         )
 
 
-def test__04_gallery(mode):
+def test_04_gallery(mode):
     return generic_test(
         mode,
         'test_04_gallery',
@@ -120,11 +120,19 @@ def test__04_gallery(mode):
         )
 
 
-def test__05_gallery(mode):
+def test_05_gallery(mode):
     return generic_test(
         mode,
         'test_05_gallery',
         '--gallery tmp --imgs . --bydir true --bydate true'
+        )
+
+
+def test_06_gallery(mode):
+    return generic_test(
+        mode,
+        'test_06_gallery',
+        '--gallery tmp --imgs . --bydir true --bydate true --dates 20000103-20000109'
         )
 
 
@@ -269,25 +277,6 @@ def test_04_ext_no_md_file(mode):
         return (
             directory_compare('no_md_file/.thumbnails', 'tmp/.thumbnails') and
             file_compare('no_md_file/index-x.htm', 'tmp/index-x.htm')
-        )
-
-
-def test_gallery(mode):
-    if mode == 'ref':
-        journal.main('--resetcfg gallery')
-        journal.main('--gallery gallery --imgs . --bydir true')
-        shutil.copyfile('gallery/index-x.htm', 'gallery/index-gallery.htm')
-        return None
-    else:
-        journal.main('--resetcfg tmp')
-        journal.main('--gallery tmp --imgs . --bydir true')
-        return (
-            directory_compare('gallery/.thumbnails', 'tmp/.thumbnails')
-            and file_compare('gallery/index-gallery.htm', 'tmp/index-x.htm')
-            and file_compare('gallery/subdir.htm', 'tmp/subdir.htm')
-            and file_compare('gallery/subdir_deeper1.htm', 'tmp/subdir_deeper1.htm')
-            and file_compare('gallery/subdir_deeper2.htm', 'tmp/subdir_deeper2.htm')
-            and file_compare('gallery/subdir_deeper2_deepest.htm', 'tmp/subdir_deeper2_deepest.htm')
         )
 
 
