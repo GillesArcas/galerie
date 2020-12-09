@@ -596,7 +596,12 @@ def create_thumbnail_video(args, filename, thumbname, size, duration):
     result = os.system(command)
 
     # add a movie icon to the thumbnail to identify videos
-    img1 = Image.open(thumbname)
+    try:
+        img1 = Image.open(thumbname)
+    except:
+        # ffmpeg was unable to save thumbnail
+        warning('Unable to save thumbnail for', filename)
+        return
     img2 = Image.open(io.BytesIO(base64.b64decode(VIDEO_ICON)))
     width, height = img1.size
     img1.paste(img2, (6, height - 20 - 6), None)
@@ -768,7 +773,7 @@ def create_item_image(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
                          thumbsize, infofmt)
     except PIL.UnidentifiedImageError:
         # corrupted image
-        warning(f'Unable to read image {media_fullname}')
+        warning('Unable to read image', media_fullname)
         return None
 
 
@@ -787,7 +792,7 @@ def create_item_video(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
                          thumbsize, infofmt)
     except CalledProcessError:
         # corrupted video
-        warning(f'Unable to read video {media_fullname}')
+        warning('Unable to read video', media_fullname)
         return None
 
 
@@ -836,40 +841,10 @@ def relative_name(media_fullname, sourcedir):
     return x
 
 
-# -- Creation of diary from medias --------------------------------------------
+# -- Creation of posts --------------------------------------------------------
 
 
-def create_index(args):
-    # list of all pictures and movies
-    medias = list_of_medias(args.imgsource, args.recursive)
-
-    # list of required dates (the DCIM directory can contain images not related
-    # with the desired index, e.g. two indexes for the same image directory)
-    required_dates = set()
-    if args.dates:
-        date1, date2 = args.dates.split('-')
-        for media in medias:
-            date = date_from_item(media)
-            if date1 <= date <= date2:
-                required_dates.add(date)
-    else:
-        for media in medias:
-            date = date_from_item(media)
-            required_dates.add(date)
-
-    title = args.imgsource
-    posts = list()
-    for date in sorted(required_dates):
-        posts.append(Post.from_date(date))
-
-    os.makedirs(args.root, exist_ok=True)
-    print_markdown(posts, title, os.path.join(args.root, 'index.md'))
-
-
-# -- Conversion to html page --------------------------------------------------
-
-
-def make_basic_index(args):
+def make_posts_from_diary (args):
     md_filename = os.path.join(args.root, 'index.md')
     if os.path.exists(md_filename):
         title, posts = parse_markdown(md_filename)
@@ -890,17 +865,8 @@ def make_basic_index(args):
     return title, posts
 
 
-def markdown_to_html(args):
-    title, posts = make_basic_index(args)
-    purge_thumbnails(args.thumbdir, posts)
-    print_html(args, posts, title, os.path.join(args.dest, 'index.htm'), 'regular')
-
-
-# -- Addition of DCIM medias --------------------------------------------------
-
-
-def extend_index(args):
-    title, posts = make_basic_index(args)
+def make_posts_from_diary_and_dir(args):
+    title, posts = make_posts_from_diary(args)
 
     # list of all pictures and movies
     medias = list_of_medias(args.imgsource, args.recursive)
@@ -942,19 +908,7 @@ def extend_index(args):
         if post.daterank == 1:
             post.dcim = bydate[post.date]
 
-    purge_thumbnails(args.thumbdir, posts)
-    print_html(args, posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
-
-
-# -- Creation of html page from directory tree --------------------------------
-
-
-def create_gallery(args):
-    posts = make_posts(args, args.imgsource)
-    title = os.path.basename(args.imgsource) or os.path.splitdrive(args.imgsource)[0]
-    print_html(args, posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
-
-    purge_thumbnails(args.thumbdir, posts)
+    return title, posts
 
 
 def make_posts(args, dirname):
@@ -1035,6 +989,65 @@ def make_posts_from_subdir_and_date(args, dirname):
         posts.append(post)
 
     return posts
+
+
+# -- Creation of diary from medias --------------------------------------------
+
+
+def create_index(args):
+    # list of all pictures and movies
+    medias = list_of_medias(args.imgsource, args.recursive)
+
+    # list of required dates (the DCIM directory can contain images not related
+    # with the desired index, e.g. two indexes for the same image directory)
+    required_dates = set()
+    if args.dates:
+        date1, date2 = args.dates.split('-')
+        for media in medias:
+            date = date_from_item(media)
+            if date1 <= date <= date2:
+                required_dates.add(date)
+    else:
+        for media in medias:
+            date = date_from_item(media)
+            required_dates.add(date)
+
+    title = args.imgsource
+    posts = list()
+    for date in sorted(required_dates):
+        posts.append(Post.from_date(date))
+
+    os.makedirs(args.root, exist_ok=True)
+    print_markdown(posts, title, os.path.join(args.root, 'index.md'))
+
+
+# -- Conversion to html page --------------------------------------------------
+
+
+def markdown_to_html(args):
+    title, posts = make_posts_from_diary(args)
+    purge_thumbnails(args.thumbdir, posts)
+    print_html(args, posts, title, os.path.join(args.dest, 'index.htm'), 'regular')
+
+
+# -- Addition of DCIM medias --------------------------------------------------
+
+
+def extend_index(args):
+    title, posts = make_posts_from_diary_and_dir(args)
+    purge_thumbnails(args.thumbdir, posts)
+    print_html(args, posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
+
+
+# -- Creation of html page from directory tree --------------------------------
+
+
+def create_gallery(args):
+    posts = make_posts(args, args.imgsource)
+    title = os.path.basename(args.imgsource) or os.path.splitdrive(args.imgsource)[0]
+    print_html(args, posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
+
+    purge_thumbnails(args.thumbdir, posts)
 
 
 # -- Export to blogger---------------------------------------------------------
@@ -1174,7 +1187,7 @@ CONFIG_DEFAULTS = \
 sourcedir = .
 ; one web page per directory
 bydir = false                           ; true or false
-; if bydir false, consider only src directory or also its subdirectories
+; if bydir false, consider subdirectories or not
 recursive = false                       ; true or false
 ; dispatch medias by date, dates as titles
 bydate = false                          ; true or false
@@ -1337,9 +1350,9 @@ def update_config(args):
 # -- Error handling -----------------------------------------------------------
 
 
-def warning(msg):
+def warning(*msg):
     print(colorama.Fore.YELLOW + colorama.Style.BRIGHT +
-          msg,
+          ' '.join(msg),
           colorama.Style.RESET_ALL)
 
 
@@ -1506,9 +1519,9 @@ def setup_context(args, root_only):
             photoboxsrc = os.path.join(os.path.dirname(__file__), 'photobox')
             shutil.copytree(photoboxsrc, photoboxdir)
 
-    args.bydir = args.bydir or args.bydir == 'true'
-    args.bydate = args.bydate or args.bydate == 'true'
-    args.recursive = args.recursive or args.recursive == 'true'
+    args.bydir = args.bydir is True or args.bydir == 'true'
+    args.bydate = args.bydate is True or args.bydate == 'true'
+    args.recursive = args.recursive is True or args.recursive == 'true'
 
 
 def main(argstring=None):
