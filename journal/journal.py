@@ -433,6 +433,7 @@ wheelNextPrev:%s
 });
 """
 
+
 def gallery_call(args, gallery_id):
     return GALLERYCALL.replace('\n', '') % (
         gallery_id,
@@ -538,6 +539,16 @@ def get_video_info(filename):
 
 
 # -- Thumbnails (image and video) ---------------------------------------------
+
+
+PREVIOUS_THUMBAME = 1
+
+
+def thumbname(name, key):
+    if PREVIOUS_THUMBAME:
+        return key + '-' + os.path.splitext(name)[0] + '.jpg'
+    else:
+        return key + '-' + name + '.jpg'
 
 
 def size_thumbnail(width, height, maxdim):
@@ -761,7 +772,7 @@ def create_item(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
 def create_item_image(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
     media_basename = os.path.basename(media_fullname)
     media_relname = relative_name(media_fullname, sourcedir)
-    thumb_basename = key + '-' + media_relname +'.jpg'
+    thumb_basename = thumbname(media_relname, key)
     thumb_fullname = os.path.join(thumbdir, thumb_basename)
 
     try:
@@ -780,7 +791,7 @@ def create_item_image(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
 def create_item_video(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
     media_basename = os.path.basename(media_fullname)
     media_relname = relative_name(media_fullname, sourcedir)
-    thumb_basename = key + '-' + media_relname +'.jpg'
+    thumb_basename = thumbname(media_relname, key)
     thumb_fullname = os.path.join(thumbdir, thumb_basename)
 
     try:
@@ -799,7 +810,7 @@ def create_item_video(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
 def create_item_subdir(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
     media_basename = os.path.basename(media_fullname)
     media_relname = relative_name(media_fullname, sourcedir)
-    thumb_basename = key + '-' + media_relname +'.jpg'
+    thumb_basename = thumbname(media_relname, key)
     thumb_fullname = os.path.join(thumbdir, thumb_basename)
 
     info, infofmt = None, None
@@ -817,7 +828,7 @@ def create_item_subdir(args, media_fullname, sourcedir, thumbdir, key, thumbmax)
     else:
         item.caption = ''
 
-    posts = make_posts(args, media_fullname)
+    _, posts = make_posts(args, media_fullname)
     item.posts = posts
     items = [item for post in posts for item in post.dcim]
     item.sublist = items
@@ -828,11 +839,11 @@ def create_item_subdir(args, media_fullname, sourcedir, thumbdir, key, thumbmax)
 
 def relative_name(media_fullname, sourcedir):
     """
-    D:\Gilles\Dev\journal\tests\subdir\deeper2\deepest\OCT_20000112_000004.jpg
+    /Gilles/Dev/journal/tests/subdir/deeper2/deepest/OCT_20000112_000004.jpg
     -->
     deeper2_deepest_OCT_20000112_000004.jpg
 
-    D:\Gilles\Dev\journal\tests\subdir\deeper2\deepest
+    /Gilles/Dev/journal/tests/subdir/deeper2/deepest
     -->
     deeper2_deepest
     """
@@ -844,7 +855,19 @@ def relative_name(media_fullname, sourcedir):
 # -- Creation of posts --------------------------------------------------------
 
 
-def make_posts_from_diary (args):
+def make_posts(args, dirname):
+    if args.diary is True:
+        if not args.imgsource:
+            return make_posts_from_diary(args)
+        else:
+            return make_posts_from_diary_and_dir(args)
+    elif args.bydate is False:
+        return make_posts_from_subdir(args, dirname)
+    else:
+        return make_posts_from_subdir_and_date(args, dirname)
+
+
+def make_posts_from_diary(args):
     md_filename = os.path.join(args.root, 'index.md')
     if os.path.exists(md_filename):
         title, posts = parse_markdown(md_filename)
@@ -857,7 +880,8 @@ def make_posts_from_diary (args):
     for post in posts:
         for media in post.medias:
             media_fullname = os.path.join(args.root, media.uri)
-            item = create_item(args, media_fullname, args.imgsource, args.thumbdir, 'post', 400)
+            ##item = create_item(args, media_fullname, args.imgsource, args.thumbdir, 'post', 400)
+            item = create_item(args, media_fullname, args.root, args.thumbdir, 'post', 400)
             media.thumb = item.thumb
             media.thumbsize = item.thumbsize
             media.descr = item.descr
@@ -865,29 +889,19 @@ def make_posts_from_diary (args):
     return title, posts
 
 
-def make_posts_from_diary_and_dir(args):
-    title, posts = make_posts_from_diary(args)
-
-    # list of all pictures and movies
-    medias = list_of_medias(args.imgsource, args.recursive)
-
-    # list of required dates (the DCIM directory can contain medias not related
-    # with the current page (e.g. two pages for the same image directory)
-    required_dates = set()
-    if args.dates:
-        date1, date2 = args.dates.split('-')
-        for media in medias:
-            date = date_from_item(media)
-            if date1 <= date <= date2:
-                required_dates.add(date)
+def create_items_by_date(args, medias, posts):
+    # list of required dates
+    if args.dates == 'diary':
+        required_dates = {post.date for post in posts}
     else:
-        for post in posts:
-            if post.date:
-                required_dates.add(post.date)
+        required_dates = {date_from_item(media) for media in medias}
+        if re.match(r'\d+-\d+', args.dates):
+            date1, date2 = args.dates.split('-')
+            required_dates = {date for date in required_dates if date1 <= date <= date2}
 
     bydate = defaultdict(list)
     for media_fullname in medias:
-        date = date_from_item(media_fullname)  #  calculé deux fois
+        date = date_from_item(media_fullname)
         if date in required_dates:
             item = create_item(args, media_fullname, args.imgsource, args.thumbdir, 'dcim', 300)
             if item:
@@ -896,26 +910,30 @@ def make_posts_from_diary_and_dir(args):
     for date, liste in bydate.items():
         liste.sort(key=lambda item: time_from_item(item.uri))
 
-    # make list of extra dates (not in posts)
-    extradates = required_dates - {post.date for post in posts}
+    return bydate
 
-    # complete posts with extra dates from args.dates
+
+def make_posts_from_diary_and_dir(args):
+    title, posts = make_posts_from_diary(args)
+
+    # list of all pictures and movies
+    medias = list_of_medias(args.imgsource, args.recursive)
+
+    bydate = create_items_by_date(args, medias, posts)
+
+    # make list of extra dates (not in posts)
+    extradates = set(bydate) - {post.date for post in posts}
+
+    # complete posts with extra dates
     for date in extradates:
         bisect.insort(posts, Post.from_date(date))
 
     # several posts can have the same date, only the first one is completed with dcim medias
     for post in posts:
-        if post.daterank == 1:
+        if post.date in bydate and post.daterank == 1:
             post.dcim = bydate[post.date]
 
     return title, posts
-
-
-def make_posts(args, dirname):
-    if args.bydate is False:
-        return make_posts_from_subdir(args, dirname)
-    else:
-        return make_posts_from_subdir_and_date(args, dirname)
 
 
 def make_posts_from_subdir(args, dirname):
@@ -935,60 +953,43 @@ def make_posts_from_subdir(args, dirname):
     post = Post(date='00000000', text='', medias=[])
     post.dcim = postmedias
     posts = [post]
+    title = os.path.basename(args.imgsource) or os.path.splitdrive(args.imgsource)[0]
 
-    return posts
+    return title, posts
 
 
 def make_posts_from_subdir_and_date(args, dirname):
     # list of all pictures and movies
     if args.bydir is False:
         medias = list_of_medias(dirname, args.recursive)
+        subdirs = []
     else:
-        medias = list_of_medias_ext(dirname)
+        medias_ext = list_of_medias_ext(dirname)
+        medias = [_ for _ in medias_ext if is_media(_)]
+        subdirs = [_ for _ in medias_ext if not is_media(_)]  # TODO: dispatch_medias
 
-    # list of required dates
-    required_dates = {date_from_item(media) for media in medias if is_media(media)}
-    if args.dates:
-        date1, date2 = args.dates.split('-')
-        required_dates = {date for date in required_dates if date1 <= date <= date2}
-
-    bydate = defaultdict(list)
-    for media_fullname in medias:
-        if is_media(media_fullname):
-            date = date_from_item(media_fullname)
-            if date in required_dates:
-                item = create_item(args, media_fullname, args.imgsource, args.thumbdir, 'dcim', 300)
-                if item:
-                    bydate[date].append(item)
-
-    for date, liste in bydate.items():
-        liste.sort(key=lambda item: time_from_item(item.uri))
-
-    # remove dates where no valid valid media has been found
-    required_dates = {date for date in required_dates if bydate[date]}
-
-    # make list of posts
+    # create list of posts with a single post containing all subdirs
     posts = list()
-
-    # add subdirs at the beginning
     items = list()
-    for media_fullname in medias:
-        if not is_media(media_fullname):
-            item = create_item(args, media_fullname, args.imgsource, args.thumbdir, 'dcim', 300)
-            if item:
-                items.append(item)
+    for media_fullname in subdirs:
+        item = create_item(args, media_fullname, args.imgsource, args.thumbdir, 'dcim', 300)
+        if item:
+            items.append(item)
     if items:
         post = Post(date='00000000', text='', medias=[])
         post.dcim = items
         posts.append(post)
 
+    bydate = create_items_by_date(args, medias, posts)
+
     # add dates
-    for date in sorted(required_dates):
+    for date in sorted(bydate):
         post = Post.from_date(date)
         post.dcim = bydate[post.date]
         posts.append(post)
+    title = os.path.basename(args.imgsource) or os.path.splitdrive(args.imgsource)[0]
 
-    return posts
+    return title, posts
 
 
 # -- Creation of diary from medias --------------------------------------------
@@ -1043,10 +1044,8 @@ def extend_index(args):
 
 
 def create_gallery(args):
-    posts = make_posts(args, args.imgsource)
-    title = os.path.basename(args.imgsource) or os.path.splitdrive(args.imgsource)[0]
+    title, posts = make_posts(args, args.imgsource)
     print_html(args, posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
-
     purge_thumbnails(args.thumbdir, posts)
 
 
@@ -1415,6 +1414,8 @@ def parse_command_line(argstring):
                         action='store', default='false', choices=BOOL)
     agroup.add_argument('--bydate', help='organize gallery by date',
                         action='store', default='false', choices=BOOL)
+    agroup.add_argument('--diary', help='organize gallery using markdown file diary',
+                        action='store', default='false', choices=BOOL)
     agroup.add_argument('--recursive', help='--imgsource scans recursively',
                         action='store', default='false', choices=BOOL)
     agroup.add_argument('--dates', help='dates interval for extended index',
@@ -1522,6 +1523,7 @@ def setup_context(args, root_only):
     args.bydir = args.bydir is True or args.bydir == 'true'
     args.bydate = args.bydate is True or args.bydate == 'true'
     args.recursive = args.recursive is True or args.recursive == 'true'
+    args.diary = args.diary is True or args.diary == 'true'
 
 
 def main(argstring=None):
