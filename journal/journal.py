@@ -515,7 +515,21 @@ def get_image_info(filename):
     return (date, time, width, height, size), f'{date} {time}, dim={width}x{height}, {size} MB'
 
 
-def get_video_info(filename):
+def get_video_info(filename, info_fullname):
+    if os.path.exists(info_fullname):
+        with open(info_fullname) as f:
+            info = f.readline().split()
+        date, time, width, height, size, duration, fps = info[0], info[1], int(info[2]), int(info[3]), float(info[4]), int(info[5]), float(info[6])
+        formatted_info = format_video_info(date, time, width, height, size, duration, fps)
+        return (date, time, width, height, size, duration, fps), formatted_info
+    else:
+        info, formatted_info = make_video_info(filename, info_fullname)
+        with open(info_fullname, 'wt') as f:
+            print(' '.join([str(_) for _ in info]), file=f)
+        return info, formatted_info
+
+
+def make_video_info(filename, info_fullname):
     # ffmpeg must be in path
     date = date_from_item(filename)
     time = time_from_item(filename)
@@ -528,9 +542,7 @@ def get_video_info(filename):
         fps = round(int(match.group(3)) / int(match.group(4)), 1)
         duration = round(float(match.group(7)))
         size = round(os.path.getsize(filename) / 1e6, 1)
-        mn = duration // 60
-        sec = duration % 60
-        output = f'{date} {time}, dim={width}x{height}, m:s={mn:02}:{sec:02}, fps={fps}, {size} MB'
+        output = format_video_info(date, time, width, height, size, duration, fps)
     except CalledProcessError as e:
         output = e.output.decode()
         warning(output)
@@ -538,10 +550,16 @@ def get_video_info(filename):
     return (date, time, width, height, size, duration, fps), output
 
 
+def format_video_info(date, time, width, height, size, duration, fps):
+    mn = duration // 60
+    sec = duration % 60
+    return f'{date} {time}, dim={width}x{height}, m:s={mn:02}:{sec:02}, fps={fps}, {size} MB'
+
+
 # -- Thumbnails (image and video) ---------------------------------------------
 
 
-PREVIOUS_THUMBAME = 1
+PREVIOUS_THUMBAME = 0
 
 
 def thumbname(name, key):
@@ -653,11 +671,12 @@ def create_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir):
     img.save(thumb_name)
 
 
-def list_of_thumbnails(posts):
+def list_of_thumbnails(posts, diary=False):
     thumblist = list()
     for post in posts:
         thumblist.extend(list_of_thumbnails_in_items(post.medias))
-        thumblist.extend(list_of_thumbnails_in_items(post.dcim))
+        if diary is False:
+            thumblist.extend(list_of_thumbnails_in_items(post.dcim))
     return thumblist
 
 
@@ -682,15 +701,18 @@ def list_of_thumbnails_in_medias(itemlist):
     return thumblist
 
 
-def purge_thumbnails(thumbdir, posts):
+def purge_thumbnails(thumbdir, posts, diary=False):
     """
     Purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
     """
-    thumblist = list_of_thumbnails(posts)
+    thumblist = list_of_thumbnails(posts, diary)
     for fullname in glob.glob(os.path.join(thumbdir, '*.jpg')):
         if os.path.basename(fullname) not in thumblist:
             print('Removing thumbnail', fullname)
             os.remove(fullname)
+            info_fullname = os.path.splitext(fullname)[0] + '.info'
+            if os.path.exists(info_fullname):
+                os.remove(info_fullname)
 
 
 # -- List of medias helpers ---------------------------------------------------
@@ -793,9 +815,10 @@ def create_item_video(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
     media_relname = relative_name(media_fullname, sourcedir)
     thumb_basename = thumbname(media_relname, key)
     thumb_fullname = os.path.join(thumbdir, thumb_basename)
+    info_fullname = os.path.splitext(thumb_fullname)[0] + '.info'
 
     try:
-        info, infofmt = get_video_info(media_fullname)
+        info, infofmt = get_video_info(media_fullname, info_fullname)
         infofmt = media_basename + ': ' + infofmt
         thumbsize = size_thumbnail(info[2], info[3], thumbmax)
         make_thumbnail_video(args, media_fullname, thumb_fullname, thumbsize, duration=info[5])
@@ -1046,7 +1069,10 @@ def extend_index(args):
 def create_gallery(args):
     title, posts = make_posts(args, args.imgsource)
     print_html(args, posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
-    purge_thumbnails(args.thumbdir, posts)
+    if args.diary and not args.imgsource:
+        purge_thumbnails(args.thumbdir, posts, diary=True)
+    else:
+        purge_thumbnails(args.thumbdir, posts)
 
 
 # -- Export to blogger---------------------------------------------------------
@@ -1424,12 +1450,12 @@ def parse_command_line(argstring):
                         action='store', default=None)
     agroup.add_argument('--update', help='updates thumbnails with parameters in config file',
                         action='store_true', default=False)
-
     agroup.add_argument('--dest', help='output directory',
                         action='store')
-    agroup.add_argument('--full', help='full html (versus blogger ready html)',
-                        action='store_true', default=False)
     agroup.add_argument('--forcethumb', help='force calculation of thumbnails',
+                        action='store_true', default=False)
+                        
+    agroup.add_argument('--full', help='full html (versus blogger ready html)',
                         action='store_true', default=False)
     agroup.add_argument('--check', dest='check_images', help='check availability of medias on blogger',
                         action='store_true')
