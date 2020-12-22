@@ -1342,6 +1342,11 @@ def setconfig(cfgname, section, key, value):
         config.write(configfile)
 
 
+def setconfig_cmd(args):
+    config_filename = configfilename(args)
+    setconfig(config_filename, *args.setcfg)
+
+
 def update_config(args):
     # update only entries which can be modified from the command line (source section)
     # manual update to keep comments
@@ -1430,6 +1435,8 @@ def parse_command_line(argstring):
                         action='store', metavar='<root-dir>')
     xgroup.add_argument('--resetcfg', help='reset config file to defaults',
                         action='store', metavar='<root-dir>')
+    xgroup.add_argument('--setcfg', help='set field in config file',
+                        action='store', nargs=4, metavar='<root-dir>')
     xgroup.add_argument('--idem', help='test idempotence',
                         action='store', metavar='<root-dir>')
     xgroup.add_argument('--test', help=argparse.SUPPRESS,
@@ -1454,7 +1461,7 @@ def parse_command_line(argstring):
                         action='store')
     agroup.add_argument('--forcethumb', help='force calculation of thumbnails',
                         action='store_true', default=False)
-                        
+
     agroup.add_argument('--full', help='full html (versus blogger ready html)',
                         action='store_true', default=False)
     agroup.add_argument('--check', dest='check_images', help='check availability of medias on blogger',
@@ -1471,6 +1478,10 @@ def parse_command_line(argstring):
         args.create or args.html or args.extend or args.gallery
         or args.blogger or args.idem or args.resetcfg
     )
+
+    if args.setcfg:
+        args.root = args.setcfg[0]
+        args.setcfg = args.setcfg[1:]
 
     return args
 
@@ -1577,6 +1588,9 @@ def main(argstring=None):
 
         elif args.idem:
             idempotence(args)
+
+        elif args.setcfg:
+            setconfig_cmd(args)
 
         elif args.test:
             pass
