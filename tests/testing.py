@@ -53,17 +53,22 @@ def directory_compare(dir1, dir2):
 # -- Tests --------------------------------------------------------------------
 
 
-def generic_test(mode, refdir, options):
+def generic_test(mode, keeptmp, refdir, *options):
     refdir = f'reference/{refdir}'
-    if os.path.isdir('tmp'):
-        shutil.rmtree('tmp')
-    os.makedirs('tmp')
-    journal.main(options)
+    if not keeptmp:
+        if os.path.isdir('tmp'):
+            shutil.rmtree('tmp')
+        os.makedirs('tmp')
+
+    for option in options:
+        journal.main(option)
+
     with open('tmp/files.txt', 'wt') as f:
         for fn in glob.glob('tmp/*.htm'):
             print(os.path.basename(fn), file=f)
         for fn in glob.glob('tmp/.thumbnails/*.jpg'):
             print(os.path.basename(fn), file=f)
+        # TODO: ajouter les .info
 
     if mode == 'ref':
         if os.path.isdir(refdir):
@@ -80,9 +85,21 @@ def generic_test(mode, refdir, options):
             return True
 
 
+def populate_tmp():
+    if os.path.isdir('tmp'):
+        shutil.rmtree('tmp')
+    os.makedirs('tmp')
+    shutil.copyfile('index.md', os.path.join('tmp/index.md'))
+    for basename in glob.glob('VID*.mp4'):
+        shutil.copyfile(basename, os.path.join('tmp', basename))
+    for basename in glob.glob('OCT*.jpg'):
+        shutil.copyfile(basename, os.path.join('tmp', basename))
+
+
 def test_00_gallery(mode):
     return generic_test(
         mode,
+        False,
         'test_00_gallery',
         '--gallery tmp --imgs . --bydir false --bydate false --recursive false'
         )
@@ -91,6 +108,7 @@ def test_00_gallery(mode):
 def test_01_gallery(mode):
     return generic_test(
         mode,
+        False,
         'test_01_gallery',
         '--gallery tmp --imgs . --bydir false --bydate false --recursive true'
         )
@@ -99,6 +117,7 @@ def test_01_gallery(mode):
 def test_02_gallery(mode):
     return generic_test(
         mode,
+        False,
         'test_02_gallery',
         '--gallery tmp --imgs . --bydir false --bydate true --recursive false'
         )
@@ -107,6 +126,7 @@ def test_02_gallery(mode):
 def test_03_gallery(mode):
     return generic_test(
         mode,
+        False,
         'test_03_gallery',
         '--gallery tmp --imgs . --bydir false --bydate true --recursive true'
         )
@@ -115,6 +135,7 @@ def test_03_gallery(mode):
 def test_04_gallery(mode):
     return generic_test(
         mode,
+        False,
         'test_04_gallery',
         '--gallery tmp --imgs . --bydir true --bydate false'
         )
@@ -123,6 +144,7 @@ def test_04_gallery(mode):
 def test_05_gallery(mode):
     return generic_test(
         mode,
+        False,
         'test_05_gallery',
         '--gallery tmp --imgs . --bydir true --bydate true'
         )
@@ -131,24 +153,83 @@ def test_05_gallery(mode):
 def test_06_gallery(mode):
     return generic_test(
         mode,
+        False,
         'test_06_gallery',
         '--gallery tmp --imgs . --bydir true --bydate true --dates 20000103-20000109'
         )
 
 
-def test_00_Config_00(mode):
-    if mode == 'ref':
-        journal.main('--resetcfg gallery')
-        journal.main('--gallery gallery --imgs subdir --bydir true')
-        shutil.copyfile('gallery/index-x.htm', 'gallery/index-config1.htm')
-        return None
-    else:
-        journal.main('--resetcfg tmp')
-        journal.main('--gallery tmp --imgs subdir --bydir true')
-        return file_compare('gallery/index-config1.htm', 'tmp/index-x.htm')
+def test_07_gallery(mode):
+    # test diary file not found
+    if os.path.isdir('tmp'):
+        shutil.rmtree('tmp')
+    os.makedirs('tmp')
+    try:
+        journal.main('--gallery tmp --diary true')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == journal.errorcode('File not found')
 
 
-def test_00_Config_01(mode):
+def test_08_gallery(mode):
+    return generic_test(
+        mode,
+        False,
+        'test_08_gallery',
+        '--resetcfg tmp',
+        '--setcfg tmp thumbnails media_description false',
+        '--setcfg tmp thumbnails subdir_caption false',
+        '--setcfg tmp photobox loop true',
+        '--setcfg tmp photobox time 2000',
+        '--gallery tmp --imgs . --bydir true --bydate true'
+        )
+
+
+def test_09_gallery(mode):
+    # convert diary file to html without any extra images
+    populate_tmp()
+    return generic_test(
+        mode,
+        True,
+        'test_09_gallery',
+        '--gallery tmp --diary true'
+    )
+
+
+def test_10_gallery(mode):
+    # convert diary file to html adding images from imgsource at dates of diary
+    populate_tmp()
+    return generic_test(
+        mode,
+        True,
+        'test_10_gallery',
+        '--gallery tmp --diary true --imgs . --dates diary'
+    )
+
+
+def test_11_gallery(mode):
+    # convert diary file to html adding images from imgsource for all dates from source
+    populate_tmp()
+    return generic_test(
+        mode,
+        True,
+        'test_11_gallery',
+        '--gallery tmp --diary true --imgs .'
+    )
+
+
+def test_12_gallery(mode):
+    # convert diary file to html adding images from imgsource for a selection of dates
+    populate_tmp()
+    return generic_test(
+        mode,
+        True,
+        'test_12_gallery',
+        '--gallery tmp --diary true --imgs . --dates 20000101-20000105'
+    )
+
+
+def XXXtest_00_Config_01(mode):
     if mode == 'ref':
         journal.setconfig('gallery/.config.ini', 'thumbnails', 'media_description', 'False')
         journal.setconfig('gallery/.config.ini', 'thumbnails', 'subdir_caption', 'False')
@@ -167,7 +248,7 @@ def test_00_Config_01(mode):
         return file_compare('gallery/index-config2.htm', 'tmp/index-x.htm')
 
 
-def test_00_Config_02(mode):
+def XXXtest_00_Config_02(mode):
     if mode == 'ref':
         return None
     else:
@@ -181,7 +262,7 @@ def test_00_Config_02(mode):
             journal.setconfig('tmp/.config.ini', 'photobox', 'loop', 'false')
 
 
-def test_00_Config_03(mode):
+def XXXtest_00_Config_03(mode):
     if mode == 'ref':
         return None
     else:
@@ -225,21 +306,13 @@ def test_02_html(mode):
         return file_compare('index.htm', 'tmp/index.htm')
 
 
-def test_02_html_no_md_file(mode):
-    try:
-        journal.main('--html no_md_file')
-        return False
-    except SystemExit as exception:
-        return exception.args[0] == journal.errorcode('File not found')
-
-
 def test_03_ext(mode):
     if mode == 'ref':
-        journal.main('--extend . --imgs .')
+        journal.main('--extend . --imgs . --dates diary')
         os.rename('index-x.htm', 'index-x-base.htm')
         return None
     else:
-        journal.main('--extend . --dest tmp --imgs . ')
+        journal.main('--extend . --dest tmp --imgs . --dates diary')
         return file_compare('index-x-base.htm', 'tmp/index-x.htm')
 
 
@@ -255,28 +328,16 @@ def test_03_ext_dates(mode):
 
 def test_03_ext_rec(mode):
     if mode == 'ref':
-        journal.main('--extend . --imgs . --recursive true')
+        journal.main('--extend . --imgs . --recursive true  --dates diary')
         os.rename('index-x.htm', 'index-x-rec.htm')
         return None
     else:
-        journal.main('--extend . --dest tmp --imgs . --recursive true')
+        journal.main('--extend . --dest tmp --imgs . --recursive true --dates diary')
         return file_compare('index-x-rec.htm', 'tmp/index-x.htm')
         return (
             file_compare('index-x-rec.htm', 'tmp/index-x.htm') and
             # .thumbnails is tested after the last command modifying thumbnails
             directory_compare('.thumbnails', 'tmp/.thumbnails')
-        )
-
-
-def test_04_ext_no_md_file(mode):
-    if mode == 'ref':
-        journal.main('--extend no_md_file --imgs . --dates 20000101-20000110')
-        return None
-    else:
-        journal.main('--extend no_md_file --dest tmp --imgs . --dates 20000101-20000110')
-        return (
-            directory_compare('no_md_file/.thumbnails', 'tmp/.thumbnails') and
-            file_compare('no_md_file/index-x.htm', 'tmp/index-x.htm')
         )
 
 
@@ -348,17 +409,20 @@ def test_url_blogger_not_read(mode):
         return exception.args[0] == journal.errorcode('Unable to read url')
 
 
-def testfunctions():
+def testfunctions(pref_testfunctions):
     return [(name, obj) for name, obj in inspect.getmembers(sys.modules[__name__])
-                if (inspect.isfunction(obj) and name.startswith('test_'))]
+                if (inspect.isfunction(obj) and name.startswith(pref_testfunctions))]
 
 
 # -- Main ---------------------------------------------------------------------
 
 
 def main():
+    pref_testfunctions = 'test_'
     if sys.argv[1:] and sys.argv[1] == 'ref':
         mode = 'ref'
+        if sys.argv[2:]:
+            pref_testfunctions = sys.argv[2]
     else:
         mode = 'test'
 
@@ -367,17 +431,17 @@ def main():
     os.mkdir('tmp')
 
     if mode == 'ref':
-        for fn in glob.glob('index*.*'):
-            if fn != 'index.md':
-                os.remove(fn)
-        for name, test in testfunctions():
+        ## for fn in glob.glob('index*.*'):
+        ##     if fn != 'index.md':
+        ##         os.remove(fn)
+        for name, test in testfunctions(pref_testfunctions):
             print(f'{colorama.Fore.YELLOW}Test: {name}{colorama.Style.RESET_ALL}')
             test('ref')
         shutil.rmtree('tmp')
     else:
-        nbtest = len(testfunctions())
+        nbtest = len(testfunctions(pref_testfunctions))
         nbcorrect = 0
-        for name, test in testfunctions():
+        for name, test in testfunctions(pref_testfunctions):
             print(f'{colorama.Fore.YELLOW}Test: {name}{colorama.Style.RESET_ALL}')
             if test('go'):
                 nbcorrect += 1
