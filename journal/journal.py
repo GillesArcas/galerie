@@ -41,8 +41,6 @@ import markdown
 USAGE = """
 journal --gallery <root-dir> --imgsource <media-dir>
 journal --create  <root-dir> --imgsource <media-dir> [--dates <yyyymmdd-yyyymmdd>]
-journal --html    <root-dir> [--dest <dir>]
-journal --extend  <root-dir> --imgsource <media-dir> [--dates <yyyymmdd-yyyymmdd>] [--dest <dir>]
 journal --blogger <root-dir> --url <url> [--check] [--full]
 """
 
@@ -894,9 +892,6 @@ def make_posts_from_diary(args):
     md_filename = os.path.join(args.root, 'index.md')
     if os.path.exists(md_filename):
         title, posts = parse_markdown(md_filename)
-    elif args.extend:
-        title = os.path.basename(args.root)
-        posts = list()
     else:
         error('File not found', md_filename)
 
@@ -1043,24 +1038,6 @@ def create_index(args):
 
     os.makedirs(args.root, exist_ok=True)
     print_markdown(posts, title, os.path.join(args.root, 'index.md'))
-
-
-# -- Conversion to html page --------------------------------------------------
-
-
-def markdown_to_html(args):
-    title, posts = make_posts_from_diary(args)
-    purge_thumbnails(args.thumbdir, posts)
-    print_html(args, posts, title, os.path.join(args.dest, 'index.htm'), 'regular')
-
-
-# -- Addition of DCIM medias --------------------------------------------------
-
-
-def extend_index(args):
-    title, posts = make_posts_from_diary_and_dir(args)
-    purge_thumbnails(args.thumbdir, posts)
-    print_html(args, posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
 
 
 # -- Creation of html page from directory tree --------------------------------
@@ -1424,10 +1401,6 @@ def parse_command_line(argstring):
     xgroup = agroup.add_mutually_exclusive_group()
     xgroup.add_argument('--create', help='create journal from medias in --imgsource',
                         action='store', metavar='<root-dir>')
-    xgroup.add_argument('--html', help='input md, output html',
-                        action='store', metavar='<root-dir>')
-    xgroup.add_argument('--extend', help='extend image set, source in --imgsource',
-                        action='store', metavar='<root-dir>')
     xgroup.add_argument('--gallery', help=' source in --imgsource',
                         action='store', metavar='<root-dir>')
     xgroup.add_argument('--blogger',
@@ -1475,7 +1448,7 @@ def parse_command_line(argstring):
         args = parser.parse_args(argstring.split())
 
     args.root = (
-        args.create or args.html or args.extend or args.gallery
+        args.create or args.gallery
         or args.blogger or args.idem or args.resetcfg
     )
 
@@ -1493,7 +1466,7 @@ def setup_context(args, root_only):
     if args.root:
         args.root = os.path.abspath(args.root)
         if not os.path.isdir(args.root):
-            if args.extend or args.gallery:
+            if args.gallery:
                 if not os.path.exists(args.root):
                     os.mkdir(args.root)
             else:
@@ -1528,13 +1501,10 @@ def setup_context(args, root_only):
     if args.dest is None:
         args.dest = args.root
 
-    if args.extend and args.imgsource is None:
-        error('No image source (--imgsource)')
-
     if args.blogger and args.urlblogger is None:
         error('No blogger url (--url)')
 
-    if args.html or args.extend or args.gallery:
+    if args.gallery:
         # check for ffmpeg and ffprobe in path
         for exe in ('ffmpeg', 'ffprobe'):
             try:
@@ -1573,12 +1543,6 @@ def main(argstring=None):
     try:
         if args.create:
             create_index(args)
-
-        elif args.html:
-            markdown_to_html(args)
-
-        elif args.extend:
-            extend_index(args)
 
         elif args.gallery:
             create_gallery(args)

@@ -171,6 +171,15 @@ def test_07_gallery(mode):
         return exception.args[0] == journal.errorcode('File not found')
 
 
+def test_14_gallery(mode):
+    # test image source not found
+    try:
+        journal.main('--gallery tmp --imgs foobar')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == journal.errorcode('Directory not found')
+
+
 def test_08_gallery(mode):
     return generic_test(
         mode,
@@ -226,6 +235,17 @@ def test_12_gallery(mode):
         True,
         'test_12_gallery',
         '--gallery tmp --diary true --imgs . --dates 20000101-20000105'
+    )
+
+
+def test_13_gallery(mode):
+    # convert diary file to html adding images from imgsource at dates of diary
+    populate_tmp()
+    return generic_test(
+        mode,
+        True,
+        'test_13_gallery',
+        '--gallery tmp --diary true --imgs subdir --dates source  --recursive true'
     )
 
 
@@ -295,52 +315,6 @@ def test_01_idem_no_md_file(mode):
         return exception.args[0] == journal.errorcode('File not found')
 
 
-def test_02_html(mode):
-    if mode == 'ref':
-        journal.main('--resetcfg .')
-        journal.main('--html .')
-        return None
-    else:
-        journal.main('--resetcfg .')
-        journal.main('--html . --dest tmp')
-        return file_compare('index.htm', 'tmp/index.htm')
-
-
-def test_03_ext(mode):
-    if mode == 'ref':
-        journal.main('--extend . --imgs . --dates diary')
-        os.rename('index-x.htm', 'index-x-base.htm')
-        return None
-    else:
-        journal.main('--extend . --dest tmp --imgs . --dates diary')
-        return file_compare('index-x-base.htm', 'tmp/index-x.htm')
-
-
-def test_03_ext_dates(mode):
-    if mode == 'ref':
-        journal.main('--extend . --imgs . --dates 20000101-20000110')
-        os.rename('index-x.htm', 'index-x-dates.htm')
-        return None
-    else:
-        journal.main('--extend . --dest tmp --imgs . --dates 20000101-20000110')
-        return file_compare('index-x-dates.htm', 'tmp/index-x.htm')
-
-
-def test_03_ext_rec(mode):
-    if mode == 'ref':
-        journal.main('--extend . --imgs . --recursive true  --dates diary')
-        os.rename('index-x.htm', 'index-x-rec.htm')
-        return None
-    else:
-        journal.main('--extend . --dest tmp --imgs . --recursive true --dates diary')
-        return file_compare('index-x-rec.htm', 'tmp/index-x.htm')
-        return (
-            file_compare('index-x-rec.htm', 'tmp/index-x.htm') and
-            # .thumbnails is tested after the last command modifying thumbnails
-            directory_compare('.thumbnails', 'tmp/.thumbnails')
-        )
-
-
 def test_create(mode):
     journal.main('--create tmp --imgs . ')
     if mode == 'ref':
@@ -372,22 +346,6 @@ def test_blogger(mode):
 def test_dir_input_not_found(mode):
     try:
         journal.main('--html foobar')
-        return False
-    except SystemExit as exception:
-        return exception.args[0] == journal.errorcode('Directory not found')
-
-
-def test_dir_imgsource_not_given(mode):
-    try:
-        journal.main('--extend .')
-        return False
-    except SystemExit as exception:
-        return exception.args[0] == journal.errorcode('No image source (--imgsource)')
-
-
-def test_dir_imgsource_not_found(mode):
-    try:
-        journal.main('--extend . --imgs foobar')
         return False
     except SystemExit as exception:
         return exception.args[0] == journal.errorcode('Directory not found')
