@@ -1260,9 +1260,9 @@ def configfilename(params):
     return os.path.join(params.root, '.config.ini')
 
 
-def createconfig(config_filename, defaults):
+def createconfig(config_filename):
     with open(config_filename, 'wt') as f:
-        f.writelines(defaults)
+        f.writelines(CONFIG_DEFAULTS)
 
 
 def read_config(params):
@@ -1270,7 +1270,7 @@ def read_config(params):
 
     try:
         if not os.path.exists(config_filename) or params.resetcfg:
-            createconfig(config_filename, CONFIG_DEFAULTS)
+            createconfig(config_filename)
     except:
         error('error creating configuration file')
 
