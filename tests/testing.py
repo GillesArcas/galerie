@@ -90,10 +90,14 @@ def generic_test(mode, keeptmp, refdir, *options):
             return True
 
 
-def populate_tmp():
+def reset_tmp():
     if os.path.isdir('tmp'):
         shutil.rmtree('tmp')
     os.makedirs('tmp')
+
+
+def populate_tmp():
+    reset_tmp()
     shutil.copyfile('index.md', os.path.join('tmp/index.md'))
     for basename in glob.glob('VID*.mp4'):
         shutil.copyfile(basename, os.path.join('tmp', basename))
@@ -155,6 +159,22 @@ def test_05_gallery(mode):
         )
 
 
+def test_16_gallery(mode):
+    # test --update
+    reset_tmp()
+    journal.main('--gallery tmp --imgs . --bydir true --bydate true')
+    os.rename('OCT_20000101_000000.jpg', 'TOC_20000101_000000.jpg')
+    try:
+        return generic_test(
+            mode,
+            True,
+            'test_16_gallery',
+            '--gallery tmp --update'
+            )
+    finally:
+        os.rename('TOC_20000101_000000.jpg', 'OCT_20000101_000000.jpg')
+
+
 def test_06_gallery(mode):
     return generic_test(
         mode,
@@ -183,6 +203,20 @@ def test_14_gallery(mode):
         return False
     except SystemExit as exception:
         return exception.args[0] == journal.errorcode('Directory not found')
+
+
+def test_15_gallery(mode):
+    if mode == 'ref':
+        return None
+    else:
+        populate_tmp()
+        journal.createconfig('tmp/.config.ini')
+        journal.setconfig('tmp/.config.ini', 'photobox', 'time', 'abc')
+        try:
+            journal.main('--gallery tmp --imgs subdir/deeper1 --bydir true')
+            return False
+        except SystemExit as exception:
+            return exception.args[0] == journal.errorcode('missing or incorrect config value:')
 
 
 def test_08_gallery(mode):
@@ -254,67 +288,42 @@ def test_13_gallery(mode):
     )
 
 
-def XXXtest_00_Config_02(mode):
+def test_diary_file_idempotence(mode):
+    reset_tmp()
     if mode == 'ref':
         return None
     else:
-        try:
-            journal.setconfig('tmp/.config.ini', 'photobox', 'loop', 'foobar')
-            journal.main('--gallery tmp --imgs subdir/deeper1 --bydir true')
-            return False
-        except SystemExit as exception:
-            return exception.args[0] == journal.errorcode('missing or incorrect config value:')
-        finally:
-            journal.setconfig('tmp/.config.ini', 'photobox', 'loop', 'false')
-
-
-def XXXtest_00_Config_03(mode):
-    if mode == 'ref':
-        return None
-    else:
-        try:
-            journal.setconfig('tmp/.config.ini', 'photobox', 'time', 'abc')
-            journal.main('--gallery tmp --imgs subdir/deeper1 --bydir true')
-            return False
-        except SystemExit as exception:
-            return exception.args[0] == journal.errorcode('missing or incorrect config value:')
-        finally:
-            journal.setconfig('tmp/.config.ini', 'photobox', 'time', '3000')
-
-
-def test_01_idem(mode):
-    # test number to keep test order
-    if mode == 'ref':
-        return None
-    else:
-        journal.main('--resetcfg .')
         journal.main('--idem . --dest tmp')
         return file_compare('index.md', 'tmp/index.md')
 
 
-def test_01_idem_no_md_file(mode):
+def test_idempotence_no_md_file(mode):
+    reset_tmp()
     try:
-        journal.main('--resetcfg no_md_file')
-        journal.main('--idem no_md_file')
+        journal.main('--idem tmp')
         return False
     except SystemExit as exception:
         return exception.args[0] == journal.errorcode('File not found')
 
 
 def test_create(mode):
+    # test diary file creation
+    reset_tmp()
     journal.main('--create tmp --imgs . ')
     if mode == 'ref':
-        return shutil.copyfile('tmp/index.md', 'index-create-base.md')
+        return shutil.copyfile('tmp/index.md', 'reference/index-create-base.md')
     else:
-        return file_compare('index-create-base.md', 'tmp/index.md')
+        return file_compare('tmp/index.md', 'reference/index-create-base.md')
 
 
 def test_create_date(mode):
+    # test diary file creation limiting date range
+    reset_tmp()
     journal.main('--create tmp --imgs . --dates 20000101-20000110')
     if mode == 'ref':
-        return shutil.copyfile('tmp/index.md', 'index-create-dates.md')
+        return shutil.copyfile('tmp/index.md', 'reference/index-create-dates.md')
     else:
-        return file_compare('index-create-dates.md', 'tmp/index.md')
+        return file_compare('tmp/index.md', 'reference/index-create-dates.md')
 
 
 def test_blogger(mode):
@@ -329,15 +338,7 @@ def test_blogger(mode):
         return file_compare('blogger-output.htm', 'tmp/blogger-output.htm')
 
 
-def test_dir_input_not_found(mode):
-    try:
-        journal.main('--html foobar')
-        return False
-    except SystemExit as exception:
-        return exception.args[0] == journal.errorcode('Directory not found')
-
-
-def test_url_blogger_not_given(mode):
+def test_blogger_url_not_given(mode):
     try:
         journal.main('--blogger .')
         return False
@@ -345,7 +346,7 @@ def test_url_blogger_not_given(mode):
         return exception.args[0] == journal.errorcode('No blogger url (--url)')
 
 
-def test_url_blogger_not_read(mode):
+def test_blogger_url_not_read(mode):
     try:
         journal.main('--blogger . --url foobar')
         return False
@@ -364,6 +365,8 @@ def main():
             pref_testfunctions = sys.argv[2]
     else:
         mode = 'test'
+        if sys.argv[1:] and sys.argv[1] != 'abort':
+            pref_testfunctions = sys.argv[1]
 
     if os.path.exists('tmp'):
         shutil.rmtree('tmp')
