@@ -50,6 +50,11 @@ def directory_compare(dir1, dir2):
     return list_compare('ref', 'res', list1, list2, dir1, dir2)
 
 
+def testfunctions(pref_testfunctions):
+    return [(name, obj) for name, obj in inspect.getmembers(sys.modules[__name__])
+                if (inspect.isfunction(obj) and name.startswith(pref_testfunctions))]
+
+
 # -- Tests --------------------------------------------------------------------
 
 
@@ -249,25 +254,6 @@ def test_13_gallery(mode):
     )
 
 
-def XXXtest_00_Config_01(mode):
-    if mode == 'ref':
-        journal.setconfig('gallery/.config.ini', 'thumbnails', 'media_description', 'False')
-        journal.setconfig('gallery/.config.ini', 'thumbnails', 'subdir_caption', 'False')
-        journal.setconfig('gallery/.config.ini', 'photobox', 'loop', 'True')
-        journal.setconfig('gallery/.config.ini', 'photobox', 'time', '2000')
-        journal.main('--gallery gallery --imgs subdir --bydir true')
-        os.remove('gallery/.config.ini')
-        shutil.copyfile('gallery/index-x.htm', 'gallery/index-config2.htm')
-        return None
-    else:
-        journal.setconfig('tmp/.config.ini', 'thumbnails', 'media_description', 'False')
-        journal.setconfig('tmp/.config.ini', 'thumbnails', 'subdir_caption', 'False')
-        journal.setconfig('tmp/.config.ini', 'photobox', 'loop', 'True')
-        journal.setconfig('tmp/.config.ini', 'photobox', 'time', '2000')
-        journal.main('--gallery tmp --imgs subdir --bydir true')
-        return file_compare('gallery/index-config2.htm', 'tmp/index-x.htm')
-
-
 def XXXtest_00_Config_02(mode):
     if mode == 'ref':
         return None
@@ -365,11 +351,6 @@ def test_url_blogger_not_read(mode):
         return False
     except SystemExit as exception:
         return exception.args[0] == journal.errorcode('Unable to read url')
-
-
-def testfunctions(pref_testfunctions):
-    return [(name, obj) for name, obj in inspect.getmembers(sys.modules[__name__])
-                if (inspect.isfunction(obj) and name.startswith(pref_testfunctions))]
 
 
 # -- Main ---------------------------------------------------------------------
