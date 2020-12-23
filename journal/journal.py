@@ -1474,8 +1474,11 @@ def setup_context(args, root_only):
 
     if args.imgsource:
         args.imgsource = os.path.abspath(args.imgsource)
+        if os.path.splitdrive(args.imgsource)[0]:
+            args.imgsource = os.path.splitdrive(args.imgsource)[0].upper() + os.path.splitdrive(args.imgsource)[1]
         if not os.path.isdir(args.imgsource):
             error('Directory not found', args.imgsource)
+
 
     if root_only:
         return
