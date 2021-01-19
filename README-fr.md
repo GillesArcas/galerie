@@ -2,6 +2,21 @@
 
 journal est un utilitaire permettant de créer des galeries d'images et de vidéos. Les images et vidéos peuvent être organiser par répertoires, par dates ou les deux. De plus, les galeries créées peuvent inclure le contenu d'un fichier journal. Un fichier journal est un fichier texte, respectant une syntaxe très simple (le format Markdown), organisé par dates et incluant du texte et des images.
 
+- [Installation](#installation)
+- [Description d'une galerie](#description_d_une_galerie)
+- [Création d'une gallerie](#creation_d'une_gallerie)
+- [Autres commandes](#autres_commandes)
+- [Règles d'écriture d'un fichier journal](#règles_d'écriture_d'un_fichier_journal)
+- [Fichier de configuration][#fichier_de_configuration]
+
+# Installation 
+
+A compléter
+
+# Description d'une galerie
+
+A compléter
+
 # Création d'une galerie
 
 ## Présentation
@@ -16,7 +31,7 @@ Il y a trois façons d'organiser une galerie à partir des médias contenus dans
 * on peut regrouper les médias par dates, en créant une section par date ayant la date pour titre, avec l'option `--bydate`,
 * on peut utiliser un ficher journal avec l'option `--diary`. Un fichier journal est un fichier de syntaxe simple, organisé par date et associant à chaque date un texte et des images. Une page peut être créée avec seulement ces données ou complétée avec les médias d'un répertoire source.
 
-Deux options supplémentaires permettent de préciser les données utilisées avec ces options :
+Les options `--bydir` et `--bydates` peuvent être combinées. Deux options supplémentaires permettent de préciser les données utilisées avec les options `--bydir`, `--bydates`  et `--diary`:
 
 * l'option `--dates` qui limite les médias utilisés dans une galerie à une sélection de dates,
 * l'option `--recursive` qui indique si il faut considérer les sous-répertoires du répertoires source.
@@ -29,7 +44,7 @@ Créer une galerie organisée par sous-répertoires :
 
 `$ journal --gallery /foo/mygallery --imgsource /bar/mypictures --bydir true` 
 
-Créer une galerie organisée par date, en limitant les dates à une plage et en considérant les sous-répertoires :
+Créer une galerie organisée par date, en limitant les dates à une plage et en incluant les sous-répertoires :
 
 `$ journal --gallery /foo/mygallery --imgsource /bar/mypictures --bydates true --dates 20200701-20200731 --recursive` 
 
@@ -41,7 +56,7 @@ Mise à jour d'une galerie en utilisant les options qui ont permis de la créer 
 
 `$ journal --gallery /foo/mygallery --update`
 
-## Description complète des options
+## Description complète des options de création de galeries
 
 L'option `--gallery` permet de créer et mettre à jour une galerie. La galerie est définie par les options `--imgsource`, `--bydir`, `--bydates`, `--diary`, `--dates` et `--recursive`. L'option `--update` permet de remplacer les cinq options précédentes. 
 
@@ -68,6 +83,10 @@ détermine si la galerie est organisée à partir d'un fichier journal.
 `--dates diary/source/yyyymmdd-yyyymmdd` (défaut `source`)
 
 spécifie les dates à considérer pour ajouter des images d'un répertoire source à un fichier journal. Si l'argument vaut `diary`, on n'ajoute que des images correspondant aux dates du fichier journal. Si l'argument vaut `source`, on ajoute toutes les images du répertoire source. Sinon, on n'ajoute que les images dans la plage de dates `yyyymmdd-yyyymmdd`.
+
+# Autres commandes
+
+A compléter
 
 # Règles d'écriture d'un fichier journal
 
@@ -110,3 +129,11 @@ Un éventuel texte après les médias est ignoré.
 ### Séparateur d'enregistrements
 
 Un séparateur d'enregistrement est une barre de séparation de longueur 6 au moins.
+
+# Fichier de configuration
+
+A compléter
+
+
+
+[#fichier_de_configuration]: 
