@@ -36,3 +36,6 @@ dcim-subdir_OCT_20000108_000102.jpg.jpg
 dcim-TOC_20000101_000000.jpg.jpg
 dcim-VID_20000107_000000.mp4.jpg
 dcim-VID_20000107_000001.mp4.jpg
+dcim-subdir_deeper2_deepest_VID_20000107_000002.mp4.info
+dcim-VID_20000107_000000.mp4.info
+dcim-VID_20000107_000001.mp4.info

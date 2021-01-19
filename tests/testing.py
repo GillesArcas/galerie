@@ -93,7 +93,8 @@ def generic_test(mode, keeptmp, refdir, *options):
             print(os.path.basename(fn), file=f)
         for fn in glob.glob('tmp/.thumbnails/*.jpg'):
             print(os.path.basename(fn), file=f)
-        # TODO: ajouter les .info
+        for fn in glob.glob('tmp/.thumbnails/*.info'):
+            print(os.path.basename(fn), file=f)
 
     if mode == 'ref':
         if os.path.isdir(refdir):
