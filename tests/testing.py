@@ -111,9 +111,13 @@ def generic_test(mode, keeptmp, refdir, *options):
             return True
 
 
-def reset_tmp():
+def remove_tmp():
     if os.path.isdir('tmp'):
         shutil.rmtree('tmp')
+
+
+def reset_tmp():
+    remove_tmp()
     os.makedirs('tmp')
 
 
@@ -132,6 +136,17 @@ def test_00_gallery(mode):
         False,
         'test_00_gallery',
         '--gallery tmp --imgs . --bydir false --bydate false --recursive false'
+        )
+
+
+def test_18_gallery(mode):
+    # create gallery when not existing
+    remove_tmp()
+    return generic_test(
+        mode,
+        True,
+        'test_18_gallery',
+        '--gallery tmp --imgs .'
         )
 
 
@@ -207,9 +222,7 @@ def test_06_gallery(mode):
 
 def test_07_gallery(mode):
     # test diary file not found
-    if os.path.isdir('tmp'):
-        shutil.rmtree('tmp')
-    os.makedirs('tmp')
+    reset_tmp()
     try:
         journal.main('--gallery tmp --diary true')
         return False
