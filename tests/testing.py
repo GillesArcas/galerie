@@ -18,8 +18,8 @@ def line_compare(line1, line2):
 
 def line_compare(line1, line2):
     """
-    Compare two lines ignoring absolute paths (in html files and md files 
-    titles). This makes possible the relocalisation of the tests (make the 
+    Compare two lines ignoring absolute paths (in html files and md files
+    titles). This makes possible the relocalisation of the tests (make the
     reference data in some directory and run the tests somewhere else).
     """
     line1 = re.sub(r'"file:///.*([^/\\]+)"', 'file:///\1"', line1)
@@ -347,15 +347,16 @@ def test_create_date(mode):
 
 
 def test_blogger(mode):
+    reset_tmp()
     journal.main('--blogger . --url blogger-medias.htm --check')
     if mode == 'ref':
-        with open('blogger-output.htm', 'wt') as f:
+        with open('reference/blogger-output.htm', 'wt') as f:
             f.write(clipboard.paste())
         return None
     else:
         with open('tmp/blogger-output.htm', 'wt') as f:
             f.write(clipboard.paste())
-        return file_compare('blogger-output.htm', 'tmp/blogger-output.htm')
+        return file_compare('reference/blogger-output.htm', 'tmp/blogger-output.htm')
 
 
 def test_blogger_url_not_given(mode):
