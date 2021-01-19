@@ -1399,13 +1399,11 @@ def parse_command_line(argstring):
 
     agroup = parser.add_argument_group('Commands')
     xgroup = agroup.add_mutually_exclusive_group()
+    xgroup.add_argument('--gallery', help='source in --imgsource',
+                        action='store', metavar='<root-dir>')
     xgroup.add_argument('--create', help='create journal from medias in --imgsource',
                         action='store', metavar='<root-dir>')
-    xgroup.add_argument('--gallery', help=' source in --imgsource',
-                        action='store', metavar='<root-dir>')
-    xgroup.add_argument('--blogger',
-                        help='input md, html blogger ready in clipboard',
-                        action='store', metavar='<root-dir>')
+    # testing
     xgroup.add_argument('--resetcfg', help='reset config file to defaults',
                         action='store', metavar='<root-dir>')
     xgroup.add_argument('--setcfg', help='set field in config file',
@@ -1414,8 +1412,12 @@ def parse_command_line(argstring):
                         action='store', metavar='<root-dir>')
     xgroup.add_argument('--test', help=argparse.SUPPRESS,
                         action='store')
-
+    # blogger
+    xgroup.add_argument('--blogger',
+                        help='input md, html blogger ready in clipboard',
+                        action='store', metavar='<root-dir>')
     agroup = parser.add_argument_group('Parameters')
+
     agroup.add_argument('--bydir', help='organize gallery by subdirectory',
                         action='store', default='false', choices=BOOL)
     agroup.add_argument('--bydate', help='organize gallery by date',
@@ -1475,10 +1477,10 @@ def setup_context(args, root_only):
     if args.imgsource:
         args.imgsource = os.path.abspath(args.imgsource)
         if os.path.splitdrive(args.imgsource)[0]:
-            args.imgsource = os.path.splitdrive(args.imgsource)[0].upper() + os.path.splitdrive(args.imgsource)[1]
+            drive, rest = os.path.splitdrive(args.imgsource)
+            args.imgsource = drive.upper() + rest
         if not os.path.isdir(args.imgsource):
             error('Directory not found', args.imgsource)
-
 
     if root_only:
         return
