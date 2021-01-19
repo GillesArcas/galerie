@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import inspect
 import shutil
 import glob
@@ -9,6 +10,25 @@ import journal
 
 
 # -- Helpers ------------------------------------------------------------------
+
+
+def line_compare(line1, line2):
+    return line1 == line2
+
+
+def line_compare(line1, line2):
+    """
+    Compare two lines ignoring absolute paths (in html files and md files 
+    titles). This makes possible the relocalisation of the tests (make the 
+    reference data in some directory and run the tests somewhere else).
+    """
+    line1 = re.sub(r'"file:///.*([^/\\]+)"', 'file:///\1"', line1)
+    line2 = re.sub(r'"file:///.*([^/\\]+)"', 'file:///\1"', line2)
+    if line1 == line2:
+        return True
+    line1 = re.sub(r'.*([^/\\]+)', '\1', line1)
+    line2 = re.sub(r'.*([^/\\]+)', '\1', line2)
+    return line1 == line2
 
 
 def list_compare(tag1, tag2, list1, list2, source1='<list1>', source2='<list2>'):
@@ -21,7 +41,7 @@ def list_compare(tag1, tag2, list1, list2, source1='<list1>', source2='<list2>')
     diff = list()
     res = True
     for i, (x, y) in enumerate(zip(list1, list2)):
-        if x != y:
+        if not line_compare(x, y):
             diff.append('line %s %d: %s' % (tag1, i + 1, x))
             diff.append('line %s %d: %s' % (tag2, i + 1, y))
             res = False
@@ -313,7 +333,7 @@ def test_create(mode):
     if mode == 'ref':
         return shutil.copyfile('tmp/index.md', 'reference/index-create-base.md')
     else:
-        return file_compare('tmp/index.md', 'reference/index-create-base.md')
+        return file_compare('reference/index-create-base.md', 'tmp/index.md')
 
 
 def test_create_date(mode):
@@ -323,7 +343,7 @@ def test_create_date(mode):
     if mode == 'ref':
         return shutil.copyfile('tmp/index.md', 'reference/index-create-dates.md')
     else:
-        return file_compare('tmp/index.md', 'reference/index-create-dates.md')
+        return file_compare('reference/index-create-dates.md', 'tmp/index.md')
 
 
 def test_blogger(mode):
