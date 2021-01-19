@@ -33,7 +33,8 @@ Une pieuvre
 ______
 [2000/01/06]
 
-Un deuxième enregistrement pour la même date.
+Un deuxième enregistrement pour la même date. Seulement le premier
+enregistrement avec la même date sera associé aux médias de cette date.
 ______
 [2000/01/07]
 
