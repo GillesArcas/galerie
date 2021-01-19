@@ -308,6 +308,17 @@ def test_13_gallery(mode):
     )
 
 
+def test_17_gallery(mode):
+    # create gallery with a name different from default
+    populate_tmp()
+    return generic_test(
+        mode,
+        True,
+        'test_17_gallery',
+        '--gallery tmp/gallery.htm --imgs .'
+    )
+
+
 def test_diary_file_idempotence(mode):
     reset_tmp()
     if mode == 'ref':
@@ -394,9 +405,6 @@ def main():
     os.mkdir('tmp')
 
     if mode == 'ref':
-        ## for fn in glob.glob('index*.*'):
-        ##     if fn != 'index.md':
-        ##         os.remove(fn)
         for name, test in testfunctions(pref_testfunctions):
             print(f'{colorama.Fore.YELLOW}Test: {name}{colorama.Style.RESET_ALL}')
             test('ref')

@@ -1045,7 +1045,7 @@ def create_index(args):
 
 def create_gallery(args):
     title, posts = make_posts(args, args.imgsource)
-    print_html(args, posts, title, os.path.join(args.dest, 'index-x.htm'), 'regular')
+    print_html(args, posts, title, os.path.join(args.dest, args.rootname), 'regular')
     if args.diary and not args.imgsource:
         purge_thumbnails(args.thumbdir, posts, diary=True)
     else:
@@ -1461,10 +1461,20 @@ def parse_command_line(argstring):
     return args
 
 
-def setup_context(args, root_only):
+def setup_part1(args):
     """
-    Check and normalize paths
+    Made before reading config file.
+    Check and normalize paths.
+    Handle priotity between command line and config
+    file.
     """
+    rootext = os.path.splitext(args.root)[1]
+    if rootext.lower() in ('.htm', '.html'):
+        args.rootname = os.path.basename(args.root)
+        args.root = os.path.dirname(args.root)
+    else:
+        args.rootname = 'index.htm'
+
     if args.root:
         args.root = os.path.abspath(args.root)
         if not os.path.isdir(args.root):
@@ -1482,10 +1492,15 @@ def setup_context(args, root_only):
         if not os.path.isdir(args.imgsource):
             error('Directory not found', args.imgsource)
 
-    if root_only:
-        return
 
-    # reading config must have been done
+def setup_part2(args):
+    """
+    Made after reading config file.
+    Check for ffmpeg in path.
+    Create .thumbnails dir if necessary and create .nomedia in it.
+    Copy photobox file to destination dir.
+    Handle priotity between command line and config file.
+    """
     if args.update:
         args.imgsource = args.source.sourcedir
         args.bydir = args.source.bydir
@@ -1542,9 +1557,9 @@ def main(argstring=None):
     colorama.init()
     locale.setlocale(locale.LC_TIME, '')
     args = parse_command_line(argstring)
-    setup_context(args, root_only=True)
+    setup_part1(args)
     read_config(args)
-    setup_context(args, root_only=False)
+    setup_part2(args)
     try:
         if args.create:
             create_index(args)

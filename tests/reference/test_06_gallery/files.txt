@@ -1,4 +1,4 @@
-index-x.htm
+index.htm
 subdir.htm
 subdir_deeper1.htm
 subdir_deeper2.htm
