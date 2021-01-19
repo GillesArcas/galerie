@@ -1479,8 +1479,7 @@ def setup_part1(args):
         args.root = os.path.abspath(args.root)
         if not os.path.isdir(args.root):
             if args.gallery:
-                if not os.path.exists(args.root):
-                    os.mkdir(args.root)
+                 os.mkdir(args.root)
             else:
                 error('Directory not found', args.root)
 
@@ -1499,7 +1498,7 @@ def setup_part2(args):
     Check for ffmpeg in path.
     Create .thumbnails dir if necessary and create .nomedia in it.
     Copy photobox file to destination dir.
-    Handle priotity between command line and config file.
+    Handle priority between command line and config file.
     """
     if args.update:
         args.imgsource = args.source.sourcedir
