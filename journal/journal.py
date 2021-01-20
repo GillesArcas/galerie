@@ -390,7 +390,7 @@ def compose_html_full(args, posts, title, target):
             gallery_id = f'gallery-{post.date}-blog-{post.daterank}'
             html.append(gallery_call(args, gallery_id))
         if post.dcim:
-            gallery_id =  f'gallery-{post.date}-dcim-{post.daterank}'
+            gallery_id = f'gallery-{post.date}-dcim-{post.daterank}'
             html.append(gallery_call(args, gallery_id))
     html.append('</script>')
 
@@ -453,7 +453,7 @@ def is_image_file(name):
 
 
 def is_video_file(name):
-    return os.path.splitext(name)[1].lower() in ('.mp4', '.webm', '.mkv', '.flv', '.m4v', '.avi', '.wmv')
+    return os.path.splitext(name)[1].lower() in ('.mp4', '.webm', '.mkv', '.flv', '.m4v', '.avi', '.wmv', '.mts')
 
 
 def is_media(name):
@@ -496,7 +496,7 @@ def time_from_item(filename):
         return datetime.datetime.fromtimestamp(timestamp).strftime('%H%M%S')
 
 
-COMMAND = '''\
+FFPROBE_CMD = '''\
     ffprobe -v error
             -select_streams v:0
             -show_entries stream=width,height,avg_frame_rate,r_frame_rate:format=duration
@@ -531,14 +531,10 @@ def make_video_info(filename, info_fullname):
     # ffmpeg must be in path
     date = date_from_item(filename)
     time = time_from_item(filename)
-    command = [*COMMAND.split(), filename]
+    command = [*FFPROBE_CMD.split(), filename]
     try:
         output = check_output(command, stderr=STDOUT).decode()
-        match = re.match(r'(\d+),(\d+),(\d+)/(\d+),(\d+)/(\d+)\s*(\d+\.\d+)', output)
-        width = int(match.group(1))
-        height = int(match.group(2))
-        fps = round(int(match.group(3)) / int(match.group(4)), 1)
-        duration = round(float(match.group(7)))
+        width, height, fps, duration = parse_ffprobe_output(output)
         size = round(os.path.getsize(filename) / 1e6, 1)
         output = format_video_info(date, time, width, height, size, duration, fps)
     except CalledProcessError as e:
@@ -546,6 +542,16 @@ def make_video_info(filename, info_fullname):
         warning(output)
         raise
     return (date, time, width, height, size, duration, fps), output
+
+
+def parse_ffprobe_output(ffprobe_output):
+    # parse first channel data and last line for duretaion
+    match = re.match(r'(\d+),(\d+),(\d+)/(\d+),(\d+/\d+).*(\d+\.\d+)', ffprobe_output, re.DOTALL)
+    width = int(match.group(1))
+    height = int(match.group(2))
+    fps = round(int(match.group(3)) / int(match.group(4)), 1)
+    duration = round(float(match.group(6)))
+    return width, height, fps, duration
 
 
 def format_video_info(date, time, width, height, size, duration, fps):
