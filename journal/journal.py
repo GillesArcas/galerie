@@ -196,7 +196,7 @@ class Post:
                 html.append(media.to_html_post(args))
             html.append('</div>')
 
-        subdirs, dcim = dispatch_medias(self.dcim)
+        subdirs, dcim = dispatch_post_items(self.dcim)
         if self.dcim:
             html.append(SEP)
         for media in subdirs:
@@ -770,9 +770,9 @@ def contains_media(fullname):
         return False
 
 
-def dispatch_medias(list_of_medias):
-    subdirs = [_ for _ in list_of_medias if type(_) is PostSubdir]
-    medias = [_ for _ in list_of_medias if type(_) is not PostSubdir]
+def dispatch_post_items(list_of_post_items):
+    subdirs = [_ for _ in list_of_post_items if type(_) is PostSubdir]
+    medias = [_ for _ in list_of_post_items if type(_) is not PostSubdir]
     return subdirs, medias
 
 
@@ -984,7 +984,7 @@ def make_posts_from_subdir_and_date(args, dirname):
     else:
         medias_ext = list_of_medias_ext(dirname)
         medias = [_ for _ in medias_ext if is_media(_)]
-        subdirs = [_ for _ in medias_ext if not is_media(_)]  # TODO: dispatch_medias
+        subdirs = [_ for _ in medias_ext if not is_media(_)]
 
     # create list of posts with a single post containing all subdirs
     posts = list()
