@@ -1,4 +1,5 @@
 index.htm
+dcim-deeper1_long_video.mp4.jpg
 dcim-deeper1_OCT_20000112_000002.jpg.jpg
 dcim-deeper1_OCT_20000112_000003.jpg.jpg
 dcim-deeper1_OCT_20000112_000004.jpg.jpg
@@ -15,6 +16,7 @@ post-OCT_20000108_000000.jpg.jpg
 post-OCT_20000108_000001.jpg.jpg
 post-VID_20000107_000000.mp4.jpg
 post-VID_20000107_000001.mp4.jpg
+dcim-deeper1_long_video.mp4.info
 dcim-deeper2_deepest_VID_20000107_000002.mp4.info
 post-VID_20000107_000000.mp4.info
 post-VID_20000107_000001.mp4.info

@@ -79,7 +79,7 @@ START = f'''\
 <body>\
 '''
 
-
+SUBDIR_BACKCOL = '#eee'
 END = '</body>\n</html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
 IMGPOST = '<a href="%s"><img src="%s" width="%d" height="%d" title="%s"/></a>'
@@ -105,10 +105,10 @@ VIDDCIM = '<a href="file:///%s" rel="video"><img src="%s" width="%d" height="%d"
 # "display: block;" dans a   : ok
 
 DIRPOST = '<a href="%s"><img src="%s" width="%d" height="%d" style="border: 1px solid #C0C0C0;" /></a>'
-DIRPOSTCAPTION = '''
-<span>
+DIRPOSTCAPTION = f'''
+<span style="background-color:{SUBDIR_BACKCOL}; margin-bottom: 8px; border: 1px solid #C0C0C0;">
 <a href="%s"><img src="%s" width="%d" height="%d" style="border: 1px solid #C0C0C0;" /></a>
-<p>%s</p>
+<p style="margin-left:2px;">%s</p>
 </span>
 '''
 BIMGPAT = '''\
@@ -545,8 +545,8 @@ def make_video_info(filename, info_fullname):
 
 
 def parse_ffprobe_output(ffprobe_output):
-    # parse first channel data and last line for duretaion
-    match = re.match(r'(\d+),(\d+),(\d+)/(\d+),(\d+/\d+).*(\d+\.\d+)', ffprobe_output, re.DOTALL)
+    # parse first channel data and last line for duration
+    match = re.match(r'(\d+),(\d+),(\d+)/(\d+),(\d+/\d+).*\s(\d+\.\d+)', ffprobe_output, re.DOTALL)
     width = int(match.group(1))
     height = int(match.group(2))
     fps = round(int(match.group(3)) / int(match.group(4)), 1)
@@ -555,22 +555,25 @@ def parse_ffprobe_output(ffprobe_output):
 
 
 def format_video_info(date, time, width, height, size, duration, fps):
+    return f'{date} {time}, dim={width}x{height}, {format_duration(duration)}, fps={fps}, {size} MB'
+
+
+def format_duration(duration):
     mn = duration // 60
     sec = duration % 60
-    return f'{date} {time}, dim={width}x{height}, m:s={mn:02}:{sec:02}, fps={fps}, {size} MB'
+    if mn <= 59:
+        return f'm:s={mn:02}:{sec:02}'
+    else:
+        hour = mn // 60
+        mn = mn % 60
+        return f'h:m:s={hour:02}:{mn:02}:{sec:02}'
 
 
 # -- Thumbnails (image and video) ---------------------------------------------
 
 
-PREVIOUS_THUMBAME = 0
-
-
 def thumbname(name, key):
-    if PREVIOUS_THUMBAME:
-        return key + '-' + os.path.splitext(name)[0] + '.jpg'
-    else:
-        return key + '-' + name + '.jpg'
+    return key + '-' + name + '.jpg'
 
 
 def size_thumbnail(width, height, maxdim):
@@ -659,7 +662,7 @@ def create_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir):
         return width2, height2
 
     thumblist = list_of_thumbnails_in_medias(items)
-    img = Image.new('RGB', size, (255, 255, 255))
+    img = Image.new('RGB', size, SUBDIR_BACKCOL)
     width = size[0] // 2 - 2, size[0] - (size[0] // 2 - 2) - 3
     height = size[1] // 2 - 2, size[1] - (size[1] // 2 - 2) - 3
     height = min(height), min(height)
@@ -1188,43 +1191,76 @@ def idempotence(args):
 
 
 # The following docstring is used to create the configuration file.
-CONFIG_DEFAULTS = \
-"""
+CONFIG_DEFAULTS = """\
 [source]
+
 ; source directory
+; value: valid path
 sourcedir = .
+
 ; one web page per directory
-bydir = false                           ; true or false
-; if bydir false, consider subdirectories or not
-recursive = false                       ; true or false
-; dispatch medias by date, dates as titles
-bydate = false                          ; true or false
+; value: true or false
+bydir = false
+
+; dispatch medias by dates
+; value: true or false
+bydate = false
+
+; include text and medias from diary file
+; value: true or false
+diary = false
+
+; include subdirectories recursively (used when bydir is false)
+; value: true or false
+recursive = false
+
 ; interval of dates to include
-dates =                                 ; yyyymmdd-yyyymmdd or empty
+; value: yyyymmdd-yyyymmdd or empty
+dates =
 
 [thumbnails]
-; Gallery displays media description (size, dimension, etc)
-media_description = true                ; true or false
-; Subdir caption is empty or name of subdir
-subdir_caption = true                   ; true or false
+
+; specifies whether or not the gallery displays media description (size, dimension, etc)
+; value: true or false
+media_description = true
+
+; specifies whether subdir captions are empty or the name of the subdir
+; value: true or false
+subdir_caption = true
+
 ; timestamp of thumbnail in video
-thumbdelay = 5                          ; seconds
+; value: number of seconds
+thumbdelay = 5
 
 [photobox]
+
 ; Allows to navigate between first and last images
-loop = False                            ; True or False
+; value: true or false
+loop = false
+
 ; Show gallery thumbnails below the presented photo
-thumbs = True                           ; True or False
+; value: true or false
+thumbs = true
+
 ; Should autoplay on first time or not
-autoplay = False                        ; True or False
+; value: true or false
+autoplay = false
+
 ; Autoplay interval (less than 1000 will hide the autoplay button)
-time = 3000                             ; milliseconds
+; value: milliseconds
+time = 3000
+
 ; Disable/enable mousewheel image zooming
-zoomable = True                         ; True or False
+; value: true or false
+zoomable = true
+
 ; Allow rotation of the image
-rotatable = True                        ; True or False
+; value: true or false
+rotatable = true
+
 ; Change image using mousewheel left/right
-wheelNextPrev = True                    ; True or False
+; value: true or false
+wheelNextPrev = true
 """
 
 
@@ -1283,11 +1319,13 @@ def read_config(params):
     try:
         getconfig(params, config_filename)
     except Exception as e:
-        error('error reading configuration file :' + str(e))
+        error('error reading configuration file.', str(e), 'Use --resetcfg')
 
 
 def getconfig(options, config_filename):
-    class Section: pass
+    class Section:
+        pass
+
     options.source = Section()
     options.thumbnails = Section()
     options.photobox = Section()
@@ -1299,6 +1337,7 @@ def getconfig(options, config_filename):
     options.source.sourcedir = config.get('source', 'sourcedir')
     options.source.bydir = config.getboolean('source', 'bydir')
     options.source.bydate = config.getboolean('source', 'bydate')
+    options.source.diary = config.getboolean('source', 'diary')
     options.source.recursive = config.getboolean('source', 'recursive')
     options.source.dates = config.get('source', 'dates')
 
@@ -1336,10 +1375,12 @@ def update_config(args):
     cfgname = configfilename(args)
     with open(cfgname) as f:
         cfglines = [_.strip() for _ in f.readlines()]
+
     updates = (
         ('sourcedir', args.imgsource),
         ('bydir', args.bydir),
         ('bydate', args.bydate),
+        ('diary', args.diary),
         ('recursive', args.recursive),
         ('dates', args.dates),
     )
@@ -1380,6 +1421,7 @@ No image source (--imgsource)
 No blogger url (--url)
 missing or incorrect config value:
 error creating configuration file
+error reading configuration file.
 '''
 
 
@@ -1469,10 +1511,8 @@ def parse_command_line(argstring):
 
 def setup_part1(args):
     """
-    Made before reading config file.
-    Check and normalize paths.
-    Handle priotity between command line and config
-    file.
+    Made before reading config file (config file located in args.root).
+    Check and normalize root path.
     """
     rootext = os.path.splitext(args.root)[1]
     if rootext.lower() in ('.htm', '.html'):
@@ -1489,14 +1529,6 @@ def setup_part1(args):
             else:
                 error('Directory not found', args.root)
 
-    if args.imgsource:
-        args.imgsource = os.path.abspath(args.imgsource)
-        if os.path.splitdrive(args.imgsource)[0]:
-            drive, rest = os.path.splitdrive(args.imgsource)
-            args.imgsource = drive.upper() + rest
-        if not os.path.isdir(args.imgsource):
-            error('Directory not found', args.imgsource)
-
 
 def setup_part2(args):
     """
@@ -1506,6 +1538,17 @@ def setup_part2(args):
     Copy photobox file to destination dir.
     Handle priority between command line and config file.
     """
+    if args.imgsource:
+        args.imgsource = os.path.abspath(args.imgsource)
+        if os.path.splitdrive(args.imgsource)[0]:
+            drive, rest = os.path.splitdrive(args.imgsource)
+            args.imgsource = drive.upper() + rest
+        if not os.path.isdir(args.imgsource):
+            error('Directory not found', args.imgsource)
+    else:
+        if args.gallery and args.update is None:
+            error('Directory not found', 'Use --imgsource')
+
     if args.update:
         args.imgsource = args.source.sourcedir
         args.bydir = args.source.bydir
@@ -1554,8 +1597,8 @@ def setup_part2(args):
 
     args.bydir = args.bydir is True or args.bydir == 'true'
     args.bydate = args.bydate is True or args.bydate == 'true'
-    args.recursive = args.recursive is True or args.recursive == 'true'
     args.diary = args.diary is True or args.diary == 'true'
+    args.recursive = args.recursive is True or args.recursive == 'true'
 
 
 def main(argstring=None):
