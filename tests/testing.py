@@ -26,8 +26,10 @@ def line_compare(line1, line2):
     line2 = re.sub(r'"file:///.*([^/\\]+)"', 'file:///\1"', line2)
     if line1 == line2:
         return True
-    line1 = re.sub(r'.*([^/\\]+)', '\1', line1)
-    line2 = re.sub(r'.*([^/\\]+)', '\1', line2)
+
+    # tailored specifically for paths in titles of diary files
+    line1 = re.sub(r'^# .*([^/\\]+)', '\1', line1)
+    line2 = re.sub(r'^# .*([^/\\]+)', '\1', line2)
     return line1 == line2
 
 
@@ -362,7 +364,7 @@ def test_create(mode):
 
 
 def test_create_date(mode):
-    # test diary file creation limiting date range
+    # test diary file creation with date range
     reset_tmp()
     journal.main('--create tmp --imgs . --dates 20000101-20000110')
     if mode == 'ref':
