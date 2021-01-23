@@ -656,26 +656,64 @@ def create_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir):
     def size_thumbnail(width, height, xmax, ymax):
         width2 = xmax
         height2 = int(round(xmax * height / width))
-        if height2 > ymax:
+        if height2 < ymax:
             width2 = int(round(ymax * width / height))
             height2 = ymax
         return width2, height2
 
-    thumblist = list_of_thumbnails_in_medias(items)
+    thumblist = [os.path.basename(item.thumb) for item in items]
+    widthnum, heightnum, width, height, offsetx, offsety = mosaic_geometry(size, thumblist)
+    thumbnum = widthnum * heightnum
     img = Image.new('RGB', size, SUBDIR_BACKCOL)
-    width = size[0] // 2 - 2, size[0] - (size[0] // 2 - 2) - 3
-    height = size[1] // 2 - 2, size[1] - (size[1] // 2 - 2) - 3
-    height = min(height), min(height)
-    offsetx = 1, 1 + width[0] + 1
-    offsety = 1, 1 + height[0] + 1
-    for ind, thumb in enumerate(thumblist[:min(4, len(thumblist))]):
-        row = ind // 2
-        col = ind % 2
+
+    for ind, thumb in enumerate(thumblist[:min(thumbnum, len(thumblist))]):
+        row = ind // widthnum
+        col = ind % widthnum
         img2 = Image.open(os.path.join(thumbdir, thumb))
         w, h = size_thumbnail(*img2.size, width[col], height[row])
+        cropdim = ((w - width[col]) // 2, (h - height[row]) // 2,
+                   (w - width[col]) // 2 + width[col], (h - height[row]) // 2 + height[row])
         img2 = img2.resize((w, h), Image.LANCZOS)
+        img2 = img2.crop(cropdim)
         img.paste(img2, (offsetx[col], offsety[row]))
     img.save(thumb_name)
+
+
+def mosaic_geometry(size, thumblist):
+    if len(thumblist) == 1:
+        widthnum = 1
+        heightnum = 1
+    elif len(thumblist) <= 3:
+        widthnum = 1
+        heightnum = 2
+    elif len(thumblist) <= 8:
+        widthnum = 2
+        heightnum = 2
+    else:
+        widthnum = 3
+        heightnum = 3
+
+    if widthnum == 1:
+        width = [size[0] - 2]
+    else:
+        width = [size[0] // widthnum - 2] * (widthnum - 1)
+        width.append(size[0] - (1 + sum(width) + 2 * len(width) + 1))
+
+    if heightnum == 1:
+        height = [size[1] - 2]
+    else:
+        height = [size[1] // heightnum - 2] * (heightnum - 1)
+        height.append(size[1] - (1 + sum(height) + 2 * len(height) + 1))
+
+    offsetx = [1]
+    for w in width[:-1]:
+        offsetx.append(offsetx[-1] + w + 2)
+
+    offsety = [1]
+    for h in height[:-1]:
+        offsety.append(offsety[-1] + h + 2)
+
+    return widthnum, heightnum, width, height, offsetx, offsety
 
 
 def list_of_thumbnails(posts, diary=False):
@@ -693,16 +731,6 @@ def list_of_thumbnails_in_items(itemlist):
         if type(item) == PostSubdir:
             thumblist.append(os.path.basename(item.thumb))
             thumblist.extend(list_of_thumbnails_in_items(item.sublist))
-        else:
-            thumblist.append(os.path.basename(item.thumb))
-    return thumblist
-
-
-def list_of_thumbnails_in_medias(itemlist):
-    thumblist = list()
-    for item in itemlist:
-        if type(item) == PostSubdir:
-            thumblist.extend(list_of_thumbnails_in_medias(item.sublist))
         else:
             thumblist.append(os.path.basename(item.thumb))
     return thumblist
@@ -1525,7 +1553,7 @@ def setup_part1(args):
         args.root = os.path.abspath(args.root)
         if not os.path.isdir(args.root):
             if args.gallery:
-                 os.mkdir(args.root)
+                os.mkdir(args.root)
             else:
                 error('Directory not found', args.root)
 
