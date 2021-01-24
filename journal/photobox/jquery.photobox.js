@@ -866,6 +866,12 @@
         return $("<iframe>").prop({ scrolling:'no', frameborder:0, allowTransparency:true, src:url }).attr({webkitAllowFullScreen:true, mozallowfullscreen:true, allowFullScreen:true});
     }
 
+    // patch GAL
+    function newVideo(){
+        var url = images[activeImage][0];
+        return $("<video loop autoplay controls>").prop({src:images[activeImage][0], width:"480", height:"480"})
+    }
+
     // show the item's Title & Counter
     function captionTextChange(){
         var tmpl;
