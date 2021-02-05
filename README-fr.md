@@ -1,17 +1,34 @@
 # Description
 
-journal est un utilitaire permettant de créer des galeries d'images et de vidéos. Les images et vidéos peuvent être organiser par répertoires, par dates ou les deux. De plus, les galeries créées peuvent inclure le contenu d'un fichier journal. Un fichier journal est un fichier texte, respectant une syntaxe très simple (le format Markdown), organisé par dates et incluant du texte et des images.
+journal est un utilitaire en ligne de commande permettant de créer des galeries d'images et de vidéos. Les images et vidéos peuvent être organiser par répertoires, par dates ou les deux. De plus, les galeries créées peuvent inclure le contenu d'un fichier journal. Un fichier journal est un fichier texte, respectant une syntaxe très simple (le format Markdown), organisé par dates et incluant du texte et des images.
 
 - [Installation](#installation)
-- [Description d'une galerie](#description_d_une_galerie)
-- [Création d'une gallerie](#creation_d'une_gallerie)
-- [Autres commandes](#autres_commandes)
-- [Règles d'écriture d'un fichier journal](#règles_d'écriture_d'un_fichier_journal)
-- [Fichier de configuration][#fichier_de_configuration]
+- [Utilisation](#utilisation)
+- [Description d'une galerie](#description-dune-galerie)
+- [Création d'une galerie](#création-dune-galerie)
+- [Autres commandes](#autres-commandes)
+- [Règles d'écriture d'un fichier journal](#règles-décriture-dun-fichier-journal)
+- [Fichier de configuration](#fichier-de-configuration)
 
 # Installation 
 
 A compléter
+
+# Utilisation 
+
+La principale utilisation de journal est la création de galeries à partir de répertoires de médias. Ceci se fait en ligne de commande, par exemple avec la commande suivante :
+
+`$ journal --gallery /foo/mygallery --imgsource /bar/mypictures`
+
+Cette commande crée dans le répertoire /foo/gallery un fichier index.htm qu'il faut ouvrir pour visionner la galerie. Toutes les options de création sont décrites dans la suite. 
+
+Toutes les options peuvent être abrégées si elles ne créent pas d'ambiguïté. Ainsi,
+
+`$ journal --gallery /foo/mygallery --imgsource /bar/mypictures --recursive` 
+
+est équivalent à
+
+`$ journal --gal /foo/mygallery --img /bar/mypictures --rec` 
 
 # Description d'une galerie
 
@@ -84,9 +101,33 @@ détermine si la galerie est organisée à partir d'un fichier journal.
 
 spécifie les dates à considérer pour ajouter des images d'un répertoire source à un fichier journal. Si l'argument vaut `diary`, on n'ajoute que des images correspondant aux dates du fichier journal. Si l'argument vaut `source`, on ajoute toutes les images du répertoire source. Sinon, on n'ajoute que les images dans la plage de dates `yyyymmdd-yyyymmdd`.
 
-# Autres commandes
+`--recursive true/false` (défaut `false`)
 
 A compléter
+
+`--dest` 
+
+??
+
+`--forcethumb`
+
+bla bla
+
+# Autres commandes
+
+L'utilitaire propose également les commandes suivantes :
+
+`--create <chemin de répertoire> --imgsource <chemin de répertoire> --dates <spec_date> --recursive true|false`
+
+crée un fichier journal en considérant les médias spécifiés par les options --imgsource --dates --recursive avec un comportement identique à celui rencontré pour la commande --gallery. Le fichier journal est initialisé avec un texte réduit aux dates des médias considérés.
+
+`--blogger <chemin de répertoire> --url <url> [--check] [--full]`
+
+exporte le journal contenu dans le répertoire au format Blogger. L'url doit pointer sur un page affichant les mêmes images que le fichier journal. Ceci est imposé par le fait qu'il n'est pas possible d'uploader des images sur blogger par programme. La page Blogger est générée dans le presse-papier. L'option `--check` force une comparaison des images locales et sur Blogger si des images de même nom ont pu changer de contenu. L'option `--full` copie dans le presse-papier une page Web complète ce qui permet de la sauver et de la tester localement.
+
+`--resetcfg`
+
+remet le fichier de configuration dans sa configuration par défaut.
 
 # Règles d'écriture d'un fichier journal
 
@@ -132,8 +173,20 @@ Un séparateur d'enregistrement est une barre de séparation de longueur 6 au mo
 
 # Fichier de configuration
 
-A compléter
+Un fichier de configuration permet de configurer certaines propriétés d'affichage. Ce fichier se nomme `.config.ini` et se situe dans le répertoire racine de la galerie. Ce fichier est organisé en trois sections :
 
+- la section `source` qui reprend les options de création données en ligne de commande. Cette section contient les valeurs utilisées quand on utilise l'option `--update`.
+- la section `thumbnails` qui permet de spécifier quelques paramètres d'affichage (affichage des méta-données, affichage des noms de répertoire, instant de capture des vignettes pour les vidéos),
+- la section `photobox` qui reprend les paramètres du module tiers photobox qui affiche les médias unitairement.
 
+Le fichier de configuration est auto-documenté et donne pour chaque paramètre une brève description ainsi que les valeurs qu'il peut prendre.
 
-[#fichier_de_configuration]: 
+# Mesures de précaution
+
+Rien de dommageable mais ça peut être utile d'avoir les remarques suivantes en tête.
+
+- La création d'une galerie met à jour le répertoire des vignettes de façon à ce que ce répertoire contiennent exactement les vignettes des médias considérés dans la galerie. En conséquence, si un média est supprimé, la vignette correspondante est également supprimée. Ce fonctionnement est souhaitable mais si on met à jour une galerie en oubliant un paramètre, par exemple on oublie --recurse qui va traiter tous les sous-répertoires, il peut arriver qu'un grand nombre de vignettes soient supprimées. Pas irrémédiable mais il peut falloir un peu de temps pour tout recréer.
+- --update ne mémorise pas le nom de galerie
+- une seule config par répertoire
+- Les valeurs des paramètres de configuration de la section [source] ne sont utilisés qu'avec la commande --update. Ils ne viennent pas en défaut d'un paramètre absent si --update n'est pas utilisé.
+
