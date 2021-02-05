@@ -79,6 +79,30 @@ START = f'''\
 <body>\
 '''
 
+BUTTONS = '''\
+<button id="btn_full" type="button" style="position: fixed; width: 50px; top: 20px; right: 20px; background-color:white">Full</button>
+<button id="btn_blog" type="button" style="position: fixed; width: 50px; top: 40px; right: 20px; background-color:white">Blog</button>
+<button id="btn_text" type="button" style="position: fixed; width: 50px; top: 60px; right: 20px; background-color:white">Text</button>
+
+<script>
+$('#btn_full').click(function() {
+    $("[id^=gallery-blog]").show();
+    $("[id^=gallery-dcim]").show();
+    $("div.extra").show();
+});
+$('#btn_text').click(function() {
+    $("[id^=gallery-blog]").hide();
+    $("[id^=gallery-dcim]").hide();
+    $("div.extra").hide();
+});
+$('#btn_blog').click(function() {
+    $("[id^=gallery-blog]").show();
+    $("[id^=gallery-dcim]").hide();
+    $("div.extra").hide();
+});
+</script>
+'''
+
 SUBDIR_BACKCOL = '#eee'
 END = '</body>\n</html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
@@ -132,6 +156,7 @@ class Post:
         self.medias = medias
         self.dcim = []
         self.daterank = 0
+        self.extra = False
 
     def __lt__(self, other):
         return self.date < other.date
@@ -181,33 +206,60 @@ class Post:
 
     def to_html(self, args, target='regular'):
         if target == 'regular':
-            return self.to_html_regular(args)
+            if args.diary:
+                return self.to_html_diary(args)
+            else:
+                return self.to_html_regular(args)
         if target == 'blogger':
             return self.to_html_blogger()
 
     def to_html_regular(self, args):
         html = list()
         if self.text:
+            # possible with --bydate
             html.append(markdown.markdown(self.text))
-
-        if self.medias:
-            html.append(f'<div id="gallery-{self.date}-blog-{self.daterank}">')
-            for media in self.medias:
-                html.append(media.to_html_post(args))
-            html.append('</div>')
-
         subdirs, dcim = dispatch_post_items(self.dcim)
         if self.dcim:
             html.append(SEP)
         for media in subdirs:
             html.append(media.to_html_dcim(args))
         if dcim:
-            html.append(f'<div id="gallery-{self.date}-dcim-{self.daterank}">')
+            html.append(f'<div id="gallery-dcim-{self.date}-{self.daterank}">')
             for media in dcim:
                 html.append(media.to_html_dcim(args))
             html.append('</div>')
 
         html.append(SEP)
+        return html
+
+    def to_html_diary(self, args):
+        html = list()
+        if self.extra:
+            html.append('<div class="extra">')
+
+        if self.text:
+            html.append(markdown.markdown(self.text))
+
+        if self.medias:
+            html.append(f'<div id="gallery-blog-{self.date}-{self.daterank}">')
+            for media in self.medias:
+                html.append(media.to_html_post(args))
+            if not self.text:
+                html.append(SEP)
+            html.append('</div>')
+
+        subdirs, dcim = dispatch_post_items(self.dcim)
+        if dcim:
+            html.append(f'<div id="gallery-dcim-{self.date}-{self.daterank}">')
+            html.append(SEP)
+            for media in dcim:
+                html.append(media.to_html_dcim(args))
+            html.append('</div>')
+
+        if self.text:
+            html.append(SEP)
+        if self.extra:
+            html.append('</div>')
         return html
 
     def to_html_blogger(self):
@@ -379,6 +431,9 @@ def compose_html_full(args, posts, title, target):
     html = list()
     html.append(START % title)
 
+    if args.diary:
+        html.append(BUTTONS)
+
     for post in posts:
         for line in post.to_html(args, target):
             html.append(line.strip())
@@ -387,10 +442,10 @@ def compose_html_full(args, posts, title, target):
     html.append('<script>')
     for post in posts:
         if post.medias:
-            gallery_id = f'gallery-{post.date}-blog-{post.daterank}'
+            gallery_id = f'gallery-blog-{post.date}-{post.daterank}'
             html.append(gallery_call(args, gallery_id))
         if post.dcim:
-            gallery_id = f'gallery-{post.date}-dcim-{post.daterank}'
+            gallery_id = f'gallery-dcim-{post.date}-{post.daterank}'
             html.append(gallery_call(args, gallery_id))
     html.append('</script>')
 
@@ -449,11 +504,15 @@ def gallery_call(args, gallery_id):
 
 
 def is_image_file(name):
-    return os.path.splitext(name)[1].lower() in ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tif')
+    return os.path.splitext(name)[1].lower() in (
+        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tif'
+    )
 
 
 def is_video_file(name):
-    return os.path.splitext(name)[1].lower() in ('.mp4', '.webm', '.mkv', '.flv', '.m4v', '.avi', '.wmv', '.mts')
+    return os.path.splitext(name)[1].lower() in (
+        '.mp4', '.webm', '.mkv', '.flv', '.m4v', '.avi', '.wmv', '.mts', '.vob', '.divx'
+    )
 
 
 def is_media(name):
@@ -981,7 +1040,9 @@ def make_posts_from_diary_and_dir(args):
 
     # complete posts with extra dates
     for date in extradates:
-        bisect.insort(posts, Post.from_date(date))
+        post = Post.from_date(date)
+        post.extra = True
+        bisect.insort(posts, post)
 
     # several posts can have the same date, only the first one is completed with dcim medias
     for post in posts:
@@ -1047,6 +1108,18 @@ def make_posts_from_subdir_and_date(args, dirname):
     return title, posts
 
 
+# -- Creation of html page from directory tree --------------------------------
+
+
+def create_gallery(args):
+    title, posts = make_posts(args, args.imgsource)
+    print_html(args, posts, title, os.path.join(args.dest, args.rootname), 'regular')
+    if args.diary and not args.imgsource:
+        purge_thumbnails(args.thumbdir, posts, diary=True)
+    else:
+        purge_thumbnails(args.thumbdir, posts)
+
+
 # -- Creation of diary from medias --------------------------------------------
 
 
@@ -1075,18 +1148,6 @@ def create_index(args):
 
     os.makedirs(args.root, exist_ok=True)
     print_markdown(posts, title, os.path.join(args.root, 'index.md'))
-
-
-# -- Creation of html page from directory tree --------------------------------
-
-
-def create_gallery(args):
-    title, posts = make_posts(args, args.imgsource)
-    print_html(args, posts, title, os.path.join(args.dest, args.rootname), 'regular')
-    if args.diary and not args.imgsource:
-        purge_thumbnails(args.thumbdir, posts, diary=True)
-    else:
-        purge_thumbnails(args.thumbdir, posts)
 
 
 # -- Export to blogger---------------------------------------------------------

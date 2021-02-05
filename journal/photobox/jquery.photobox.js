@@ -859,17 +859,27 @@
         }
     })();
 
-    function newVideo(){
+    function newVideo_iframe(){
         var url = images[activeImage][0],
-            sign = $('<a>').prop('href',images[activeImage][0])[0].search ? '&' : '?';
+            sign = $('<a>').prop('href', images[activeImage][0])[0].search ? '&' : '?';
         url += sign + 'vq=hd720&wmode=opaque';
         return $("<iframe>").prop({ scrolling:'no', frameborder:0, allowTransparency:true, src:url }).attr({webkitAllowFullScreen:true, mozallowfullscreen:true, allowFullScreen:true});
     }
 
-    // patch GAL
-    function newVideo(){
+    function newVideo_video(){
         var url = images[activeImage][0];
         return $("<video loop autoplay controls>").prop({src:images[activeImage][0], width:"480", height:"480"})
+    }
+
+    function newVideo(){
+        var
+            filename = images[activeImage][0],
+            ext = filename.split('.').pop().toLowerCase();
+
+        if (ext == 'mp4' || ext == 'webm')
+            return newVideo_video();
+        else
+            return newVideo_iframe();
     }
 
     // show the item's Title & Counter
