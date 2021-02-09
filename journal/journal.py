@@ -1372,17 +1372,6 @@ class MyConfigParser (ConfigParser):
             print(e)
             self.error(section, entry)
 
-    def getcolor(self, section, entry, n):
-        try:
-            s = ConfigParser.get(self, section, entry)
-            x = tuple([int(x) for x in s.split()])
-        except:
-            self.error(section, entry)
-        if len(x) == n:
-            return x
-        else:
-            self.error(section, entry)
-
 
 def configfilename(params):
     return os.path.join(params.root, '.config.ini')
@@ -1475,11 +1464,7 @@ def update_config(args):
         print(key, value)
         for iline, line in enumerate(cfglines):
             if line.startswith(key):
-                m = re.search('(; .*)', line)
-                s = f'{key} = {value}'
-                if m:
-                    s = s.ljust(40) + m.group(1)
-                cfglines[iline] = s
+                cfglines[iline] = f'{key} = {value}'
                 break
 
     with open(cfgname, 'wt') as f:
