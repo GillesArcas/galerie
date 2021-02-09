@@ -373,6 +373,22 @@ def test_create_date(mode):
         return file_compare('reference/index-create-dates.md', 'tmp/index.md')
 
 
+def test_dates_1(mode):
+    try:
+        journal.main('--gallery tmp --dates 20200230-20201231')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == journal.errorcode('Incorrect date format')
+
+
+def test_dates_2(mode):
+    try:
+        journal.main('--gallery tmp --dates foobar')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == journal.errorcode('Incorrect date format')
+
+
 def test_blogger(mode):
     reset_tmp()
     journal.main('--blogger . --url blogger-medias.htm --check')

@@ -1006,8 +1006,8 @@ def create_items_by_date(args, medias, posts):
         required_dates = {post.date for post in posts}
     else:
         required_dates = {date_from_item(media) for media in medias}
-        if re.match(r'\d+-\d+', args.dates):
-            date1, date2 = args.dates.split('-')
+        if type(args.dates) == tuple:
+            date1, date2 = args.dates
             required_dates = {date for date in required_dates if date1 <= date <= date2}
 
     bydate = defaultdict(list)
@@ -1127,8 +1127,8 @@ def create_index(args):
     # list of required dates (the DCIM directory can contain images not related
     # with the desired index, e.g. two indexes for the same image directory)
     required_dates = set()
-    if args.dates:
-        date1, date2 = args.dates.split('-')
+    if type(args.dates) == tuple:
+        date1, date2 = args.dates
         for media in medias:
             date = date_from_item(media)
             if date1 <= date <= date2:
@@ -1508,6 +1508,7 @@ No blogger url (--url)
 missing or incorrect config value:
 error creating configuration file
 error reading configuration file.
+Incorrect date format
 '''
 
 
@@ -1550,8 +1551,8 @@ def parse_command_line(argstring):
     xgroup.add_argument('--blogger',
                         help='input md, html blogger ready in clipboard',
                         action='store', metavar='<root-dir>')
-    agroup = parser.add_argument_group('Parameters')
 
+    agroup = parser.add_argument_group('Parameters')
     agroup.add_argument('--bydir', help='organize gallery by subdirectory',
                         action='store', default='false', choices=BOOL)
     agroup.add_argument('--bydate', help='organize gallery by date',
@@ -1561,7 +1562,7 @@ def parse_command_line(argstring):
     agroup.add_argument('--recursive', help='--imgsource scans recursively',
                         action='store', default='false', choices=BOOL)
     agroup.add_argument('--dates', help='dates interval for extended index',
-                        action='store', default='')
+                        action='store', default='source')
     agroup.add_argument('--imgsource', help='image source for extended index',
                         action='store', default=None)
     agroup.add_argument('--update', help='updates thumbnails with parameters in config file',
@@ -1687,6 +1688,27 @@ def setup_part2(args):
     args.bydate = args.bydate is True or args.bydate == 'true'
     args.diary = args.diary is True or args.diary == 'true'
     args.recursive = args.recursive is True or args.recursive == 'true'
+
+    if args.dates:
+        if args.dates in ('diary', 'source'):
+            pass
+        elif re.match(r'\d+-\d+', args.dates):
+            date1, date2 = args.dates.split('-')
+            if validate_date(date1) and validate_date(date2):
+                args.dates = date1, date2
+            else:
+                error('Incorrect date format', args.dates)
+        else:
+            error('Incorrect date format', args.dates)
+
+
+def validate_date(datestr):
+    # datestr = yyyymmdd
+    try:
+        datetime.datetime.strptime(datestr, '%Y%m%d')
+        return True
+    except ValueError:
+        return False
 
 
 def main(argstring=None):
