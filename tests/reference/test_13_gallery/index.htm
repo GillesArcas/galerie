@@ -19,6 +19,28 @@
 </head>
 
 <body>
+<button id="btn_full" type="button" style="position: fixed; width: 50px; top: 20px; right: 20px; background-color:white">Full</button>
+<button id="btn_blog" type="button" style="position: fixed; width: 50px; top: 40px; right: 20px; background-color:white">Diary</button>
+<button id="btn_text" type="button" style="position: fixed; width: 50px; top: 60px; right: 20px; background-color:white">Text</button>
+
+<script>
+$('#btn_full').click(function() {
+    $("[id^=gallery-blog]").show();
+    $("[id^=gallery-dcim]").show();
+    $("div.extra").show();
+});
+$('#btn_text').click(function() {
+    $("[id^=gallery-blog]").hide();
+    $("[id^=gallery-dcim]").hide();
+    $("div.extra").hide();
+});
+$('#btn_blog').click(function() {
+    $("[id^=gallery-blog]").show();
+    $("[id^=gallery-dcim]").hide();
+    $("div.extra").hide();
+});
+</script>
+
 <h3>Un titre</h3>
 <p>Du texte. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
 eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
@@ -33,13 +55,13 @@ aliquip ex ea commodo consequat.</p>
 <hr color="#C0C0C0" size="1" />
 
 <p>Une image sans légende.</p>
-<div id="gallery-20000105-blog-1">
+<div id="gallery-blog-20000105-1">
 <a href="OCT_20000105_000000.jpg"><img src=".thumbnails/post-OCT_20000105_000000.jpg.jpg" width="400" height="250" title="OCT_20000105_000000.jpg: 20000105 000000, dim=640x400, 0.0 MB"/></a>
 </div>
 <hr color="#C0C0C0" size="1" />
 
 <p>Une image avec légende.</p>
-<div id="gallery-20000106-blog-1">
+<div id="gallery-blog-20000106-1">
 <span>
 <a href="OCT_20000106_000000.jpg"><img src=.thumbnails/post-OCT_20000106_000000.jpg.jpg width="400" height="270" title="OCT_20000106_000000.jpg: 20000106 000000, dim=640x432, 0.0 MB"/></a>
 <p>Une pieuvre</p>
@@ -52,7 +74,7 @@ enregistrement avec la même date sera associé aux médias de cette date.</p>
 <hr color="#C0C0C0" size="1" />
 
 <p>Plusieurs images et une vidéo.</p>
-<div id="gallery-20000107-blog-1">
+<div id="gallery-blog-20000107-1">
 <span>
 <a href="OCT_20000107_000000.jpg"><img src=.thumbnails/post-OCT_20000107_000000.jpg.jpg width="400" height="324" title="OCT_20000107_000000.jpg: 20000107 000000, dim=640x518, 0.0 MB"/></a>
 <p>Une pieuvre</p>
@@ -68,21 +90,21 @@ enregistrement avec la même date sera associé aux médias de cette date.</p>
 </span>
 <a href="OCT_20000107_000002.jpg"><img src=".thumbnails/post-OCT_20000107_000002.jpg.jpg" width="400" height="237" title="OCT_20000107_000002.jpg: 20000107 000002, dim=640x379, 0.0 MB"/></a>
 </div>
+<div id="gallery-dcim-20000107-1">
 <hr color="#C0C0C0" size="1" />
-<div id="gallery-20000107-dcim-1">
 <a href="file:///D:\Gilles\Dev\journal\tests\subdir\deeper2\deepest\VID_20000107_000002.mp4" rel="video"><img src=".thumbnails/dcim-deeper2_deepest_VID_20000107_000002.mp4.jpg" width="300" height="146" title="VID_20000107_000002.mp4: 20000107 000002, dim=500x244, m:s=00:01, fps=10.0, 0.1 MB"/></a>
 </div>
 <hr color="#C0C0C0" size="1" />
 
-<div id="gallery-20000108-blog-1">
+<div id="gallery-blog-20000108-1">
 <span>
 <a href="OCT_20000108_000000.jpg"><img src=.thumbnails/post-OCT_20000108_000000.jpg.jpg width="266" height="400" title="OCT_20000108_000000.jpg: 20000108 000000, dim=426x640, 0.0 MB"/></a>
 <p>Pas de texte</p>
 </span>
 <a href="OCT_20000108_000001.jpg"><img src=".thumbnails/post-OCT_20000108_000001.jpg.jpg" width="400" height="267" title="OCT_20000108_000001.jpg: 20000108 000001, dim=640x427, 0.1 MB"/></a>
 </div>
+<div id="gallery-dcim-20000108-1">
 <hr color="#C0C0C0" size="1" />
-<div id="gallery-20000108-dcim-1">
 <a href="file:///D:\Gilles\Dev\journal\tests\subdir\OCT_20000108_000100.jpg"><img src=".thumbnails/dcim-OCT_20000108_000100.jpg.jpg" width="300" height="169" title="OCT_20000108_000100.jpg: 20000108 000100, dim=640x360, 0.0 MB"/></a>
 <a href="file:///D:\Gilles\Dev\journal\tests\subdir\OCT_20000108_000102.jpg"><img src=".thumbnails/dcim-OCT_20000108_000102.jpg.jpg" width="300" height="177" title="OCT_20000108_000102.jpg: 20000108 000102, dim=640x378, 0.1 MB"/></a>
 </div>
@@ -93,32 +115,36 @@ enregistrement avec la même date sera associé aux médias de cette date.</p>
 
 <hr color="#C0C0C0" size="1" />
 
+<div class="extra">
 <p>Mercredi 12 janvier 2000</p>
+<div id="gallery-dcim-20000112-1">
 <hr color="#C0C0C0" size="1" />
-<div id="gallery-20000112-dcim-1">
 <a href="file:///D:\Gilles\Dev\journal\tests\subdir\deeper1\OCT_20000112_000002.jpg"><img src=".thumbnails/dcim-deeper1_OCT_20000112_000002.jpg.jpg" width="300" height="209" title="OCT_20000112_000002.jpg: 20000112 000002, dim=640x446, 0.0 MB"/></a>
 <a href="file:///D:\Gilles\Dev\journal\tests\subdir\deeper1\OCT_20000112_000003.jpg"><img src=".thumbnails/dcim-deeper1_OCT_20000112_000003.jpg.jpg" width="300" height="169" title="OCT_20000112_000003.jpg: 20000112 000003, dim=667x375, 0.1 MB"/></a>
 <a href="file:///D:\Gilles\Dev\journal\tests\subdir\deeper1\OCT_20000112_000004.jpg"><img src=".thumbnails/dcim-deeper1_OCT_20000112_000004.jpg.jpg" width="225" height="300" title="OCT_20000112_000004.jpg: 20000112 000004, dim=281x375, 0.0 MB"/></a>
 <a href="file:///D:\Gilles\Dev\journal\tests\subdir\deeper2\deepest\OCT_20000112_000004.jpg"><img src=".thumbnails/dcim-deeper2_deepest_OCT_20000112_000004.jpg.jpg" width="300" height="201" title="OCT_20000112_000004.jpg: 20000112 000004, dim=640x429, 0.1 MB"/></a>
 </div>
 <hr color="#C0C0C0" size="1" />
+</div>
 
+<div class="extra">
 <p>Vendredi 22 janvier 2021</p>
+<div id="gallery-dcim-20210122-1">
 <hr color="#C0C0C0" size="1" />
-<div id="gallery-20210122-dcim-1">
 <a href="file:///D:\Gilles\Dev\journal\tests\subdir\deeper1\long_video.mp4" rel="video"><img src=".thumbnails/dcim-deeper1_long_video.mp4.jpg" width="300" height="199" title="long_video.mp4: 20210122 103056, dim=320x212, h:m:s=01:00:05, fps=25.0, 12.6 MB"/></a>
 </div>
 <hr color="#C0C0C0" size="1" />
+</div>
 
 <script>
-$('#gallery-20000105-blog-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
-$('#gallery-20000106-blog-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
-$('#gallery-20000107-blog-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
-$('#gallery-20000107-dcim-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
-$('#gallery-20000108-blog-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
-$('#gallery-20000108-dcim-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
-$('#gallery-20000112-dcim-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
-$('#gallery-20210122-dcim-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
+$('#gallery-blog-20000105-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
+$('#gallery-blog-20000106-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
+$('#gallery-blog-20000107-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
+$('#gallery-dcim-20000107-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
+$('#gallery-blog-20000108-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
+$('#gallery-dcim-20000108-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
+$('#gallery-dcim-20000112-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
+$('#gallery-dcim-20210122-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
 </script>
 </body>
 </html>

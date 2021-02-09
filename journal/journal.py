@@ -81,7 +81,7 @@ START = f'''\
 
 BUTTONS = '''\
 <button id="btn_full" type="button" style="position: fixed; width: 50px; top: 20px; right: 20px; background-color:white">Full</button>
-<button id="btn_blog" type="button" style="position: fixed; width: 50px; top: 40px; right: 20px; background-color:white">Blog</button>
+<button id="btn_blog" type="button" style="position: fixed; width: 50px; top: 40px; right: 20px; background-color:white">Diary</button>
 <button id="btn_text" type="button" style="position: fixed; width: 50px; top: 60px; right: 20px; background-color:white">Text</button>
 
 <script>
@@ -244,11 +244,9 @@ class Post:
             html.append(f'<div id="gallery-blog-{self.date}-{self.daterank}">')
             for media in self.medias:
                 html.append(media.to_html_post(args))
-            if not self.text:
-                html.append(SEP)
             html.append('</div>')
 
-        subdirs, dcim = dispatch_post_items(self.dcim)
+        _, dcim = dispatch_post_items(self.dcim)
         if dcim:
             html.append(f'<div id="gallery-dcim-{self.date}-{self.daterank}">')
             html.append(SEP)
@@ -256,8 +254,7 @@ class Post:
                 html.append(media.to_html_dcim(args))
             html.append('</div>')
 
-        if self.text:
-            html.append(SEP)
+        html.append(SEP)
         if self.extra:
             html.append('</div>')
         return html

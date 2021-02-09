@@ -50,7 +50,7 @@ def list_compare(tag1, tag2, list1, list2, source1='<list1>', source2='<list2>')
 
     if diff:
         print(colorama.Fore.RED)
-        print('Diff:', tag1, source1, tag2, source2)
+        print(f'Diff: {tag1}-{tag2}:', source1, source2)
         for line in diff[:10]:
             print(line)
         print(colorama.Style.RESET_ALL)
