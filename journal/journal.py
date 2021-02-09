@@ -1639,12 +1639,14 @@ def setup_part2(args):
         args.imgsource = args.source.sourcedir
         args.bydir = args.source.bydir
         args.bydate = args.source.bydate
+        args.diary = args.source.diary
         args.recursive = args.source.recursive
         args.dates = args.source.dates
     elif args.gallery:
         args.source.sourcedir = args.imgsource
         args.source.bydir = args.bydir
         args.source.bydate = args.bydate
+        args.source.diary = args.diary
         args.source.recursive = args.recursive
         args.source.dates = args.dates
         update_config(args)
