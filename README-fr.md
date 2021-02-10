@@ -1,6 +1,6 @@
 # Description
 
-journal est un utilitaire en ligne de commande permettant de créer des galeries d'images et de vidéos. Les images et vidéos peuvent être organiser par répertoires, par dates ou les deux. De plus, les galeries créées peuvent inclure le contenu d'un fichier journal. Un fichier journal est un fichier texte, respectant une syntaxe très simple (le format Markdown), organisé par dates et incluant du texte et des images.
+galerie est un utilitaire en ligne de commande permettant de créer des galeries d'images et de vidéos. Les images et vidéos peuvent être organiser par répertoires, par dates ou les deux. De plus, les galeries créées peuvent inclure le contenu d'un fichier journal. Un fichier journal est un fichier texte, respectant une syntaxe très simple (le format Markdown), organisé par dates et incluant du texte et des images.
 
 - [Installation](#installation)
 - [Utilisation](#utilisation)
@@ -16,19 +16,19 @@ A compléter
 
 # Utilisation 
 
-La principale utilisation de journal est la création de galeries à partir de répertoires de médias. Ceci se fait en ligne de commande, par exemple avec la commande suivante :
+La principale utilisation de galerie est la création de galeries à partir de répertoires de médias. Ceci se fait en ligne de commande, par exemple avec la commande suivante :
 
-`$ journal --gallery /foo/mygallery --sourcedir /bar/mypictures`
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures`
 
 Cette commande crée dans le répertoire /foo/gallery un fichier index.htm qu'il faut ouvrir pour visionner la galerie. Toutes les options de création sont décrites dans la suite. 
 
 Toutes les options peuvent être abrégées si elles ne créent pas d'ambiguïté. Ainsi,
 
-`$ journal --gallery /foo/mygallery --sourcedir /bar/mypictures --recursive` 
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --recursive` 
 
 est équivalent à
 
-`$ journal --gal /foo/mygallery --source /bar/mypictures --rec` 
+`$ galerie --gal /foo/mygallery --source /bar/mypictures --rec` 
 
 # Description d'une galerie
 
@@ -40,7 +40,7 @@ A compléter
 
 Une galerie est créée (ou mise à jour) avec la commande `--gallery`. Cette commande, suivie du nom du répertoire racine de la galerie, nécessite de donner le nom du répertoire source des médias avec l'option `--sourcedir. 
 
-`$ journal --gallery /foo/bar/mygallery --sourcedir /spam/egg/mypictures` 
+`$ galerie --gallery /foo/bar/mygallery --sourcedir /spam/egg/mypictures` 
 
 Il y a trois façons d'organiser une galerie à partir des médias contenus dans un répertoire :
 
@@ -59,19 +59,19 @@ Finalement, une fois la configuration d'une galerie établie, il suffit d'utilis
 
 Créer une galerie organisée par sous-répertoires :
 
-`$ journal --gallery /foo/mygallery --sourcedir /bar/mypictures --bydir true` 
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydir true` 
 
 Créer une galerie organisée par date, en limitant les dates à une plage et en incluant les sous-répertoires :
 
-`$ journal --gallery /foo/mygallery --sourcedir /bar/mypictures --bydates true --dates 20200701-20200731 --recursive` 
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydates true --dates 20200701-20200731 --recursive` 
 
 Créer une galerie organisée par dates et sous-répertoires :
 
-`$ journal --gallery /foo/mygallery --sourcedir /bar/mypictures --bydates true --bydir true`
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydates true --bydir true`
 
 Mise à jour d'une galerie en utilisant les options qui ont permis de la créer :
 
-`$ journal --gallery /foo/mygallery --update`
+`$ galerie --gallery /foo/mygallery --update`
 
 ## Description complète des options de création de galeries
 
