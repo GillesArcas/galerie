@@ -1,1 +1,1 @@
-from .journal import *
+from .galerie import *

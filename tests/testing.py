@@ -6,7 +6,7 @@ import shutil
 import glob
 import colorama
 import clipboard
-import journal
+import galerie
 
 
 # -- Helpers ------------------------------------------------------------------
@@ -88,7 +88,7 @@ def generic_test(mode, keeptmp, refdir, *options):
         os.makedirs('tmp')
 
     for option in options:
-        journal.main(option)
+        galerie.main(option)
 
     with open('tmp/files.txt', 'wt') as f:
         for fn in glob.glob('tmp/*.htm'):
@@ -200,7 +200,7 @@ def test_05_gallery(mode):
 def test_16_gallery(mode):
     # test --update
     reset_tmp()
-    journal.main('--gallery tmp --source . --bydir true --bydate true')
+    galerie.main('--gallery tmp --source . --bydir true --bydate true')
     os.rename('OCT_20000101_000000.jpg', 'TOC_20000101_000000.jpg')
     try:
         return generic_test(
@@ -226,19 +226,19 @@ def test_07_gallery(mode):
     # test diary file not found
     reset_tmp()
     try:
-        journal.main('--gallery tmp --diary true')
+        galerie.main('--gallery tmp --diary true')
         return False
     except SystemExit as exception:
-        return exception.args[0] == journal.errorcode('File not found')
+        return exception.args[0] == galerie.errorcode('File not found')
 
 
 def test_14_gallery(mode):
     # test image source not found
     try:
-        journal.main('--gallery tmp --source foobar')
+        galerie.main('--gallery tmp --source foobar')
         return False
     except SystemExit as exception:
-        return exception.args[0] == journal.errorcode('Directory not found')
+        return exception.args[0] == galerie.errorcode('Directory not found')
 
 
 def test_15_gallery(mode):
@@ -246,13 +246,13 @@ def test_15_gallery(mode):
         return None
     else:
         populate_tmp()
-        journal.createconfig('tmp/.config.ini')
-        journal.setconfig('tmp/.config.ini', 'photobox', 'time', 'abc')
+        galerie.createconfig('tmp/.config.ini')
+        galerie.setconfig('tmp/.config.ini', 'photobox', 'time', 'abc')
         try:
-            journal.main('--gallery tmp --source subdir/deeper1 --bydir true')
+            galerie.main('--gallery tmp --source subdir/deeper1 --bydir true')
             return False
         except SystemExit as exception:
-            return exception.args[0] == journal.errorcode('missing or incorrect config value:')
+            return exception.args[0] == galerie.errorcode('missing or incorrect config value:')
 
 
 def test_08_gallery(mode):
@@ -340,23 +340,23 @@ def test_diary_file_idempotence(mode):
     if mode == 'ref':
         return None
     else:
-        journal.main('--idem . --dest tmp')
+        galerie.main('--idem . --dest tmp')
         return file_compare('index.md', 'tmp/index.md')
 
 
 def test_idempotence_no_md_file(mode):
     reset_tmp()
     try:
-        journal.main('--idem tmp')
+        galerie.main('--idem tmp')
         return False
     except SystemExit as exception:
-        return exception.args[0] == journal.errorcode('File not found')
+        return exception.args[0] == galerie.errorcode('File not found')
 
 
 def test_create(mode):
     # test diary file creation
     reset_tmp()
-    journal.main('--create tmp --source . ')
+    galerie.main('--create tmp --source . ')
     if mode == 'ref':
         return shutil.copyfile('tmp/index.md', 'reference/index-create-base.md')
     else:
@@ -366,7 +366,7 @@ def test_create(mode):
 def test_create_date(mode):
     # test diary file creation with date range
     reset_tmp()
-    journal.main('--create tmp --source . --dates 20000101-20000110')
+    galerie.main('--create tmp --source . --dates 20000101-20000110')
     if mode == 'ref':
         return shutil.copyfile('tmp/index.md', 'reference/index-create-dates.md')
     else:
@@ -375,23 +375,23 @@ def test_create_date(mode):
 
 def test_dates_1(mode):
     try:
-        journal.main('--gallery tmp --dates 20200230-20201231')
+        galerie.main('--gallery tmp --dates 20200230-20201231')
         return False
     except SystemExit as exception:
-        return exception.args[0] == journal.errorcode('Incorrect date format')
+        return exception.args[0] == galerie.errorcode('Incorrect date format')
 
 
 def test_dates_2(mode):
     try:
-        journal.main('--gallery tmp --dates foobar')
+        galerie.main('--gallery tmp --dates foobar')
         return False
     except SystemExit as exception:
-        return exception.args[0] == journal.errorcode('Incorrect date format')
+        return exception.args[0] == galerie.errorcode('Incorrect date format')
 
 
 def test_blogger(mode):
     reset_tmp()
-    journal.main('--blogger . --url blogger-medias.htm --check')
+    galerie.main('--blogger . --url blogger-medias.htm --check')
     if mode == 'ref':
         with open('reference/blogger-output.htm', 'wt') as f:
             f.write(clipboard.paste())
@@ -404,18 +404,18 @@ def test_blogger(mode):
 
 def test_blogger_url_not_given(mode):
     try:
-        journal.main('--blogger .')
+        galerie.main('--blogger .')
         return False
     except SystemExit as exception:
-        return exception.args[0] == journal.errorcode('No blogger url (--url)')
+        return exception.args[0] == galerie.errorcode('No blogger url (--url)')
 
 
 def test_blogger_url_not_read(mode):
     try:
-        journal.main('--blogger . --url foobar')
+        galerie.main('--blogger . --url foobar')
         return False
     except SystemExit as exception:
-        return exception.args[0] == journal.errorcode('Unable to read url')
+        return exception.args[0] == galerie.errorcode('Unable to read url')
 
 
 # -- Main ---------------------------------------------------------------------

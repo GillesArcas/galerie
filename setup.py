@@ -2,21 +2,21 @@ import glob
 from setuptools import setup
 
 setup(
-    name='journal',
+    name='galerie',
     version='0.0',
     license='MIT',
-    packages=['journal'],
-    url = 'https://github.com/GillesArcas/journal',
+    packages=['galerie'],
+    url = 'https://github.com/GillesArcas/galerie',
     author = 'Gilles Arcas',
     author_email = 'gilles.arcas@gmail.com',
     entry_points = {
-        'console_scripts': ['journal=journal.journal:main'],
+        'console_scripts': ['galerie=galerie.galerie:main'],
     },
     zip_safe=False,
     include_package_data=True,
     data_files=[
-       ('Lib/site-packages/journal', ['README.md', 'LICENSE']),
-       ('Lib/site-packages/journal/photobox', glob.glob('photobox/*.*')),
+       ('Lib/site-packages/galerie', ['README.md', 'LICENSE']),
+       ('Lib/site-packages/galerie/photobox', glob.glob('photobox/*.*')),
     ],
     install_requires = [
         'clipboard',

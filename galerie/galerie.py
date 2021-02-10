@@ -39,9 +39,9 @@ import markdown
 
 
 USAGE = """
-journal --gallery <root-dir> --sourcedir <media-dir>
-journal --create  <root-dir> --sourcedir <media-dir> [--dates <yyyymmdd-yyyymmdd>]
-journal --blogger <root-dir> --url <url> [--check] [--full]
+galerie --gallery <root-dir> --sourcedir <media-dir>
+galerie --create  <root-dir> --sourcedir <media-dir> [--dates <yyyymmdd-yyyymmdd>]
+galerie --blogger <root-dir> --url <url> [--check] [--full]
 """
 
 
