@@ -39,8 +39,8 @@ import markdown
 
 
 USAGE = """
-journal --gallery <root-dir> --imgsource <media-dir>
-journal --create  <root-dir> --imgsource <media-dir> [--dates <yyyymmdd-yyyymmdd>]
+journal --gallery <root-dir> --sourcedir <media-dir>
+journal --create  <root-dir> --sourcedir <media-dir> [--dates <yyyymmdd-yyyymmdd>]
 journal --blogger <root-dir> --url <url> [--check] [--full]
 """
 
@@ -827,11 +827,11 @@ def list_of_files(sourcedir, recursive):
     return result
 
 
-def list_of_medias(imgsource, recursive):
+def list_of_medias(sourcedir, recursive):
     """
     Return the list of full paths for pictures and movies in source directory
     """
-    files = list_of_files(imgsource, recursive)
+    files = list_of_files(sourcedir, recursive)
     return [_ for _ in files if is_media(_)]
 
 
@@ -971,7 +971,7 @@ def relative_name(media_fullname, sourcedir):
 
 def make_posts(args, dirname):
     if args.diary is True:
-        if not args.imgsource:
+        if not args.sourcedir:
             return make_posts_from_diary(args)
         else:
             return make_posts_from_diary_and_dir(args)
@@ -991,7 +991,7 @@ def make_posts_from_diary(args):
     for post in posts:
         for media in post.medias:
             media_fullname = os.path.join(args.root, media.uri)
-            ##item = create_item(args, media_fullname, args.imgsource, args.thumbdir, 'post', 400)
+            ##item = create_item(args, media_fullname, args.sourcedir, args.thumbdir, 'post', 400)
             item = create_item(args, media_fullname, args.root, args.thumbdir, 'post', 400)
             media.thumb = item.thumb
             media.thumbsize = item.thumbsize
@@ -1014,7 +1014,7 @@ def create_items_by_date(args, medias, posts):
     for media_fullname in medias:
         date = date_from_item(media_fullname)
         if date in required_dates:
-            item = create_item(args, media_fullname, args.imgsource, args.thumbdir, 'dcim', 300)
+            item = create_item(args, media_fullname, args.sourcedir, args.thumbdir, 'dcim', 300)
             if item:
                 bydate[date].append(item)
 
@@ -1028,7 +1028,7 @@ def make_posts_from_diary_and_dir(args):
     title, posts = make_posts_from_diary(args)
 
     # list of all pictures and movies
-    medias = list_of_medias(args.imgsource, args.recursive)
+    medias = list_of_medias(args.sourcedir, args.recursive)
 
     bydate = create_items_by_date(args, medias, posts)
 
@@ -1059,14 +1059,14 @@ def make_posts_from_subdir(args, dirname):
     # complete posts
     postmedias = list()
     for item in medias_ext:
-        postmedia = create_item(args, item, args.imgsource, args.thumbdir, 'dcim', 300)
+        postmedia = create_item(args, item, args.sourcedir, args.thumbdir, 'dcim', 300)
         if postmedia is not None:
             postmedias.append(postmedia)
 
     post = Post(date='00000000', text='', medias=[])
     post.dcim = postmedias
     posts = [post]
-    title = os.path.basename(args.imgsource) or os.path.splitdrive(args.imgsource)[0]
+    title = os.path.basename(args.sourcedir) or os.path.splitdrive(args.sourcedir)[0]
 
     return title, posts
 
@@ -1085,7 +1085,7 @@ def make_posts_from_subdir_and_date(args, dirname):
     posts = list()
     items = list()
     for media_fullname in subdirs:
-        item = create_item(args, media_fullname, args.imgsource, args.thumbdir, 'dcim', 300)
+        item = create_item(args, media_fullname, args.sourcedir, args.thumbdir, 'dcim', 300)
         if item:
             items.append(item)
     if items:
@@ -1100,7 +1100,7 @@ def make_posts_from_subdir_and_date(args, dirname):
         post = Post.from_date(date)
         post.dcim = bydate[post.date]
         posts.append(post)
-    title = os.path.basename(args.imgsource) or os.path.splitdrive(args.imgsource)[0]
+    title = os.path.basename(args.sourcedir) or os.path.splitdrive(args.sourcedir)[0]
 
     return title, posts
 
@@ -1109,9 +1109,9 @@ def make_posts_from_subdir_and_date(args, dirname):
 
 
 def create_gallery(args):
-    title, posts = make_posts(args, args.imgsource)
+    title, posts = make_posts(args, args.sourcedir)
     print_html(args, posts, title, os.path.join(args.dest, args.rootname), 'regular')
-    if args.diary and not args.imgsource:
+    if args.diary and not args.sourcedir:
         purge_thumbnails(args.thumbdir, posts, diary=True)
     else:
         purge_thumbnails(args.thumbdir, posts)
@@ -1122,7 +1122,7 @@ def create_gallery(args):
 
 def create_index(args):
     # list of all pictures and movies
-    medias = list_of_medias(args.imgsource, args.recursive)
+    medias = list_of_medias(args.sourcedir, args.recursive)
 
     # list of required dates (the DCIM directory can contain images not related
     # with the desired index, e.g. two indexes for the same image directory)
@@ -1138,7 +1138,7 @@ def create_index(args):
             date = date_from_item(media)
             required_dates.add(date)
 
-    title = args.imgsource
+    title = args.sourcedir
     posts = list()
     for date in sorted(required_dates):
         posts.append(Post.from_date(date))
@@ -1452,7 +1452,7 @@ def update_config(args):
         cfglines = [_.strip() for _ in f.readlines()]
 
     updates = (
-        ('sourcedir', args.imgsource),
+        ('sourcedir', args.sourcedir),
         ('bydir', args.bydir),
         ('bydate', args.bydate),
         ('diary', args.diary),
@@ -1488,7 +1488,7 @@ Directory not found
 No date in record
 Posts are not ordered
 Unable to read url
-No image source (--imgsource)
+No image source (--sourcedir)
 No blogger url (--url)
 missing or incorrect config value:
 error creating configuration file
@@ -1519,9 +1519,9 @@ def parse_command_line(argstring):
 
     agroup = parser.add_argument_group('Commands')
     xgroup = agroup.add_mutually_exclusive_group()
-    xgroup.add_argument('--gallery', help='source in --imgsource',
+    xgroup.add_argument('--gallery', help='source in --sourcedir',
                         action='store', metavar='<root-dir>')
-    xgroup.add_argument('--create', help='create journal from medias in --imgsource',
+    xgroup.add_argument('--create', help='create journal from medias in --sourcedir',
                         action='store', metavar='<root-dir>')
     # testing
     xgroup.add_argument('--resetcfg', help='reset config file to defaults',
@@ -1544,11 +1544,11 @@ def parse_command_line(argstring):
                         action='store', default='false', choices=BOOL)
     agroup.add_argument('--diary', help='organize gallery using markdown file diary',
                         action='store', default='false', choices=BOOL)
-    agroup.add_argument('--recursive', help='--imgsource scans recursively',
+    agroup.add_argument('--recursive', help='--sourcedir scans recursively',
                         action='store', default='false', choices=BOOL)
     agroup.add_argument('--dates', help='dates interval for extended index',
                         action='store', default='source')
-    agroup.add_argument('--imgsource', help='image source for extended index',
+    agroup.add_argument('--sourcedir', help='image source for extended index',
                         action='store', default=None)
     agroup.add_argument('--update', help='updates thumbnails with parameters in config file',
                         action='store_true', default=False)
@@ -1610,26 +1610,26 @@ def setup_part2(args):
     Copy photobox file to destination dir.
     Handle priority between command line and config file.
     """
-    if args.imgsource:
-        args.imgsource = os.path.abspath(args.imgsource)
-        if os.path.splitdrive(args.imgsource)[0]:
-            drive, rest = os.path.splitdrive(args.imgsource)
-            args.imgsource = drive.upper() + rest
-        if not os.path.isdir(args.imgsource):
-            error('Directory not found', args.imgsource)
+    if args.sourcedir:
+        args.sourcedir = os.path.abspath(args.sourcedir)
+        if os.path.splitdrive(args.sourcedir)[0]:
+            drive, rest = os.path.splitdrive(args.sourcedir)
+            args.sourcedir = drive.upper() + rest
+        if not os.path.isdir(args.sourcedir):
+            error('Directory not found', args.sourcedir)
     else:
         if args.gallery and args.update is None:
-            error('Directory not found', 'Use --imgsource')
+            error('Directory not found', 'Use --sourcedir')
 
     if args.update:
-        args.imgsource = args.source.sourcedir
+        args.sourcedir = args.source.sourcedir
         args.bydir = args.source.bydir
         args.bydate = args.source.bydate
         args.diary = args.source.diary
         args.recursive = args.source.recursive
         args.dates = args.source.dates
     elif args.gallery:
-        args.source.sourcedir = args.imgsource
+        args.source.sourcedir = args.sourcedir
         args.source.bydir = args.bydir
         args.source.bydate = args.bydate
         args.source.diary = args.diary

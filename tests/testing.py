@@ -137,7 +137,7 @@ def test_00_gallery(mode):
         mode,
         False,
         'test_00_gallery',
-        '--gallery tmp --imgs . --bydir false --bydate false --recursive false'
+        '--gallery tmp --source . --bydir false --bydate false --recursive false'
         )
 
 
@@ -148,7 +148,7 @@ def test_18_gallery(mode):
         mode,
         True,
         'test_18_gallery',
-        '--gallery tmp --imgs .'
+        '--gallery tmp --source .'
         )
 
 
@@ -157,7 +157,7 @@ def test_01_gallery(mode):
         mode,
         False,
         'test_01_gallery',
-        '--gallery tmp --imgs . --bydir false --bydate false --recursive true'
+        '--gallery tmp --source . --bydir false --bydate false --recursive true'
         )
 
 
@@ -166,7 +166,7 @@ def test_02_gallery(mode):
         mode,
         False,
         'test_02_gallery',
-        '--gallery tmp --imgs . --bydir false --bydate true --recursive false'
+        '--gallery tmp --source . --bydir false --bydate true --recursive false'
         )
 
 
@@ -175,7 +175,7 @@ def test_03_gallery(mode):
         mode,
         False,
         'test_03_gallery',
-        '--gallery tmp --imgs . --bydir false --bydate true --recursive true'
+        '--gallery tmp --source . --bydir false --bydate true --recursive true'
         )
 
 
@@ -184,7 +184,7 @@ def test_04_gallery(mode):
         mode,
         False,
         'test_04_gallery',
-        '--gallery tmp --imgs . --bydir true --bydate false'
+        '--gallery tmp --source . --bydir true --bydate false'
         )
 
 
@@ -193,14 +193,14 @@ def test_05_gallery(mode):
         mode,
         False,
         'test_05_gallery',
-        '--gallery tmp --imgs . --bydir true --bydate true'
+        '--gallery tmp --source . --bydir true --bydate true'
         )
 
 
 def test_16_gallery(mode):
     # test --update
     reset_tmp()
-    journal.main('--gallery tmp --imgs . --bydir true --bydate true')
+    journal.main('--gallery tmp --source . --bydir true --bydate true')
     os.rename('OCT_20000101_000000.jpg', 'TOC_20000101_000000.jpg')
     try:
         return generic_test(
@@ -218,7 +218,7 @@ def test_06_gallery(mode):
         mode,
         False,
         'test_06_gallery',
-        '--gallery tmp --imgs . --bydir true --bydate true --dates 20000103-20000109'
+        '--gallery tmp --source . --bydir true --bydate true --dates 20000103-20000109'
         )
 
 
@@ -235,7 +235,7 @@ def test_07_gallery(mode):
 def test_14_gallery(mode):
     # test image source not found
     try:
-        journal.main('--gallery tmp --imgs foobar')
+        journal.main('--gallery tmp --source foobar')
         return False
     except SystemExit as exception:
         return exception.args[0] == journal.errorcode('Directory not found')
@@ -249,7 +249,7 @@ def test_15_gallery(mode):
         journal.createconfig('tmp/.config.ini')
         journal.setconfig('tmp/.config.ini', 'photobox', 'time', 'abc')
         try:
-            journal.main('--gallery tmp --imgs subdir/deeper1 --bydir true')
+            journal.main('--gallery tmp --source subdir/deeper1 --bydir true')
             return False
         except SystemExit as exception:
             return exception.args[0] == journal.errorcode('missing or incorrect config value:')
@@ -265,7 +265,7 @@ def test_08_gallery(mode):
         '--setcfg tmp thumbnails subdir_caption false',
         '--setcfg tmp photobox loop true',
         '--setcfg tmp photobox time 2000',
-        '--gallery tmp --imgs . --bydir true --bydate true'
+        '--gallery tmp --source . --bydir true --bydate true'
         )
 
 
@@ -281,46 +281,46 @@ def test_09_gallery(mode):
 
 
 def test_10_gallery(mode):
-    # convert diary file to html adding images from imgsource at dates of diary
+    # convert diary file to html adding images from sourcedir at dates of diary
     populate_tmp()
     return generic_test(
         mode,
         True,
         'test_10_gallery',
-        '--gallery tmp --diary true --imgs . --dates diary'
+        '--gallery tmp --diary true --source . --dates diary'
     )
 
 
 def test_11_gallery(mode):
-    # convert diary file to html adding images from imgsource for all dates from source
+    # convert diary file to html adding images from sourcedir for all dates from source
     populate_tmp()
     return generic_test(
         mode,
         True,
         'test_11_gallery',
-        '--gallery tmp --diary true --imgs .'
+        '--gallery tmp --diary true --source .'
     )
 
 
 def test_12_gallery(mode):
-    # convert diary file to html adding images from imgsource for a selection of dates
+    # convert diary file to html adding images from sourcedir for a selection of dates
     populate_tmp()
     return generic_test(
         mode,
         True,
         'test_12_gallery',
-        '--gallery tmp --diary true --imgs . --dates 20000101-20000105'
+        '--gallery tmp --diary true --source . --dates 20000101-20000105'
     )
 
 
 def test_13_gallery(mode):
-    # convert diary file to html adding images from imgsource at dates of diary
+    # convert diary file to html adding images from sourcedir at dates of diary
     populate_tmp()
     return generic_test(
         mode,
         True,
         'test_13_gallery',
-        '--gallery tmp --diary true --imgs subdir --dates source  --recursive true'
+        '--gallery tmp --diary true --source subdir --dates source  --recursive true'
     )
 
 
@@ -331,7 +331,7 @@ def test_17_gallery(mode):
         mode,
         True,
         'test_17_gallery',
-        '--gallery tmp/gallery.htm --imgs .'
+        '--gallery tmp/gallery.htm --source .'
     )
 
 
@@ -356,7 +356,7 @@ def test_idempotence_no_md_file(mode):
 def test_create(mode):
     # test diary file creation
     reset_tmp()
-    journal.main('--create tmp --imgs . ')
+    journal.main('--create tmp --source . ')
     if mode == 'ref':
         return shutil.copyfile('tmp/index.md', 'reference/index-create-base.md')
     else:
@@ -366,7 +366,7 @@ def test_create(mode):
 def test_create_date(mode):
     # test diary file creation with date range
     reset_tmp()
-    journal.main('--create tmp --imgs . --dates 20000101-20000110')
+    journal.main('--create tmp --source . --dates 20000101-20000110')
     if mode == 'ref':
         return shutil.copyfile('tmp/index.md', 'reference/index-create-dates.md')
     else:
