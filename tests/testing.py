@@ -241,6 +241,42 @@ def test_14_gallery(mode):
         return exception.args[0] == galerie.errorcode('Directory not found')
 
 
+def test_19_gallery(mode):
+    # test for date missing in diary
+    reset_tmp()
+    diary = '''\
+
+    ______
+    '''
+    with open('tmp/index.md', 'wt') as f:
+        f.write(diary)
+
+    try:
+        galerie.main('--gallery tmp --diary true')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == galerie.errorcode('No date in post')
+
+
+def test_20_gallery(mode):
+    # test for post not ordered by dates in diary
+    reset_tmp()
+    diary = '''\
+[2020/01/02]
+______
+[2020/01/01]
+______
+    '''
+    with open('tmp/index.md', 'wt') as f:
+        f.write(diary)
+
+    try:
+        galerie.main('--gallery tmp --diary true')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == galerie.errorcode('Posts are not ordered')
+
+
 def test_15_gallery(mode):
     if mode == 'ref':
         return None
@@ -384,6 +420,14 @@ def test_dates_1(mode):
 def test_dates_2(mode):
     try:
         galerie.main('--gallery tmp --dates foobar')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == galerie.errorcode('Incorrect date format')
+
+
+def test_dates_3(mode):
+    try:
+        galerie.main('--create tmp --dates diary')
         return False
     except SystemExit as exception:
         return exception.args[0] == galerie.errorcode('Incorrect date format')
