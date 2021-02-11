@@ -1,12 +1,9 @@
 """
-Media directory and diary organizer. Handle a markdown file organized by dates,
-each day described by a text and a subset of the medias (photos and movies).
+Make html galleries from media directories. Organize by dates, by subdirs or by
+the content of a diary file. The diary file is a markdown file organized by
+dates, each day described by a text and some medias (photos and movies).
 
-The markdown file can be:
-* edited manually (very basic syntax),
-* created from the media directory.
-
-The markdown file can be exported to:
+The diary file can be exported to:
 * an html file with the text and subset of medias associated with each day,
 * the previous html file extended with all medias in the media directory,
 * an html file ready to import into Blogger.
@@ -39,9 +36,26 @@ import markdown
 
 
 USAGE = """
-galerie --gallery <root-dir> --sourcedir <media-dir>
-galerie --create  <root-dir> --sourcedir <media-dir> [--dates <yyyymmdd-yyyymmdd>]
-galerie --blogger <root-dir> --url <url> [--check] [--full]
+galerie --gallery <root-dir> [--sourcedir <media-dir>]
+                             [--bydir true|false*]
+                             [--bydate true|false*]
+                             [--diary true|false*]
+                             [--recursive true|false*]
+                             [--dates source*|diary|<yyyymmdd-yyyymmdd>]
+                             [--dest <directory>]
+                             [--forcethumb]
+galerie --gallery <root-dir> [--update]
+galerie --create  <root-dir> --sourcedir <media-dir>
+                             [--recursive true|false*]
+                             [--dates source*|<yyyymmdd-yyyymmdd>]
+galerie --blogger <root-dir> --url <url>
+                             [--check]
+                             [--full]
+
+Notes:
+    - * gives default
+    - all options can be abbreviated is there is no conflict with other options (--gallery --> --gal)
+
 """
 
 
@@ -168,7 +182,7 @@ class Post:
             date = m.group(1).replace('/', '')
             del post[0]
         else:
-            error('No date in record', post)
+            error('No date in post', ' '.join(post))
 
         while post and not post[0].strip():
             del post[0]
@@ -1120,23 +1134,18 @@ def create_gallery(args):
 # -- Creation of diary from medias --------------------------------------------
 
 
-def create_index(args):
+def create_diary(args):
     # list of all pictures and movies
     medias = list_of_medias(args.sourcedir, args.recursive)
 
-    # list of required dates (the DCIM directory can contain images not related
-    # with the desired index, e.g. two indexes for the same image directory)
-    required_dates = set()
-    if type(args.dates) == tuple:
-        date1, date2 = args.dates
-        for media in medias:
-            date = date_from_item(media)
-            if date1 <= date <= date2:
-                required_dates.add(date)
+    # list of required dates
+    if args.dates == 'diary':
+        assert 0
     else:
-        for media in medias:
-            date = date_from_item(media)
-            required_dates.add(date)
+        required_dates = {date_from_item(media) for media in medias}
+        if type(args.dates) == tuple:
+            date1, date2 = args.dates
+            required_dates = {date for date in required_dates if date1 <= date <= date2}
 
     title = args.sourcedir
     posts = list()
@@ -1485,7 +1494,7 @@ def warning(*msg):
 ERRORS = '''\
 File not found
 Directory not found
-No date in record
+No date in post
 Posts are not ordered
 Unable to read url
 No image source (--sourcedir)
@@ -1675,8 +1684,16 @@ def setup_part2(args):
     args.recursive = args.recursive is True or args.recursive == 'true'
 
     if args.dates:
-        if args.dates in ('diary', 'source'):
+        if not(args.gallery or args.create):
+            # silently ignored for the moment, otherwise all other commands will
+            # launch a wanrning or an error on the default --dates value
             pass
+
+        if args.dates == 'source':
+            pass
+        elif args.dates == 'diary':
+            if args.create:
+                error('Incorrect date format', args.dates)
         elif re.match(r'\d+-\d+', args.dates):
             date1, date2 = args.dates.split('-')
             if validate_date(date1) and validate_date(date2):
@@ -1705,7 +1722,7 @@ def main(argstring=None):
     setup_part2(args)
     try:
         if args.create:
-            create_index(args)
+            create_diary(args)
 
         elif args.gallery:
             create_gallery(args)
