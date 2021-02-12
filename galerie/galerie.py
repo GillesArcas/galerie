@@ -54,7 +54,7 @@ galerie --blogger <root-dir> --url <url>
 
 Notes:
     - * gives default
-    - all options can be abbreviated is there is no conflict with other options (--gallery --> --gal)
+    - all options can be abbreviated if there is no conflict with other options (--gallery --> --gal)
 
 """
 
@@ -530,12 +530,20 @@ def is_media(name):
     return is_image_file(name) or is_video_file(name)
 
 
+def validate_date(datestr):
+    # datestr = yyyymmdd
+    try:
+        datetime.datetime.strptime(datestr, '%Y%m%d')
+        return True
+    except ValueError:
+        return False
+
+
 def date_from_name(name):
     # heuristics
-    if match := re.search(r'(?:[^0-9]|^)(\d{8})([^0-9]|$)', name):
+    if match := re.search(r'(?:\D|^)(\d{8})(?:\D|$)', name, re.ASCII):
         digits = match.group(1)
-        year, month, day = int(digits[0:4]), int(digits[4:6]), int(digits[6:8])
-        if 2000 <= year <= datetime.date.today().year and 1 <= month <= 12 and 1 <= day <= 31:
+        if validate_date(digits):
             return digits
     return None
 
@@ -550,7 +558,7 @@ def date_from_item(filename):
 
 def time_from_name(name):
     # heuristics
-    if match := re.search(r'(?:[^0-9]|^)(\d{8})[^0-9](\d{6})([^0-9]|$)', name):
+    if match := re.search(r'(?:\D|^)(\d{8})\D(\d{6})(?:\D|$)', name, re.ASCII):
         digits = match.group(2)
         hour, minute, second = int(digits[0:2]), int(digits[2:4]), int(digits[4:6])
         if 0 <= hour < 24 and 0 <= minute < 60 and 0 <= second < 60:
@@ -1005,7 +1013,6 @@ def make_posts_from_diary(args):
     for post in posts:
         for media in post.medias:
             media_fullname = os.path.join(args.root, media.uri)
-            ##item = create_item(args, media_fullname, args.sourcedir, args.thumbdir, 'post', 400)
             item = create_item(args, media_fullname, args.root, args.thumbdir, 'post', 400)
             media.thumb = item.thumb
             media.thumbsize = item.thumbsize
@@ -1278,6 +1285,10 @@ def prepare_for_blogger(args):
 
 
 def idempotence(args):
+    """
+    For testing identity between a diary file and the fle obtained after reading
+    and printing it. See testing.
+    """
     title, posts = parse_markdown(os.path.join(args.root, 'index.md'))
     print_markdown(posts, title, os.path.join(args.dest, 'index.md'))
 
@@ -1455,11 +1466,6 @@ def setconfig_cmd(args):
 
 def update_config(args):
     # update only entries which can be modified from the command line (source section)
-    # manual update to keep comments
-    cfgname = configfilename(args)
-    with open(cfgname) as f:
-        cfglines = [_.strip() for _ in f.readlines()]
-
     updates = (
         ('sourcedir', args.sourcedir),
         ('bydir', args.bydir),
@@ -1468,6 +1474,11 @@ def update_config(args):
         ('recursive', args.recursive),
         ('dates', args.dates),
     )
+
+    # manual update to keep comments
+    cfgname = configfilename(args)
+    with open(cfgname) as f:
+        cfglines = [_.strip() for _ in f.readlines()]
 
     for key, value in updates:
         print(key, value)
@@ -1539,8 +1550,6 @@ def parse_command_line(argstring):
                         action='store', nargs=4, metavar='<root-dir>')
     xgroup.add_argument('--idem', help='test idempotence',
                         action='store', metavar='<root-dir>')
-    xgroup.add_argument('--test', help=argparse.SUPPRESS,
-                        action='store')
     # blogger
     xgroup.add_argument('--blogger',
                         help='input md, html blogger ready in clipboard',
@@ -1702,15 +1711,6 @@ def setup_part2(args):
                 error('Incorrect date format', args.dates)
         else:
             error('Incorrect date format', args.dates)
-
-
-def validate_date(datestr):
-    # datestr = yyyymmdd
-    try:
-        datetime.datetime.strptime(datestr, '%Y%m%d')
-        return True
-    except ValueError:
-        return False
 
 
 def main(argstring=None):
