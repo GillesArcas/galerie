@@ -4,17 +4,28 @@ galerie est un utilitaire en ligne de commande permettant de créer des galeries
 
 - [Installation](#installation)
 - [Utilisation](#utilisation)
-- [Description d'une galerie](#description-dune-galerie)
 - [Création d'une galerie](#création-dune-galerie)
 - [Autres commandes](#autres-commandes)
 - [Règles d'écriture d'un fichier journal](#règles-décriture-dun-fichier-journal)
 - [Fichier de configuration](#fichier-de-configuration)
+- [Crédits](#crédits)
 
 # Installation 
 
-A compléter
+1. Télécharger l'archive de l'application :
+
+https://github.com/GillesArcas/galerie/archive/master.zip
+
+2. Décompresser dans un répertoire
+3. Ouvrir une console dans ce répertoire et lancer la commande suivante :
+
+```
+pip install .
+```
 
 # Utilisation 
+
+## Génération d'une galerie
 
 La principale utilisation de galerie est la création de galeries à partir de répertoires de médias. Ceci se fait en ligne de commande, par exemple avec la commande suivante :
 
@@ -30,15 +41,17 @@ est équivalent à
 
 `$ galerie --gal /foo/mygallery --source /bar/mypictures --rec` 
 
-# Description d'une galerie
+## Navigation dans une galerie
 
-A compléter
+Après avoir ouvert le fichier index.htm dans un navigateur, on voit une page de vignettes. Si on clique sur une des vignettes, les vignettes sont remplacées par la visualisation de l'image cliquée. L'image peut être zoomée ou orientée. En mode visualisation, on peut également passer d'une image à une autre et les images peuvent être enchainées en diaporama.
+
+![aperçu](aperçu.jpg)
 
 # Création d'une galerie
 
 ## Présentation
 
-Une galerie est créée (ou mise à jour) avec la commande `--gallery`. Cette commande, suivie du nom du répertoire racine de la galerie, nécessite de donner le nom du répertoire source des médias avec l'option `--sourcedir. 
+Une galerie est créée (ou mise à jour) avec la commande `--gallery`. Cette commande, suivie du nom du répertoire racine de la galerie, nécessite de donner le nom du répertoire source des médias avec l'option `--sourcedir`. 
 
 `$ galerie --gallery /foo/bar/mygallery --sourcedir /spam/egg/mypictures` 
 
@@ -75,7 +88,7 @@ Mise à jour d'une galerie en utilisant les options qui ont permis de la créer 
 
 ## Description complète des options de création de galeries
 
-L'option `--gallery` permet de créer et mettre à jour une galerie. La galerie est définie par les options `--sourcedir, `--bydir`, `--bydates`, `--diary`, `--dates` et `--recursive`. L'option `--update` permet de remplacer les cinq options précédentes. 
+L'option `--gallery` permet de créer et mettre à jour une galerie. La galerie est définie par les options `--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` et `--recursive`. L'option `--update` permet de remplacer les cinq options précédentes. 
 
 `--gallery <chemin de répertoire>`
 
@@ -85,33 +98,33 @@ spécifie le répertoire racine de la galerie. Dans ce répertoire se trouvent l
 
 spécifie le répertoire où se trouve les médias à inclure dans la galerie.
 
-`--bydir true/false` (défaut `false`)
+`--bydir true|false` (défaut `false`)
 
 détermine si la galerie est organisée par répertoire et sous-répertoire, une page par répertoire. Peut-être combiné avec `--bydates`.
 
-`--bydates true/false` (défaut `false`)
+`--bydates true|false` (défaut `false`)
 
 détermine si la galerie est organisée par dates. Peut-être combiné avec `--bydir`.
 
-`--diary true/false` (défaut `false`)
+`--diary true|false` (défaut `false`)
 
 détermine si la galerie est organisée à partir d'un fichier journal. 
 
-`--dates diary/source/yyyymmdd-yyyymmdd` (défaut `source`)
+`--dates diary|source|yyyymmdd-yyyymmdd` (défaut `source`)
 
 spécifie les dates à considérer pour ajouter des images d'un répertoire source à un fichier journal. Si l'argument vaut `diary`, on n'ajoute que des images correspondant aux dates du fichier journal. Si l'argument vaut `source`, on ajoute toutes les images du répertoire source. Sinon, on n'ajoute que les images dans la plage de dates `yyyymmdd-yyyymmdd`.
 
-`--recursive true/false` (défaut `false`)
+`--recursive true|false` (défaut `false`)
 
-A compléter
+Quand on crée une galerie à partir d'in fichier journal et d'un répertoire de médias, il est peur être envisagé d'utiliser également les médias contenus dans les sous-répertoires. Ceci se fait en donnant la valeur `true` à l'option `--recursive`.
 
 `--dest` 
 
-??
+spécifie le répertoire de destination des fichiers générés (fichiers html et vignettes) à la place du répertoire racine (valeur de l'option `--gallery`). Attention, ceci ne copie pas le fichier journal ni les médias qui pourraient se trouver dans le répertoire racine.
 
 `--forcethumb`
 
-bla bla
+force le calcul des vignettes (ce qui est évité par défaut pour gagner en efficacité). Ceci est par exemple nécessaire si on modifie le paramètre `thumbdelay` du fichier de configuration (ce paramètre permet de spécifier l'instant de prise de vue de la vignette d'une vidéo).
 
 # Autres commandes
 
@@ -119,7 +132,7 @@ L'utilitaire propose également les commandes suivantes :
 
 `--create <chemin de répertoire> --sourcedir <chemin de répertoire> --dates <spec_date> --recursive true|false`
 
-crée un fichier journal en considérant les médias spécifiés par les options --sourcedir --dates --recursive avec un comportement identique à celui rencontré pour la commande --gallery. Le fichier journal est initialisé avec un texte réduit aux dates des médias considérés.
+crée un fichier journal en considérant les médias spécifiés par les options `--sourcedir`, `--dates` et `--recursive` avec un comportement identique à celui rencontré pour la commande `--gallery`. Le fichier journal est initialisé avec un texte réduit aux dates des médias considérés.
 
 `--blogger <chemin de répertoire> --url <url> [--check] [--full]`
 
@@ -185,8 +198,9 @@ Le fichier de configuration est auto-documenté et donne pour chaque paramètre 
 
 Rien de dommageable mais ça peut être utile d'avoir les remarques suivantes en tête.
 
-- La création d'une galerie met à jour le répertoire des vignettes de façon à ce que ce répertoire contiennent exactement les vignettes des médias considérés dans la galerie. En conséquence, si un média est supprimé, la vignette correspondante est également supprimée. Ce fonctionnement est souhaitable mais si on met à jour une galerie en oubliant un paramètre, par exemple on oublie --recurse qui va traiter tous les sous-répertoires, il peut arriver qu'un grand nombre de vignettes soient supprimées. Pas irrémédiable mais il peut falloir un peu de temps pour tout recréer.
-- --update ne mémorise pas le nom de galerie
-- une seule config par répertoire
+- La création d'une galerie met à jour le répertoire des vignettes de façon à ce que ce répertoire contiennent exactement les vignettes des médias considérés dans la galerie. En conséquence, si un média est supprimé, la vignette correspondante est également supprimée. Ce fonctionnement est souhaitable mais si on met à jour une galerie en oubliant un paramètre, par exemple on oublie `--recurse` qui va traiter tous les sous-répertoires, il peut arriver qu'un grand nombre de vignettes soient supprimées. Pas irrémédiable mais il peut falloir un peu de temps pour tout recréer.
 - Les valeurs des paramètres de configuration de la section [source] ne sont utilisés qu'avec la commande --update. Ils ne viennent pas en défaut d'un paramètre absent si --update n'est pas utilisé.
 
+# Crédits
+
+Le mode visualisation utilise le module Photobox de Yair Even Or (https://github.com/yairEO/photobox).
