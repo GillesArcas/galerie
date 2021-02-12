@@ -1481,7 +1481,6 @@ def update_config(args):
         cfglines = [_.strip() for _ in f.readlines()]
 
     for key, value in updates:
-        print(key, value)
         for iline, line in enumerate(cfglines):
             if line.startswith(key):
                 cfglines[iline] = f'{key} = {value}'
@@ -1546,9 +1545,9 @@ def parse_command_line(argstring):
     # testing
     xgroup.add_argument('--resetcfg', help='reset config file to defaults',
                         action='store', metavar='<root-dir>')
-    xgroup.add_argument('--setcfg', help='set field in config file',
+    xgroup.add_argument('--setcfg', help=argparse.SUPPRESS,
                         action='store', nargs=4, metavar='<root-dir>')
-    xgroup.add_argument('--idem', help='test idempotence',
+    xgroup.add_argument('--idem', help=argparse.SUPPRESS,
                         action='store', metavar='<root-dir>')
     # blogger
     xgroup.add_argument('--blogger',
@@ -1736,8 +1735,6 @@ def main(argstring=None):
         elif args.setcfg:
             setconfig_cmd(args)
 
-        elif args.test:
-            pass
     except KeyboardInterrupt:
         warning('Interrupted by user.')
 
