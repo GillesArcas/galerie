@@ -6,6 +6,8 @@ import shutil
 import glob
 import colorama
 import clipboard
+import locale
+
 import galerie
 
 
@@ -466,6 +468,8 @@ def test_blogger_url_not_read(mode):
 
 
 def main():
+    locale.setlocale(locale.LC_TIME, ('fr', 'utf-8'))
+
     pref_testfunctions = 'test_'
     if sys.argv[1:] and sys.argv[1] == 'ref':
         mode = 'ref'
