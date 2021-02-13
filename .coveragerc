@@ -1,0 +1,12 @@
+# coverage configuration file
+
+[run]
+omit =
+    # remove site.py from coveralls reports
+    */lib/*
+
+[report]
+# omit =
+
+exclude_lines =
+    not used
