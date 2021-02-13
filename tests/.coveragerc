@@ -5,12 +5,10 @@
 #    # remove site.py from coveralls reports
 #    */lib/*
 
-include =
-    */galerie/*
-
 [report]
 omit =
-    testing.Py
+    testing.py
 
 exclude_lines =
     not used
+    
