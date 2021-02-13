@@ -1280,7 +1280,7 @@ def prepare_for_blogger(args):
         html = STYLE.replace('%%', '%') + html
 
     if args.dest:
-        with open(args.dest, 'wt') as f:
+        with open(args.dest, 'wt', encoding='utf-8') as f:
             f.write(html)
     else:
         clipboard.copy(html)
