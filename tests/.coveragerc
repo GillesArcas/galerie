@@ -1,0 +1,16 @@
+# coverage configuration file
+
+[run]
+#omit =
+#    # remove site.py from coveralls reports
+#    */lib/*
+
+include =
+    */galerie/*
+
+[report]
+omit =
+    testing.Py
+
+exclude_lines =
+    not used
