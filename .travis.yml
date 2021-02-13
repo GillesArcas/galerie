@@ -13,6 +13,9 @@ install:
   # - pip install coveralls
   - pip install .
 
+after_install:
+  - chmod +x tests/testing.py
+
 script:
   - tests/testing.py
   # - coverage run tests/testing.py
