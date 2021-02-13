@@ -1,3 +1,7 @@
+# galerie
+
+# ![python-3.8|3.9](https://img.shields.io/badge/python-3.8%20|%203.9-blue)[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)[![Build Status](https://travis-ci.org/GillesArcas/galerie.svg?branch=master)](https://travis-ci.org/GillesArcas/galerie)[![Coverage Status](https://coveralls.io/repos/github/GillesArcas/galerie/badge.svg?branch=master)](https://coveralls.io/github/GillesArcas/galerie?branch=master)
+
 # Description
 
 galerie est un utilitaire en ligne de commande permettant de créer des galeries d'images et de vidéos. Les images et vidéos peuvent être organiser par répertoires, par dates ou les deux. De plus, les galeries créées peuvent inclure le contenu d'un fichier journal. Un fichier journal est un fichier texte, respectant une syntaxe très simple (le format Markdown), organisé par dates et incluant du texte et des images.
@@ -10,7 +14,7 @@ galerie est un utilitaire en ligne de commande permettant de créer des galeries
 - [Fichier de configuration](#fichier-de-configuration)
 - [Crédits](#crédits)
 
-# Installation 
+# Installation
 
 1. Télécharger l'archive de l'application :
 
@@ -23,7 +27,7 @@ https://github.com/GillesArcas/galerie/archive/master.zip
 pip install .
 ```
 
-# Utilisation 
+# Utilisation
 
 ## Génération d'une galerie
 
@@ -31,15 +35,15 @@ La principale utilisation de galerie est la création de galeries à partir de r
 
 `$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures`
 
-Cette commande crée dans le répertoire /foo/gallery un fichier index.htm qu'il faut ouvrir pour visionner la galerie. Toutes les options de création sont décrites dans la suite. 
+Cette commande crée dans le répertoire /foo/gallery un fichier index.htm qu'il faut ouvrir pour visionner la galerie. Toutes les options de création sont décrites dans la suite.
 
 Toutes les options peuvent être abrégées si elles ne créent pas d'ambiguïté. Ainsi,
 
-`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --recursive` 
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --recursive`
 
 est équivalent à
 
-`$ galerie --gal /foo/mygallery --source /bar/mypictures --rec` 
+`$ galerie --gal /foo/mygallery --source /bar/mypictures --rec`
 
 ## Navigation dans une galerie
 
@@ -51,9 +55,9 @@ Après avoir ouvert le fichier index.htm dans un navigateur, on voit une page de
 
 ## Présentation
 
-Une galerie est créée (ou mise à jour) avec la commande `--gallery`. Cette commande, suivie du nom du répertoire racine de la galerie, nécessite de donner le nom du répertoire source des médias avec l'option `--sourcedir`. 
+Une galerie est créée (ou mise à jour) avec la commande `--gallery`. Cette commande, suivie du nom du répertoire racine de la galerie, nécessite de donner le nom du répertoire source des médias avec l'option `--sourcedir`.
 
-`$ galerie --gallery /foo/bar/mygallery --sourcedir /spam/egg/mypictures` 
+`$ galerie --gallery /foo/bar/mygallery --sourcedir /spam/egg/mypictures`
 
 Il y a trois façons d'organiser une galerie à partir des médias contenus dans un répertoire :
 
@@ -72,11 +76,11 @@ Finalement, une fois la configuration d'une galerie établie, il suffit d'utilis
 
 Créer une galerie organisée par sous-répertoires :
 
-`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydir true` 
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydir true`
 
 Créer une galerie organisée par date, en limitant les dates à une plage et en incluant les sous-répertoires :
 
-`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydates true --dates 20200701-20200731 --recursive` 
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydates true --dates 20200701-20200731 --recursive`
 
 Créer une galerie organisée par dates et sous-répertoires :
 
@@ -88,7 +92,7 @@ Mise à jour d'une galerie en utilisant les options qui ont permis de la créer 
 
 ## Description complète des options de création de galeries
 
-L'option `--gallery` permet de créer et mettre à jour une galerie. La galerie est définie par les options `--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` et `--recursive`. L'option `--update` permet de remplacer les cinq options précédentes. 
+L'option `--gallery` permet de créer et mettre à jour une galerie. La galerie est définie par les options `--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` et `--recursive`. L'option `--update` permet de remplacer les cinq options précédentes.
 
 `--gallery <chemin de répertoire>`
 
@@ -108,7 +112,7 @@ détermine si la galerie est organisée par dates. Peut-être combiné avec `--b
 
 `--diary true|false` (défaut `false`)
 
-détermine si la galerie est organisée à partir d'un fichier journal. 
+détermine si la galerie est organisée à partir d'un fichier journal.
 
 `--dates diary|source|yyyymmdd-yyyymmdd` (défaut `source`)
 
@@ -118,7 +122,7 @@ spécifie les dates à considérer pour ajouter des images d'un répertoire sour
 
 Quand on crée une galerie à partir d'in fichier journal et d'un répertoire de médias, il est peur être envisagé d'utiliser également les médias contenus dans les sous-répertoires. Ceci se fait en donnant la valeur `true` à l'option `--recursive`.
 
-`--dest` 
+`--dest`
 
 spécifie le répertoire de destination des fichiers générés (fichiers html et vignettes) à la place du répertoire racine (valeur de l'option `--gallery`). Attention, ceci ne copie pas le fichier journal ni les médias qui pourraient se trouver dans le répertoire racine.
 
@@ -144,7 +148,7 @@ remet le fichier de configuration dans sa configuration par défaut.
 
 # Règles d'écriture d'un fichier journal
 
-Un fichier journal est un fichier texte respectant le format Markdown avec les quelques contraintes listées ci-dessous. Ces contraintes permettent de structurer le journal. 
+Un fichier journal est un fichier texte respectant le format Markdown avec les quelques contraintes listées ci-dessous. Ces contraintes permettent de structurer le journal.
 
 ### Structure d'enregistrement
 
