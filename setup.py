@@ -21,6 +21,8 @@ setup(
     install_requires = [
         'clipboard',
         'pillow',
-        'lxml'
+        'lxml',
+        'colorama',
+        'markdown'
     ]
 )
