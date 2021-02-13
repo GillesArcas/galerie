@@ -6,11 +6,11 @@ python:
 
 before_install:
   - sudo apt-get install -y ffmpeg
-  # make clipboard work on linux
-  - sudo apt-get install gtk
 
 install:
   # - pip install coveralls
+  # make clipboard work on linux
+  - pip install gtk
   - pip install .
 
 before_script:
