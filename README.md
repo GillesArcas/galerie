@@ -1,6 +1,6 @@
 # galerie
 
-# [![Build Status](https://travis-ci.org/GillesArcas/galerie.svg?branch=master)](https://travis-ci.org/GillesArcas/galerie)
+# ![python-3.8|3.9](https://img.shields.io/badge/python-3.8%20|%203.9-blue) [![Build Status](https://travis-ci.org/GillesArcas/galerie.svg?branch=master)](https://travis-ci.org/GillesArcas/galerie)
 
 Make html galleries from media directories. Organize by dates, by subdirs or by
 the content of a diary file. The diary file is a markdown file organized by
