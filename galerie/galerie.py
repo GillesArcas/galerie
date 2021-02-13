@@ -51,6 +51,7 @@ galerie --create  <root-dir> --sourcedir <media-dir>
 galerie --blogger <root-dir> --url <url>
                              [--check]
                              [--full]
+                             [--dest <filename>]
 
 Notes:
     - * gives default
@@ -1278,7 +1279,11 @@ def prepare_for_blogger(args):
         html = re.sub('<script>.*?</script>', '', html, flags=re.DOTALL)
         html = STYLE.replace('%%', '%') + html
 
-    clipboard.copy(html)
+    if args.dest:
+        with open(args.dest, 'wt') as f:
+            f.write(html)
+    else:
+        clipboard.copy(html)
 
 
 # -- Other commands -----------------------------------------------------------

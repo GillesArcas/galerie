@@ -9,8 +9,6 @@ before_install:
 
 install:
   # - pip install coveralls
-  # make clipboard work on linux
-  - pip install PyQt4
   - pip install .
 
 before_script:

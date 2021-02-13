@@ -7,8 +7,6 @@ import glob
 import locale
 import colorama
 
-import clipboard
-
 import galerie
 
 
@@ -438,14 +436,11 @@ def test_dates_3(mode):
 
 def test_blogger(mode):
     reset_tmp()
-    galerie.main('--blogger . --url blogger-medias.htm --check')
     if mode == 'ref':
-        with open('reference/blogger-output.htm', 'wt') as f:
-            f.write(clipboard.paste())
+        galerie.main('--blogger . --url blogger-medias.htm --check --dest reference/blogger-output.htm')
         return None
     else:
-        with open('tmp/blogger-output.htm', 'wt') as f:
-            f.write(clipboard.paste())
+        galerie.main('--blogger . --url blogger-medias.htm --check --dest tmp/blogger-output.htm')
         return file_compare('reference/blogger-output.htm', 'tmp/blogger-output.htm')
 
 
