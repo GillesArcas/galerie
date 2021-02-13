@@ -1,12 +1,12 @@
 index.htm
-dcim-deeper1_long_video.mp4.jpg
+dcim-OCT_20000108_000100.jpg.jpg
+dcim-OCT_20000108_000102.jpg.jpg
 dcim-deeper1_OCT_20000112_000002.jpg.jpg
 dcim-deeper1_OCT_20000112_000003.jpg.jpg
 dcim-deeper1_OCT_20000112_000004.jpg.jpg
+dcim-deeper1_long_video.mp4.jpg
 dcim-deeper2_deepest_OCT_20000112_000004.jpg.jpg
 dcim-deeper2_deepest_VID_20000107_000002.mp4.jpg
-dcim-OCT_20000108_000100.jpg.jpg
-dcim-OCT_20000108_000102.jpg.jpg
 post-OCT_20000105_000000.jpg.jpg
 post-OCT_20000106_000000.jpg.jpg
 post-OCT_20000107_000000.jpg.jpg
