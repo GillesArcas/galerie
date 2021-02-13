@@ -8,5 +8,7 @@
 [report]
 # omit =
 
+include = galerie.py
+
 exclude_lines =
     not used
