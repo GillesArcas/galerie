@@ -1,8 +1,13 @@
 # galerie
-A utility to format a basic markdown diary into various html forms. The markdown is basic enough to be edited on a smartphone when travelling (see example in example directory). 
 
-The html pages generated are:
+# [![Build Status](https://travis-ci.org/GillesArcas/galerie.svg?branch=master)](https://travis-ci.org/GillesArcas/galerie)
 
-* A page with the same information as in the markdown reference,
-* an extended page including all photos from a DCIM directory,
-* a page ready to export to Blogger.
+Make html galleries from media directories. Organize by dates, by subdirs or by
+the content of a diary file. The diary file is a markdown file organized by
+dates, each day described by a text and some medias (photos and movies).
+
+The diary file can be exported to:
+
+* an html file with the text and subset of medias associated with each day,
+* the previous html file extended with all medias in the media directory,
+* an html file ready to import into Blogger.
