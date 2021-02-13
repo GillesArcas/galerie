@@ -468,6 +468,7 @@ def test_blogger_url_not_read(mode):
 
 
 def main():
+    print('testing start')
     locale.setlocale(locale.LC_TIME, ('fr', 'utf-8'))
 
     pref_testfunctions = 'test_'
@@ -490,6 +491,7 @@ def main():
             test('ref')
         shutil.rmtree('tmp')
     else:
+        print('testing compare')
         nbtest = len(testfunctions(pref_testfunctions))
         nbcorrect = 0
         for name, test in testfunctions(pref_testfunctions):
