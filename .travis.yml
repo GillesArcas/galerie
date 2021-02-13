@@ -7,7 +7,7 @@ python:
 before_install:
   - sudo apt-get install -y ffmpeg
   # make clipboard work on linux
-  - sudo apt-get install xsel
+  - sudo apt-get install xclip
 
 install:
   # - pip install coveralls
