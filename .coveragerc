@@ -5,9 +5,6 @@
 #    # remove site.py from coveralls reports
 #    */lib/*
 
-include =   
-    galerie.py
-
 [report]
 # omit =
 
