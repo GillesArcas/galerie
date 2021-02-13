@@ -4,9 +4,10 @@ import re
 import inspect
 import shutil
 import glob
-import colorama
-import clipboard
 import locale
+import colorama
+
+import clipboard
 
 import galerie
 
@@ -468,7 +469,6 @@ def test_blogger_url_not_read(mode):
 
 
 def main():
-    print('testing start')
     locale.setlocale(locale.LC_TIME, ('fr', 'utf-8'))
 
     pref_testfunctions = 'test_'
@@ -491,7 +491,6 @@ def main():
             test('ref')
         shutil.rmtree('tmp')
     else:
-        print('testing compare')
         nbtest = len(testfunctions(pref_testfunctions))
         nbcorrect = 0
         for name, test in testfunctions(pref_testfunctions):
@@ -513,4 +512,9 @@ def main():
 
 
 colorama.init()
-main()
+try:
+    current_path = os.path.abspath(os.getcwd())
+    os.chdir(os.path.dirname(os.path.realpath(__file__)))
+    main()
+finally:
+    os.chdir(current_path)
