@@ -1,5 +1,15 @@
 import glob
+import os
 from setuptools import setup
+
+
+print('PATH:', os.path.dirname(os.path.realpath(__file__)))
+print('FILES', os.listdir())
+
+test_files = []
+for path, subdirs, files in os.walk(r'tests'):
+    test_files.append((os.path.join('Lib/site-packages/galerie', path), glob.glob(os.path.join(path, '*.*'))))
+
 
 setup(
     name='galerie',
@@ -16,8 +26,9 @@ setup(
     include_package_data=True,
     data_files=[
        ('Lib/site-packages/galerie', ['README.md', 'LICENSE']),
+       ('Lib/site-packages/galerie', ['galerie/favicon.ico']),
        ('Lib/site-packages/galerie/photobox', glob.glob('photobox/*.*')),
-    ],
+    ] + test_files,
     install_requires = [
         'clipboard',
         'pillow',
