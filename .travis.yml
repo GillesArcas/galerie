@@ -16,4 +16,4 @@ before_script:
 
 script:
   # - python tests/testing.py
-  - coverage run python tests/testing.py
+  - coverage run tests/testing.py
