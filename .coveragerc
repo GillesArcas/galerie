@@ -1,9 +1,12 @@
 # coverage configuration file
 
 [run]
-omit =
-    # remove site.py from coveralls reports
-    */lib/*
+#omit =
+#    # remove site.py from coveralls reports
+#    */lib/*
+
+include =   
+    galerie.py
 
 [report]
 # omit =
