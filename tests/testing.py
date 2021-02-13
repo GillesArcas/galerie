@@ -107,7 +107,7 @@ def generic_test(mode, keeptmp, refdir, *options):
         for fn in glob.glob('tmp/*.htm'):
             shutil.copy(fn, refdir)
     else:
-        for fn in glob.glob(os.path.join(refdir, '*.*')):
+        for fn in sorted(glob.glob(os.path.join(refdir, '*.*'))):
             if file_compare(fn, os.path.join('tmp', os.path.basename(fn))) is False:
                 return False
         else:
