@@ -27,7 +27,7 @@ setup(
     data_files=[
        ('Lib/site-packages/galerie', ['README.md', 'LICENSE']),
        ('Lib/site-packages/galerie', ['galerie/favicon.ico']),
-       ('Lib/site-packages/galerie/photobox', glob.glob('photobox/*.*')),
+       ('Lib/site-packages/galerie/photobox', glob.glob('galerie/photobox/*.*')),
     ] + test_files,
     install_requires = [
         'clipboard',
