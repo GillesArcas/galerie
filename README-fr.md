@@ -63,7 +63,7 @@ Il y a trois façons d'organiser une galerie à partir des médias contenus dans
 
 * on peut conserver la structure de sous-répertoire, en créant une page par sous-répertoire, avec l'option `--bydir`,
 * on peut regrouper les médias par dates, en créant une section par date ayant la date pour titre, avec l'option `--bydate`,
-* on peut utiliser un ficher journal avec l'option `--diary`. Un fichier journal est un fichier de syntaxe simple, organisé par date et associant à chaque date un texte et des images. Une page peut être créée avec seulement ces données ou complétée avec les médias d'un répertoire source.
+* on peut utiliser un ficher journal avec l'option `--diary`. Un fichier journal est un fichier de syntaxe simple, organisé par date et associant à chaque date un texte et des images ou des vidéos. Une page peut être créée avec seulement ces données ou complétée avec les médias d'un répertoire source.
 
 Les options `--bydir` et `--bydates` peuvent être combinées. Deux options supplémentaires permettent de préciser les données utilisées avec les options `--bydir`, `--bydates`  et `--diary`:
 
@@ -116,7 +116,7 @@ détermine si la galerie est organisée à partir d'un fichier journal.
 
 `--dates diary|source|yyyymmdd-yyyymmdd` (défaut `source`)
 
-spécifie les dates à considérer pour ajouter des images d'un répertoire source à un fichier journal. Si l'argument vaut `diary`, on n'ajoute que des images correspondant aux dates du fichier journal. Si l'argument vaut `source`, on ajoute toutes les images du répertoire source. Sinon, on n'ajoute que les images dans la plage de dates `yyyymmdd-yyyymmdd`.
+spécifie les dates à considérer pour ajouter les médias d'un répertoire source à un fichier journal. Si l'argument vaut `diary`, on n'ajoute que les médias correspondant aux dates du fichier journal. Si l'argument vaut `source`, on ajoute tous les médias du répertoire source. Sinon, on n'ajoute que les médias dans une plage de dates qui doit être au format `yyyymmdd-yyyymmdd`.
 
 `--recursive true|false` (défaut `false`)
 
@@ -140,7 +140,7 @@ crée un fichier journal en considérant les médias spécifiés par les options
 
 `--blogger <chemin de répertoire> --url <url> [--check] [--full]`
 
-exporte le journal contenu dans le répertoire au format Blogger. L'url doit pointer sur un page affichant les mêmes images que le fichier journal. Ceci est imposé par le fait qu'il n'est pas possible d'uploader des images sur blogger par programme. La page Blogger est générée dans le presse-papier. L'option `--check` force une comparaison des images locales et sur Blogger si des images de même nom ont pu changer de contenu. L'option `--full` copie dans le presse-papier une page Web complète ce qui permet de la sauver et de la tester localement.
+exporte le journal contenu dans le répertoire au format Blogger. L'url doit pointer sur un page affichant les mêmes images que le fichier journal. Ceci est imposé par le fait qu'il n'est pas possible d'uploader des images sur Blogger par programme. La page Blogger est générée dans le presse-papier. L'option `--check` force une comparaison des images locales et sur Blogger si des images de même nom ont pu changer de contenu. L'option `--full` copie dans le presse-papier une page Web complète ce qui permet de la sauver et de la tester localement.
 
 `--resetcfg`
 
@@ -150,9 +150,15 @@ remet le fichier de configuration dans sa configuration par défaut.
 
 Un fichier journal est un fichier texte respectant le format Markdown avec les quelques contraintes listées ci-dessous. Ces contraintes permettent de structurer le journal.
 
+## Structure d'un fichier journal
+
+La première ligne d'un fichier journal est considérée comme son titre si elle commence par un caractère dièse "#". Un fichier journal est ensuite constitué d'enregistrements. 
+
+Le nom d'un fichier journal doit être `index.md` et il doit être situé dans le répertoire racine (valeur de l'option `--gallery`).
+
 ### Structure d'enregistrement
 
-Un fichier journal est constitué d'enregistrements. Un enregistrement est constitué dans cet ordre de :
+Un enregistrement est constitué dans cet ordre de :
 
 * un champ date obligatoire,
 * un champ texte,
@@ -175,24 +181,27 @@ Le champ texte doit respecter la syntaxe Markdown sans autre contrainte.
 
 ### Le champ médias
 
-Deux types de média sont pris en compte : les images et les vidéos. Les images (au format JPEG) sont spécifiées avec le format ![]\(\) standard. Les vidéos (au format MP4) sont spécifiées avec la syntaxe des liens []\(\). Les crochets doivent restés vide (pas de texte alt ou de texte de lien).
+Deux types de média sont pris en compte : les images et les vidéos. Les images (au format JPEG) sont spécifiées avec le format ![]\(\) standard:
 
-![](une_image.jpg)
-[](une_video.mp4)
+ `![](une_image.jpg)`
 
-Ces spécifications sont regroupées en fin d'enregistrement, un média par ligne en début de ligne. Si la ligne qui suit un média  n'est pas un média, elle est considérée comme une légende (texte lié au média apparaissant en dessous) par les fonctions d'exportation.
+ Les vidéos (au format MP4) sont spécifiées avec la syntaxe des liens []\(\). 
+
+`[](une_video.mp4)`
+
+Dans les deux cas, les crochets doivent restés vide (pas de texte alt ou de texte de lien). Ces spécifications sont regroupées en fin d'enregistrement, un média par ligne en début de ligne. Si la ligne qui suit un média  n'est pas un média, elle est considérée comme une légende (texte lié au média apparaissant en dessous) par les fonctions d'exportation.
 
 Un éventuel texte après les médias est ignoré.
 
 ### Séparateur d'enregistrements
 
-Un séparateur d'enregistrement est une barre de séparation de longueur 6 au moins.
+Un séparateur d'enregistrement est une barre de séparation de trois caractères soulignés (ASCII 95) au moins.
 
 # Fichier de configuration
 
 Un fichier de configuration permet de configurer certaines propriétés d'affichage. Ce fichier se nomme `.config.ini` et se situe dans le répertoire racine de la galerie. Ce fichier est organisé en trois sections :
 
-- la section `source` qui reprend les options de création données en ligne de commande. Cette section contient les valeurs utilisées quand on utilise l'option `--update`.
+- la section `source` qui reprend les options de création données en ligne de commande (`--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` et`--recursive`). Cette section contient les valeurs utilisées quand on utilise l'option `--update`.
 - la section `thumbnails` qui permet de spécifier quelques paramètres d'affichage (affichage des méta-données, affichage des noms de répertoire, instant de capture des vignettes pour les vidéos),
 - la section `photobox` qui reprend les paramètres du module tiers photobox qui affiche les médias unitairement.
 
