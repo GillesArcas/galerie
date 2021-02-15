@@ -380,7 +380,7 @@ def parse_markdown(filename):
             title = None
             record = [line]
         for line in f:
-            if '___' not in line:
+            if not line.startswith('___'):
                 record.append(line)
             else:
                 posts.append(Post.from_markdown(record))
@@ -401,6 +401,7 @@ def parse_markdown(filename):
 
 
 # -- Markdown printer ---------------------------------------------------------
+
 
 def print_markdown(posts, title, fullname):
     with open(fullname, 'wt', encoding='utf-8') as fdst:
@@ -815,18 +816,29 @@ def list_of_thumbnails_in_items(itemlist):
     return thumblist
 
 
-def purge_thumbnails(thumbdir, posts, diary=False):
+def purge_thumbnails(args, thumbdir, posts, diary=False):
     """
     Purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
     """
     thumblist = list_of_thumbnails(posts, diary)
+    thumbs_to_remove = list()
     for fullname in glob.glob(os.path.join(thumbdir, '*.jpg')):
         if os.path.basename(fullname) not in thumblist:
-            print('Removing thumbnail', fullname)
-            os.remove(fullname)
-            info_fullname = os.path.splitext(fullname)[0] + '.info'
-            if os.path.exists(info_fullname):
-                os.remove(info_fullname)
+            thumbs_to_remove.append(fullname)
+
+    if len(thumbs_to_remove) > args.thumbnails.threshold_thumbs:
+        inpt = 'x'
+        while inpt not in 'yn':
+            inpt = input(f'{len(thumbs_to_remove)} thumbnails to remove. Continue [y|n]? ').lower()
+        if inpt == 'n':
+            return
+
+    for name in thumbs_to_remove:
+        print('Removing thumbnail', name)
+        os.remove(name)
+        info_fullname = os.path.splitext(name)[0] + '.info'
+        if os.path.exists(info_fullname):
+            os.remove(info_fullname)
 
 
 # -- List of medias helpers ---------------------------------------------------
@@ -1134,9 +1146,9 @@ def create_gallery(args):
     title, posts = make_posts(args, args.sourcedir)
     print_html(args, posts, title, os.path.join(args.dest, args.rootname), 'regular')
     if args.diary and not args.sourcedir:
-        purge_thumbnails(args.thumbdir, posts, diary=True)
+        purge_thumbnails(args, args.thumbdir, posts, diary=True)
     else:
-        purge_thumbnails(args.thumbdir, posts)
+        purge_thumbnails(args, args.thumbdir, posts)
 
 
 # -- Creation of diary from medias --------------------------------------------
@@ -1343,6 +1355,10 @@ subdir_caption = true
 ; value: number of seconds
 thumbdelay = 5
 
+; maximum number of thumbnails to remove without user confirmation
+; value: integer
+threshold_thumbs = 10
+
 [photobox]
 
 ; Allows to navigate between first and last images
@@ -1445,6 +1461,7 @@ def getconfig(options, config_filename):
     options.thumbnails.media_description = config.getboolean('thumbnails', 'media_description')
     options.thumbnails.subdir_caption = config.getboolean('thumbnails', 'subdir_caption')
     options.thumbnails.thumbdelay = config.getint('thumbnails', 'thumbdelay')
+    options.thumbnails.threshold_thumbs = config.getint('thumbnails', 'threshold_thumbs')
 
     # [photobox]
     options.photobox.loop = config.getboolean('photobox', 'loop')

@@ -211,7 +211,6 @@ Le fichier de configuration est auto-documenté et donne pour chaque paramètre 
 
 Rien de dommageable mais ça peut être utile d'avoir les remarques suivantes en tête.
 
-- La création d'une galerie met à jour le répertoire des vignettes de façon à ce que ce répertoire contiennent exactement les vignettes des médias considérés dans la galerie. En conséquence, si un média est supprimé, la vignette correspondante est également supprimée. Ce fonctionnement est souhaitable mais si on met à jour une galerie en oubliant un paramètre, par exemple on oublie `--recurse` qui va traiter tous les sous-répertoires, il peut arriver qu'un grand nombre de vignettes soient supprimées. Pas irrémédiable mais il peut falloir un peu de temps pour tout recréer.
 - Les valeurs des paramètres de configuration de la section [source] ne sont utilisés qu'avec la commande --update. Ils ne viennent pas en défaut d'un paramètre absent si --update n'est pas utilisé.
 
 # Crédits

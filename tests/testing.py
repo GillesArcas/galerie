@@ -5,6 +5,8 @@ import inspect
 import shutil
 import glob
 import locale
+import io
+
 import colorama
 
 import galerie
@@ -214,6 +216,52 @@ def test_16_gallery(mode):
         os.rename('TOC_20000101_000000.jpg', 'OCT_20000101_000000.jpg')
 
 
+def test_21_gallery(mode):
+    # test thumbnail purge below threshold
+    reset_tmp()
+    galerie.main('--gallery tmp --source . --bydate true --dates source')
+    return generic_test(
+        mode,
+        True,
+        'test_21_gallery',
+        '--gallery tmp --source . --bydate true --dates 20000101-20000107'
+        )
+
+
+def test_22_gallery(mode):
+    # test thumbnail purge above threshold and accept removing
+    reset_tmp()
+    galerie.main('--gallery tmp --source . --bydate true --dates source')
+    try:
+        stdin = sys.stdin
+        sys.stdin = io.StringIO('x\nx\ny')
+        return generic_test(
+            mode,
+            True,
+            'test_22_gallery',
+            '--gallery tmp --source . --bydate true --dates 20000101-20000102'
+            )
+    finally:
+        sys.stdin = stdin
+
+
+def test_23_gallery(mode):
+    # test thumbnail purge above threshold and deny removing
+    reset_tmp()
+    galerie.main('--gallery tmp --source . --bydate true --dates source')
+    try:
+        stdin = sys.stdin
+        sys.stdin = io.StringIO('x\nx\nn')
+        return generic_test(
+            mode,
+            True,
+            'test_23_gallery',
+            '--gallery tmp --source . --bydate true --dates 20000101-20000102'
+            )
+    finally:
+        sys.stdin = stdin
+
+
 def test_06_gallery(mode):
     return generic_test(
         mode,
@@ -247,7 +295,7 @@ def test_19_gallery(mode):
     reset_tmp()
     diary = '''\
 
-    ______
+______
     '''
     with open('tmp/index.md', 'wt') as f:
         f.write(diary)
