@@ -4,7 +4,7 @@
 
 # Description
 
-galerie est un utilitaire en ligne de commande permettant de créer des galeries d'images et de vidéos. Les images et vidéos peuvent être organiser par répertoires, par dates ou les deux. De plus, les galeries créées peuvent inclure le contenu d'un fichier journal. Un fichier journal est un fichier texte, respectant une syntaxe très simple (le format Markdown), organisé par dates et incluant du texte et des images.
+*galerie* est un utilitaire en ligne de commande permettant de créer des galeries d'images et de vidéos sous la forme de pages HTML. Les images et vidéos peuvent être organisées par répertoires, par dates ou les deux. De plus, les galeries créées peuvent inclure le contenu d'un fichier journal. Un fichier journal est un fichier texte, respectant une syntaxe très simple (le format Markdown), organisé par dates et incluant du texte et des médias. Additionnellement, une galerie peut être exportée au format de la plate-forme Blogger.
 
 - [Installation](#installation)
 - [Utilisation](#utilisation)
@@ -31,11 +31,11 @@ pip install .
 
 ## Génération d'une galerie
 
-La principale utilisation de galerie est la création de galeries à partir de répertoires de médias. Ceci se fait en ligne de commande, par exemple avec la commande suivante :
+La principale utilisation de *galerie* est la création de galeries à partir de répertoires de médias. Ceci se fait en ligne de commande, par exemple avec la commande suivante :
 
 `$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures`
 
-Cette commande crée dans le répertoire /foo/gallery un fichier index.htm qu'il faut ouvrir pour visionner la galerie. Toutes les options de création sont décrites dans la suite.
+Cette commande crée dans le répertoire /foo/gallery un fichier HTML index.htm qu'il faut ouvrir pour visionner la galerie. Toutes les options de création sont décrites dans la suite.
 
 Toutes les options peuvent être abrégées si elles ne créent pas d'ambiguïté. Ainsi,
 
@@ -55,7 +55,7 @@ Après avoir ouvert le fichier index.htm dans un navigateur, on voit une page de
 
 ## Présentation
 
-Une galerie est créée (ou mise à jour) avec la commande `--gallery`. Cette commande, suivie du nom du répertoire racine de la galerie, nécessite de donner le nom du répertoire source des médias avec l'option `--sourcedir`.
+Une galerie est créée (ou mise à jour) avec la commande `--gallery`. Cette commande, suivie du nom du répertoire racine de la galerie, peut nécessiter de donner le nom du répertoire source des médias avec l'option `--sourcedir`.
 
 `$ galerie --gallery /foo/bar/mygallery --sourcedir /spam/egg/mypictures`
 
@@ -92,7 +92,7 @@ Mise à jour d'une galerie en utilisant les options qui ont permis de la créer 
 
 ## Description complète des options de création de galeries
 
-L'option `--gallery` permet de créer et mettre à jour une galerie. La galerie est définie par les options `--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` et `--recursive`. L'option `--update` permet de remplacer les cinq options précédentes.
+L'option `--gallery` permet de créer et mettre à jour une galerie. La galerie est définie par les options `--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` et `--recursive`. L'option `--update` permet de remplacer les six options précédentes.
 
 `--gallery <chemin de répertoire>`
 
@@ -122,9 +122,13 @@ spécifie les dates à considérer pour ajouter les médias d'un répertoire sou
 
 Quand on crée une galerie à partir d'in fichier journal et d'un répertoire de médias, il est peur être envisagé d'utiliser également les médias contenus dans les sous-répertoires. Ceci se fait en donnant la valeur `true` à l'option `--recursive`.
 
+`--update`
+
+met à jour la galerie en utilisant les valeurs des options `--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` et `--recursive` utilisées pour sa création.
+
 `--dest`
 
-spécifie le répertoire de destination des fichiers générés (fichiers html et vignettes) à la place du répertoire racine (valeur de l'option `--gallery`). Attention, ceci ne copie pas le fichier journal ni les médias qui pourraient se trouver dans le répertoire racine.
+spécifie le répertoire de destination des fichiers générés (fichiers HTML et vignettes) à la place du répertoire racine (valeur de l'option `--gallery`). Attention, ceci ne copie pas le fichier journal ni les médias qui pourraient se trouver dans le répertoire racine.
 
 `--forcethumb`
 
@@ -201,18 +205,17 @@ Un séparateur d'enregistrement est une barre de séparation de trois caractère
 
 Un fichier de configuration permet de configurer certaines propriétés d'affichage. Ce fichier se nomme `.config.ini` et se situe dans le répertoire racine de la galerie. Ce fichier est organisé en trois sections :
 
-- la section `source` qui reprend les options de création données en ligne de commande (`--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` et`--recursive`). Cette section contient les valeurs utilisées quand on utilise l'option `--update`.
-- la section `thumbnails` qui permet de spécifier quelques paramètres d'affichage (affichage des méta-données, affichage des noms de répertoire, instant de capture des vignettes pour les vidéos),
-- la section `photobox` qui reprend les paramètres du module tiers photobox qui affiche les médias unitairement.
+- la section `[source]` qui reprend les options de création données en ligne de commande (`--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` et `--recursive`). Cette section contient les valeurs utilisées quand on utilise l'option `--update`.
+
+  **Note** : Les valeurs des paramètres de configuration de la section `[source]` ne sont utilisés qu'avec l'option `--update`. Ils ne viennent pas en défaut d'un paramètre absent si `--update` n'est pas utilisé.
+
+- la section `[thumbnails]` qui permet de spécifier quelques paramètres d'affichage (affichage des méta-données, affichage des noms de répertoire, instant de capture des vignettes pour les vidéos),
+
+- la section `[photobox]` qui reprend les paramètres du module tiers Photobox qui affiche les médias unitairement.
 
 Le fichier de configuration est auto-documenté et donne pour chaque paramètre une brève description ainsi que les valeurs qu'il peut prendre.
-
-# Mesures de précaution
-
-Rien de dommageable mais ça peut être utile d'avoir les remarques suivantes en tête.
-
-- Les valeurs des paramètres de configuration de la section [source] ne sont utilisés qu'avec la commande --update. Ils ne viennent pas en défaut d'un paramètre absent si --update n'est pas utilisé.
 
 # Crédits
 
 Le mode visualisation utilise le module Photobox de Yair Even Or (https://github.com/yairEO/photobox).
+

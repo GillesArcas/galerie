@@ -2,12 +2,198 @@
 
 # ![python-3.8|3.9](https://img.shields.io/badge/python-3.8%20|%203.9-blue) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Build Status](https://travis-ci.org/GillesArcas/galerie.svg?branch=master)](https://travis-ci.org/GillesArcas/galerie) [![Coverage Status](https://coveralls.io/repos/github/GillesArcas/galerie/badge.svg?branch=master)](https://coveralls.io/github/GillesArcas/galerie?branch=master)
 
-Make html galleries from media directories. Organize by dates, by subdirs or by
-the content of a diary file. The diary file is a markdown file organized by
-dates, each day described by a text and some medias (photos and movies).
+# Description
 
-The diary file can be exported to:
+*galerie* is a command line utility generating HTML galleries from media directories. Images and videos can be organized by dates, by directories, by both or by
+the content of a diary file. A diary file is a markdown file organized by
+dates, each day described by a text and some medias (photos and movies). Additionally, a gallery can be exported to Blogger platform.
 
-* an html file with the text and subset of medias associated with each day,
-* the previous html file extended with all medias in the media directory,
-* an html file ready to import into Blogger.
+- [Installation](#installation)
+- [Usage](#usage)
+- [Creation of a gallery](#creation-of-a-gallery)
+- [Other commands](#other-commands)
+- [Format of a diary file](#format-of-a-diary-file)
+- [Configuration file](#configuration-file)
+- [Credits](#credits)
+
+# Installation
+
+1. Download the archive at:
+
+   https://github.com/GillesArcas/galerie/archive/master.zip
+
+2. Unzip is some directory.
+
+3. Open a console windows in this directory and launch he following command:
+
+   `pip install .`
+
+# Usage
+
+## Making a gallery
+
+Main usage of *galerie* is the creation of galleries from media directories. This is done from the command line, for instance with the following command:
+
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures`
+
+This creates in the /foo/gallery directory an HTML file named index.htm. Open this file with any internet browser to navigate in the gallery. All creating optoins are described next.
+
+Note that all options may be abbreviated as long as there is no ambiguity. As a consequence:
+
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --recursive`
+
+is equivalent to:
+
+`$ galerie --gal /foo/mygallery --source /bar/mypictures --rec`
+
+## Navigating inside a gallery
+
+Wen browsing the gallery, a page of thumbnails is displayed. When clicking on a thumbnail, the thumbnails is replaced  by a full display of the clicked image. The image can be oriented or zoomed. It is also possible ti navigate from one image to the other or visualize the images in slide-show mode.
+
+![aperçu](aperçu.jpg)
+
+# Creation of a gallery
+
+## Presentation
+
+A gallery is created (or updated)  withe `--gallery` command. This command, followed by the name of root directory of the gallery, requires the name of the media directory with the option `--sourcedir`.
+
+`$ galerie --gallery /foo/bar/mygallery --sourcedir /spam/egg/mypictures`
+
+There are three ways to organize the medias from a source directory:
+
+* it is possible to copy the sub-directory structure by crating a web page for each sub-directory with the option `--bydir`,
+* it is possible to organize the medias by dates, by creating a section for each date with the command `--bydate`,
+* it is possible to include the content of a diary file with the `--diary` option. A diary file is a text file with a very simple syntax (Markdown) organized by dates, associating to each date some text and medias. A page can be extended by adding also the medias from source directory. 
+
+The options `--bydir` and `--bydates` can be combined. Two additional options enable to give more information abut the data used with the options `--bydir`, `--bydates`  et `--diary`:
+
+* the `--dates` option gives a range limiting the dates of the medias,
+* the `--recursive` option specifies if th sub-directories must be included or not.
+
+Finally, when the configuration of gallery has been given, it is sufficient to use the `u` option to update a gallery to update a gallery with the options given to specify it.
+
+## Some examples
+
+The option `--gallery` enables to create and update galleries. A gallery is defined by the options `--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` and `--recursive`. The option `--update` enables to replace the six previous options.
+
+`--gallery <chemin de répertoire>`
+
+specifies the root directory of the gallery. All th files created for the gallery are in this directory. The entry point of the gallery is by default the file `index.htm`.
+
+`--sourcedir <chemin de répertoire>`
+
+specifies the directory where to find the medias to include in the gallery.
+
+`--bydir true|false` (default `false`)
+
+specifies whether the gallery is organized by directories, one web page for each directory. Can be combined with `--bydates`.
+
+`--bydates true|false` (default `false`)
+
+specifies whether the gallery is organized by dates. Can be combined with `--bydir`.
+
+`--diary true|false` (default `false`)
+
+species whether he gallery is organized using a diary file.
+
+`--dates diary|source|yyyymmdd-yyyymmdd` (default `source`)
+
+specifies the dates to considered when adding medias to a diary. If the value of the option is `diary`, only the medias at the dates of the diary are added. If the value is+ `source`, all the medias from the source directory are added. Otherwise the value must have the format `yyyymmdd-yyyymmdd`and the added medias must be included in this range.
+
+`--recursive true|false` (default `false`)
+
+When creating a gallery from a diary and a media directory, it may be required to consider the medias contained in the sub-directories. This is done by using the `--recursive` option with value `true`.
+
+`--dest`
+
+specifies the destination directory for all files generated by a galley (HTML files and thumbnails) instead of the root directory (value of option `--gallery`). Beware this does not copy the medias contained in the root directory.
+
+`--forcethumb`
+
+forces the calculus of thumbnails (not not done by default to save time). This is necessary for instance when modifying the value of the parameter `thumbdelay` in the configuration file. This parameter specifies the time offset of the thumbnail in the video.
+
+# Other commands
+
+The utility proposes also the following commands.
+
+`--create <chemin de répertoire> --sourcedir <chemin de répertoire> --dates <spec_date> --recursive true|false`
+
+creates a diary file by considering the medias specified by he options `--sourcedir`, `--dates` et `--recursive`withe he same behavior as for the command `--gallery`. The diary is initialized with a text limited to the dates of the considered medias.
+
+`--blogger <chemin de répertoire> --url <url> [--check] [--full]`
+
+exports the diary file in a format ready for Blogger. The url must linked to a page containing the same images as in the diary. This is mandatory because it is not possible to upload image by program to Blogger. The command exports the diary into the clipboard. The `--check` option forces the comparison between local images and Blogger images in case some images could have bee renamed. The `--full` option copies a full web page to the clipboard. This enables to test it locally.
+
+`--resetcfg`
+
+resets the configuration file to the factory content. 
+
+# Format of a diary file
+
+A diary is a text file respecting the Markdown format with some constraints described hereafter. These constraints enable to give a structure to the diary.
+
+The name of a diary file must be `index.md` and it must be located in the root directory (value of the `--gallery` command).
+
+## Structure of a diary file
+
+ The first line of the diary file is the title of the diary if it starts with a sharp character (#). After that, the diary is made of a collection of records.
+
+## Structure of a record
+
+A record is made of:
+
+* a mandatory date field,
+* a text field,
+* a media field,
+* a record separator. 
+
+## Date field
+
+The date field is mandatory and must appear alone in the first line of the record. It mus respect the following format:
+
+[yyyy/mm/dd] (for instance [2020/02/07])
+
+If the date is absent, a reading error is launched. An error is also launched if the dates are not ordered. Two different records may have the same date.
+
+The date field is ignored by the export functions. However, it is necessary to associate the media from some directory to each record.
+
+## Text field
+
+The text field must respect Markdown syntax without any constraint.
+
+## Media field
+
+Two types of media are considered: images and videos. Images (in JPEG format) are specified with the usual Markdown notation:
+
+ `![](an_image.jpg)`
+
+The videos (in MP4 format) are specified with link notation:
+
+ `[](a_video.mp4)`
+
+In both cases, brackets must remain empty (no alt text or link description). These specifications are gathered at the end of th record, one per line, at beginning of line. If the line following a media is not a media specification, it is considered as a caption (a text associated to the media displayed below it) by the export functions.
+
+Any text following the media specifications is ignored.
+
+## Record separator
+
+A record separator is a horizontal rule made of three underscore (ASCII 95) at least.
+
+# Configuration file
+
+A configuration file enable to set some properties of the gallery. This file is named `.config.ini` and is located in the root directory of the gallery. This file is organized in three sections:
+
+* the `[source]` section which memorizes the creation options given in the command line (`--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` and `--recursive`) . These values are used when using `--update`.
+
+  **Note**:  The values of the `[source]` section are used only when using the `--update` option. They are not used as default of a missing parameter if `--update` is not used.
+
+* the `[thumbnails]` section which enables to specify some display parameters (display of meta-data, display of directory names, time offset of video thumbnails).
+
+* the `[photobox]` section which enables to configure the third party module Photobox used to visualize medias one by one.
+
+The configuration file is self-documented. It gives for each parameter a brief description and the possible values.
+
+# Credits
+
+The third party module Photobox from Yair Even Or (https://github.com/yairEO/photobox) is used for the visualization mode.
