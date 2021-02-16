@@ -47,7 +47,7 @@ est équivalent à
 
 ## Navigation dans une galerie
 
-Après avoir ouvert le fichier index.htm dans un navigateur, on voit une page de vignettes. Si on clique sur une des vignettes, les vignettes sont remplacées par la visualisation de l'image cliquée. L'image peut être zoomée ou orientée. En mode visualisation, on peut également passer d'une image à une autre et les images peuvent être enchainées en diaporama.
+Après avoir ouvert le fichier index.htm dans un navigateur, une page de vignettes est affichée. Si on clique sur une des vignettes, les vignettes sont remplacées par la visualisation de l'image cliquée. L'image peut être zoomée ou orientée. En mode visualisation, on peut également passer d'une image à une autre et les images peuvent être enchainées en diaporama.
 
 ![aperçu](aperçu.jpg)
 
@@ -70,19 +70,19 @@ Les options `--bydir` et `--bydates` peuvent être combinées. Deux options supp
 * l'option `--dates` qui limite les médias utilisés dans une galerie à une sélection de dates,
 * l'option `--recursive` qui indique si il faut considérer les sous-répertoires du répertoires source.
 
-Finalement, une fois la configuration d'une galerie établie, il suffit d'utiliser l'option `--update` pour mettre à jour une galerie avec les options qui ont permis de la créer.
+Finalement, une fois la galerie créée, il suffit d'utiliser l'option `--update` pour mettre à jour une galerie avec les options qui ont permis de la créer.
 
 ## Quelques exemples
 
-Créer une galerie organisée par sous-répertoires :
+Création d'une galerie organisée par sous-répertoires :
 
 `$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydir true`
 
-Créer une galerie organisée par date, en limitant les dates à une plage et en incluant les sous-répertoires :
+Création d'une galerie organisée par date, en limitant les dates à une plage et en incluant les sous-répertoires :
 
 `$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydates true --dates 20200701-20200731 --recursive`
 
-Créer une galerie organisée par dates et sous-répertoires :
+Création d'une galerie organisée par dates et sous-répertoires :
 
 `$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydates true --bydir true`
 
@@ -100,11 +100,11 @@ spécifie le répertoire racine de la galerie. Dans ce répertoire se trouvent l
 
 `--sourcedir <chemin de répertoire>`
 
-spécifie le répertoire où se trouve les médias à inclure dans la galerie.
+spécifie le répertoire où se trouve les médias à inclure dans la galerie. Cette option est facultative si on utilise l'option `--diary`. Dans ce cas, on peut en effet n'inclure que les médias spécifiés dans le fichier journal.
 
 `--bydir true|false` (défaut `false`)
 
-détermine si la galerie est organisée par répertoire et sous-répertoire, une page par répertoire. Peut-être combiné avec `--bydates`.
+détermine si la galerie est organisée par répertoire et sous-répertoire, une page HTML par répertoire. Peut-être combiné avec `--bydates`.
 
 `--bydates true|false` (défaut `false`)
 
@@ -126,7 +126,7 @@ Quand on crée une galerie à partir d'in fichier journal et d'un répertoire de
 
 met à jour la galerie en utilisant les valeurs des options `--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` et `--recursive` utilisées pour sa création.
 
-`--dest`
+`--dest <chemin de répertoire>`
 
 spécifie le répertoire de destination des fichiers générés (fichiers HTML et vignettes) à la place du répertoire racine (valeur de l'option `--gallery`). Attention, ceci ne copie pas le fichier journal ni les médias qui pourraient se trouver dans le répertoire racine.
 
@@ -144,7 +144,7 @@ crée un fichier journal en considérant les médias spécifiés par les options
 
 `--blogger <chemin de répertoire> --url <url> [--check] [--full]`
 
-exporte le journal contenu dans le répertoire au format Blogger. L'url doit pointer sur un page affichant les mêmes images que le fichier journal. Ceci est imposé par le fait qu'il n'est pas possible d'uploader des images sur Blogger par programme. La page Blogger est générée dans le presse-papier. L'option `--check` force une comparaison des images locales et sur Blogger si des images de même nom ont pu changer de contenu. L'option `--full` copie dans le presse-papier une page Web complète ce qui permet de la sauver et de la tester localement.
+exporte le journal contenu dans le répertoire au format Blogger. L'url doit pointer sur une page affichant les mêmes images que le fichier journal. Ceci est imposé par le fait qu'il n'est pas possible d'uploader des images sur Blogger par programme. La page Blogger est générée dans le presse-papier. L'option `--check` force une comparaison des images locales et sur Blogger (utile dans le cas où des images de même nom auraient pu changer de contenu). L'option `--full` copie dans le presse-papier une page HTML complète ce qui permet de la sauver et de la tester localement.
 
 `--resetcfg`
 
@@ -154,11 +154,11 @@ remet le fichier de configuration dans sa configuration par défaut.
 
 Un fichier journal est un fichier texte respectant le format Markdown avec les quelques contraintes listées ci-dessous. Ces contraintes permettent de structurer le journal.
 
-## Structure d'un fichier journal
+Le nom d'un fichier journal doit être `index.md` et il doit être situé dans le répertoire racine (valeur de l'option `--gallery`).
+
+### Structure d'un fichier journal
 
 La première ligne d'un fichier journal est considérée comme son titre si elle commence par un caractère dièse "#". Un fichier journal est ensuite constitué d'enregistrements. 
-
-Le nom d'un fichier journal doit être `index.md` et il doit être situé dans le répertoire racine (valeur de l'option `--gallery`).
 
 ### Structure d'enregistrement
 
@@ -189,7 +189,7 @@ Deux types de média sont pris en compte : les images et les vidéos. Les images
 
  `![](une_image.jpg)`
 
- Les vidéos (au format MP4) sont spécifiées avec la syntaxe des liens []\(\). 
+ Les vidéos (au format MP4) sont spécifiées avec la syntaxe des liens Markdonwn : 
 
 `[](une_video.mp4)`
 
@@ -199,17 +199,17 @@ Un éventuel texte après les médias est ignoré.
 
 ### Séparateur d'enregistrements
 
-Un séparateur d'enregistrement est une barre de séparation de trois caractères soulignés (ASCII 95) au moins.
+Un séparateur d'enregistrement est une barre de séparation de trois caractères soulignés ("_", ASCII 95) au moins.
 
 # Fichier de configuration
 
-Un fichier de configuration permet de configurer certaines propriétés d'affichage. Ce fichier se nomme `.config.ini` et se situe dans le répertoire racine de la galerie. Ce fichier est organisé en trois sections :
+Un fichier de configuration permet de configurer certaines propriétés d'une galerie. Ce fichier se nomme `.config.ini` et se situe dans le répertoire racine de la galerie. Ce fichier est organisé en trois sections :
 
 - la section `[source]` qui reprend les options de création données en ligne de commande (`--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` et `--recursive`). Cette section contient les valeurs utilisées quand on utilise l'option `--update`.
 
   **Note** : Les valeurs des paramètres de configuration de la section `[source]` ne sont utilisés qu'avec l'option `--update`. Ils ne viennent pas en défaut d'un paramètre absent si `--update` n'est pas utilisé.
 
-- la section `[thumbnails]` qui permet de spécifier quelques paramètres d'affichage (affichage des méta-données, affichage des noms de répertoire, instant de capture des vignettes pour les vidéos),
+- la section `[thumbnails]` qui permet de spécifier quelques paramètres d'affichage et de création des vignettes (affichage des méta-données, affichage des noms de répertoire, instant de capture des vignettes pour les vidéos, nombre maximum de vignettes à supprimer sans confirmation de l'utilisateur),
 
 - la section `[photobox]` qui reprend les paramètres du module tiers Photobox qui affiche les médias unitairement.
 

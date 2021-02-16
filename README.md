@@ -6,7 +6,7 @@
 
 *galerie* is a command line utility generating HTML galleries from media directories. Images and videos can be organized by dates, by directories, by both or by
 the content of a diary file. A diary file is a markdown file organized by
-dates, each day described by a text and some medias (photos and movies). Additionally, a gallery can be exported to Blogger platform.
+dates, each day being described by a text and some medias (photos and movies). Additionally, a gallery can be exported to Blogger platform.
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -22,9 +22,9 @@ dates, each day described by a text and some medias (photos and movies). Additio
 
    https://github.com/GillesArcas/galerie/archive/master.zip
 
-2. Unzip is some directory.
+2. Unzip in some directory.
 
-3. Open a console windows in this directory and launch he following command:
+3. Open a console window in this directory and launch he following command:
 
    `pip install .`
 
@@ -36,7 +36,7 @@ Main usage of *galerie* is the creation of galleries from media directories. Thi
 
 `$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures`
 
-This creates in the /foo/gallery directory an HTML file named index.htm. Open this file with any internet browser to navigate in the gallery. All creating optoins are described next.
+This creates in the /foo/gallery directory an HTML file named index.htm. Open this file with any internet browser to navigate in the gallery. All creating options are described next.
 
 Note that all options may be abbreviated as long as there is no ambiguity. As a consequence:
 
@@ -48,7 +48,7 @@ is equivalent to:
 
 ## Navigating inside a gallery
 
-Wen browsing the gallery, a page of thumbnails is displayed. When clicking on a thumbnail, the thumbnails is replaced  by a full display of the clicked image. The image can be oriented or zoomed. It is also possible ti navigate from one image to the other or visualize the images in slide-show mode.
+Wen browsing the gallery, a page of thumbnails is displayed. When clicking on a thumbnail, the thumbnails is replaced  by a full display of the clicked image. The image can be oriented or zoomed. It is also possible to navigate from one image to the other or visualize the images in slide-show mode.
 
 ![aperçu](aperçu.jpg)
 
@@ -56,38 +56,56 @@ Wen browsing the gallery, a page of thumbnails is displayed. When clicking on a 
 
 ## Presentation
 
-A gallery is created (or updated)  withe `--gallery` command. This command, followed by the name of root directory of the gallery, requires the name of the media directory with the option `--sourcedir`.
+A gallery is created (or updated)  with the `--gallery` command. This command, followed by the name of the root directory of the gallery, requires to give the name of the media directory with the option `--sourcedir`.
 
 `$ galerie --gallery /foo/bar/mygallery --sourcedir /spam/egg/mypictures`
 
 There are three ways to organize the medias from a source directory:
 
-* it is possible to copy the sub-directory structure by crating a web page for each sub-directory with the option `--bydir`,
+* it is possible to copy the sub-directory structure by creating a web page for each sub-directory with the option `--bydir`,
 * it is possible to organize the medias by dates, by creating a section for each date with the command `--bydate`,
-* it is possible to include the content of a diary file with the `--diary` option. A diary file is a text file with a very simple syntax (Markdown) organized by dates, associating to each date some text and medias. A page can be extended by adding also the medias from source directory. 
+* it is possible to include the content of a diary file with the `--diary` option. A diary file is a text file with a very simple syntax (Markdown) organized by dates, associating to each date some text and medias. A page can be extended by adding also the medias from some directory. 
 
-The options `--bydir` and `--bydates` can be combined. Two additional options enable to give more information abut the data used with the options `--bydir`, `--bydates`  et `--diary`:
+The options `--bydir` and `--bydates` can be combined. Two additional options enable to give more information about the data used with the options `--bydir`, `--bydates`  et `--diary`:
 
 * the `--dates` option gives a range limiting the dates of the medias,
-* the `--recursive` option specifies if th sub-directories must be included or not.
+* the `--recursive` option specifies if the sub-directories must be included or not.
 
-Finally, when the configuration of gallery has been given, it is sufficient to use the `u` option to update a gallery to update a gallery with the options given to specify it.
+Finally, after creating a gallery, it is sufficient to use the `--update` option to update a gallery with the options given to specify it.
 
 ## Some examples
 
+Creation of a gallery organized by directories:
+
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydir true`
+
+Creation of a gallery organized by dates, limiting the dates to a given rank, and including sub-directories:
+
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydates true --dates 20200701-20200731 --recursive`
+
+Creation of a gallery organized by dates and directories:
+
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydates true --bydir true`
+
+Update of gallery with the creation options:
+
+`$ galerie --gallery /foo/mygallery --update`
+
+## Complete description of gallery creation options
+
 The option `--gallery` enables to create and update galleries. A gallery is defined by the options `--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` and `--recursive`. The option `--update` enables to replace the six previous options.
 
-`--gallery <chemin de répertoire>`
+`--gallery <directory path>`
 
-specifies the root directory of the gallery. All th files created for the gallery are in this directory. The entry point of the gallery is by default the file `index.htm`.
+specifies the root directory of the gallery. All the files created for the gallery are in this directory. The entry point of the gallery is by default the file `index.htm`.
 
-`--sourcedir <chemin de répertoire>`
+`--sourcedir <directory path>`
 
-specifies the directory where to find the medias to include in the gallery.
+specifies the directory where to find the medias to include in the gallery. This option is not mandatory when using the `--diary` option. In this case, it is possible to include only the medias specified in the diary file. 
 
 `--bydir true|false` (default `false`)
 
-specifies whether the gallery is organized by directories, one web page for each directory. Can be combined with `--bydates`.
+specifies whether the gallery is organized by directories, one HTML page for each directory. Can be combined with `--bydates`.
 
 `--bydates true|false` (default `false`)
 
@@ -95,35 +113,35 @@ specifies whether the gallery is organized by dates. Can be combined with `--byd
 
 `--diary true|false` (default `false`)
 
-species whether he gallery is organized using a diary file.
+specifies whether he gallery is organized using a diary file.
 
 `--dates diary|source|yyyymmdd-yyyymmdd` (default `source`)
 
-specifies the dates to considered when adding medias to a diary. If the value of the option is `diary`, only the medias at the dates of the diary are added. If the value is+ `source`, all the medias from the source directory are added. Otherwise the value must have the format `yyyymmdd-yyyymmdd`and the added medias must be included in this range.
+specifies the dates to considered when adding medias to a diary. If the value of the option is `diary`, only the medias at the dates of the diary are added. If the value is  `source`, all the medias from the source directory are added. Otherwise the value must have the format `yyyymmdd-yyyymmdd` and the added medias must be included in this range.
 
 `--recursive true|false` (default `false`)
 
 When creating a gallery from a diary and a media directory, it may be required to consider the medias contained in the sub-directories. This is done by using the `--recursive` option with value `true`.
 
-`--dest`
+`--dest <directory path>`
 
 specifies the destination directory for all files generated by a galley (HTML files and thumbnails) instead of the root directory (value of option `--gallery`). Beware this does not copy the medias contained in the root directory.
 
 `--forcethumb`
 
-forces the calculus of thumbnails (not not done by default to save time). This is necessary for instance when modifying the value of the parameter `thumbdelay` in the configuration file. This parameter specifies the time offset of the thumbnail in the video.
+forces the calculus of thumbnails (not done by default to save time). This is necessary for instance when modifying the value of the parameter `thumbdelay` in the configuration file. This parameter specifies the time offset of the thumbnails in the video.
 
 # Other commands
 
 The utility proposes also the following commands.
 
-`--create <chemin de répertoire> --sourcedir <chemin de répertoire> --dates <spec_date> --recursive true|false`
+`--create <directory path> --sourcedir <directory path> --dates <spec_date> --recursive true|false`
 
-creates a diary file by considering the medias specified by he options `--sourcedir`, `--dates` et `--recursive`withe he same behavior as for the command `--gallery`. The diary is initialized with a text limited to the dates of the considered medias.
+creates a diary file by considering the medias specified by the options `--sourcedir`, `--dates` and `--recursive` with the same behavior as for the command `--gallery`. The diary is initialized with a text limited to the dates of the considered medias.
 
-`--blogger <chemin de répertoire> --url <url> [--check] [--full]`
+`--blogger <directory path> --url <url> [--check] [--full]`
 
-exports the diary file in a format ready for Blogger. The url must linked to a page containing the same images as in the diary. This is mandatory because it is not possible to upload image by program to Blogger. The command exports the diary into the clipboard. The `--check` option forces the comparison between local images and Blogger images in case some images could have bee renamed. The `--full` option copies a full web page to the clipboard. This enables to test it locally.
+exports the diary file in a format ready for Blogger. The url must linked to a page containing the same images as in the diary. This is mandatory because it is not possible to upload image by program to Blogger. The command exports the diary into the clipboard. The `--check` option forces the comparison between local images and Blogger images in case some images could have bee renamed. The `--full` option copies a full HTML page to the clipboard. This enables to test it locally.
 
 `--resetcfg`
 
@@ -156,11 +174,11 @@ The date field is mandatory and must appear alone in the first line of the recor
 
 If the date is absent, a reading error is launched. An error is also launched if the dates are not ordered. Two different records may have the same date.
 
-The date field is ignored by the export functions. However, it is necessary to associate the media from some directory to each record.
+The date field is ignored by the export functions. However, it is required to associate the medias from some directory to each record.
 
 ## Text field
 
-The text field must respect Markdown syntax without any constraint.
+The text field must respect the Markdown syntax without any constraint.
 
 ## Media field
 
@@ -172,13 +190,13 @@ The videos (in MP4 format) are specified with link notation:
 
  `[](a_video.mp4)`
 
-In both cases, brackets must remain empty (no alt text or link description). These specifications are gathered at the end of th record, one per line, at beginning of line. If the line following a media is not a media specification, it is considered as a caption (a text associated to the media displayed below it) by the export functions.
+In both cases, brackets must remain empty (no alt text or link description). These specifications are gathered at the end of th record, one per line, at the beginning of line. If the line following a media is not a media specification, it is considered as a caption (a text associated to the media displayed below it) by the export functions.
 
 Any text following the media specifications is ignored.
 
 ## Record separator
 
-A record separator is a horizontal rule made of three underscore (ASCII 95) at least.
+A record separator is a horizontal rule made of three underscores ("_", ASCII 95) at least.
 
 # Configuration file
 
@@ -188,7 +206,7 @@ A configuration file enable to set some properties of the gallery. This file is 
 
   **Note**:  The values of the `[source]` section are used only when using the `--update` option. They are not used as default of a missing parameter if `--update` is not used.
 
-* the `[thumbnails]` section which enables to specify some display parameters (display of meta-data, display of directory names, time offset of video thumbnails).
+* the `[thumbnails]` section which enables to specify some thumbnails display or creation parameters (display of meta-data, display of directory names, time offset of video thumbnails, maximum number of thumbnails to remove without user confirmation).
 
 * the `[photobox]` section which enables to configure the third party module Photobox used to visualize medias one by one.
 
