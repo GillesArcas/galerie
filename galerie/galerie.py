@@ -1397,7 +1397,7 @@ class MyConfigParser (ConfigParser):
         ConfigParser.__init__(self, inline_comment_prefixes=(';',))
 
     def error(self, section, entry):
-        error('missing or incorrect config value:', '[%s]%s' % (section, entry))
+        error('Missing or incorrect config value:', '[%s]%s' % (section, entry))
 
     def getint(self, section, entry):
         try:
@@ -1430,12 +1430,12 @@ def read_config(params):
         if not os.path.exists(config_filename) or params.resetcfg:
             createconfig(config_filename)
     except:
-        error('error creating configuration file')
+        error('Error creating configuration file')
 
     try:
         getconfig(params, config_filename)
     except Exception as e:
-        error('error reading configuration file.', str(e), 'Use --resetcfg')
+        error('Error reading configuration file.', str(e), 'Use --resetcfg')
 
 
 def getconfig(options, config_filename):
@@ -1531,10 +1531,11 @@ Posts are not ordered
 Unable to read url
 No image source (--sourcedir)
 No blogger url (--url)
-missing or incorrect config value:
-error creating configuration file
-error reading configuration file.
+Missing or incorrect config value:
+Error creating configuration file
+Error reading configuration file.
 Incorrect date format
+Incorrect parameters:
 '''
 
 
@@ -1578,18 +1579,18 @@ def parse_command_line(argstring):
 
     agroup = parser.add_argument_group('Parameters')
     agroup.add_argument('--bydir', help='organize gallery by subdirectory',
-                        action='store', default='false', choices=BOOL)
+                        action='store', default=None, choices=BOOL)
     agroup.add_argument('--bydate', help='organize gallery by date',
-                        action='store', default='false', choices=BOOL)
+                        action='store', default=None, choices=BOOL)
     agroup.add_argument('--diary', help='organize gallery using markdown file diary',
-                        action='store', default='false', choices=BOOL)
+                        action='store', default=None, choices=BOOL)
     agroup.add_argument('--recursive', help='--sourcedir scans recursively',
-                        action='store', default='false', choices=BOOL)
-    agroup.add_argument('--dates', help='dates interval for extended index',
-                        action='store', default='source')
-    agroup.add_argument('--sourcedir', help='image source for extended index',
+                        action='store', default=None, choices=BOOL)
+    agroup.add_argument('--dates', help='dates interval',
                         action='store', default=None)
-    agroup.add_argument('--update', help='updates thumbnails with parameters in config file',
+    agroup.add_argument('--sourcedir', help='meida directory',
+                        action='store', default=None)
+    agroup.add_argument('--update', help='updates gallery with parameters in config file',
                         action='store_true', default=False)
     agroup.add_argument('--dest', help='output directory',
                         action='store')
@@ -1607,6 +1608,17 @@ def parse_command_line(argstring):
         args = parser.parse_args()
     else:
         args = parser.parse_args(argstring.split())
+
+    if args.gallery:
+        if args.update and (args.bydir or args.bydate or args.diary or args.sourcedir or args.recursive or args.dates):
+            error('Incorrect parameters:',
+                  '--update cannot be used with --bydir, --bydate, --diary, --sourcedir, --recursive or --dates')
+
+    args.bydir = args.bydir == 'true'
+    args.bydate = args.bydate == 'true'
+    args.diary = args.diary == 'true'
+    args.recursive = args.recursive == 'true'
+    args.dates = 'source' if (args.dates is None) else args.dates
 
     args.root = (
         args.create or args.gallery
@@ -1707,11 +1719,6 @@ def setup_part2(args):
         if not os.path.exists(photoboxdir):
             photoboxsrc = os.path.join(os.path.dirname(__file__), 'photobox')
             shutil.copytree(photoboxsrc, photoboxdir)
-
-    args.bydir = args.bydir is True or args.bydir == 'true'
-    args.bydate = args.bydate is True or args.bydate == 'true'
-    args.diary = args.diary is True or args.diary == 'true'
-    args.recursive = args.recursive is True or args.recursive == 'true'
 
     if args.dates:
         if not(args.gallery or args.create):

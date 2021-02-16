@@ -216,6 +216,16 @@ def test_16_gallery(mode):
         os.rename('TOC_20000101_000000.jpg', 'OCT_20000101_000000.jpg')
 
 
+def test_update_incorrect_parameter(mode):
+    # test --update with incorrect parameter
+    reset_tmp()
+    try:
+        galerie.main('--gallery tmp --update --bydir true')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == galerie.errorcode('Incorrect parameters:')
+
+
 def test_21_gallery(mode):
     # test thumbnail purge below threshold
     reset_tmp()
@@ -337,7 +347,7 @@ def test_15_gallery(mode):
             galerie.main('--gallery tmp --source subdir/deeper1 --bydir true')
             return False
         except SystemExit as exception:
-            return exception.args[0] == galerie.errorcode('missing or incorrect config value:')
+            return exception.args[0] == galerie.errorcode('Missing or incorrect config value:')
 
 
 def test_08_gallery(mode):
