@@ -844,6 +844,16 @@ def purge_thumbnails(args, thumbdir, posts, diary=False):
 # -- List of medias helpers ---------------------------------------------------
 
 
+def is_media_within_dates(fullname, dates):
+    if is_media(fullname):
+        if type(dates) == tuple:
+            return dates[0] <= date_from_item(fullname) <= dates[1]
+        else:
+            return True
+    else:
+        return False
+
+
 def list_of_files(sourcedir, recursive):
     """
     Return the list of full paths for files in source directory
@@ -862,15 +872,15 @@ def list_of_files(sourcedir, recursive):
     return result
 
 
-def list_of_medias(sourcedir, recursive):
+def list_of_medias(args, sourcedir, recursive):
     """
     Return the list of full paths for pictures and movies in source directory
     """
     files = list_of_files(sourcedir, recursive)
-    return [_ for _ in files if is_media(_)]
+    return [_ for _ in files if is_media_within_dates(_, args.dates)]
 
 
-def list_of_medias_ext(sourcedir):
+def list_of_medias_ext(args, sourcedir):
     """
     Return the list of full paths for pictures and movies in source directory
     plus subdirectories containing media
@@ -880,19 +890,19 @@ def list_of_medias_ext(sourcedir):
     if '.nomedia' not in listdir:
         for basename in listdir:
             fullname = os.path.join(sourcedir, basename)
-            if os.path.isdir(fullname) and basename != '$RECYCLE.BIN' and contains_media(fullname):
+            if os.path.isdir(fullname) and basename != '$RECYCLE.BIN' and contains_media(args, fullname):
                 result.append(fullname)
             else:
-                if is_media(basename):
+                if is_media_within_dates(fullname, args.dates):
                     result.append(fullname)
     return result
 
 
-def contains_media(fullname):
-    for root, dirs, files in os.walk(fullname):
+def contains_media(args, dirname):
+    for root, dirs, files in os.walk(dirname):
         if '.nomedia' not in files:
             for basename in files:
-                if is_media(basename):
+                if is_media_within_dates(os.path.join(root, basename), args.dates):
                     return True
     else:
         return False
@@ -965,7 +975,7 @@ def create_item_subdir(args, media_fullname, sourcedir, thumbdir, key, thumbmax)
     info, infofmt = None, None
     thumbsize = (thumbmax, int(round(thumbmax / 640 * 480)))
 
-    medias_ext = list_of_medias_ext(media_fullname)
+    medias_ext = list_of_medias_ext(args, media_fullname)
     if not medias_ext:
         return None
 
@@ -1062,7 +1072,7 @@ def make_posts_from_diary_and_dir(args):
     title, posts = make_posts_from_diary(args)
 
     # list of all pictures and movies
-    medias = list_of_medias(args.sourcedir, args.recursive)
+    medias = list_of_medias(args, args.sourcedir, args.recursive)
 
     bydate = create_items_by_date(args, medias, posts)
 
@@ -1086,9 +1096,15 @@ def make_posts_from_diary_and_dir(args):
 def make_posts_from_subdir(args, dirname):
     # list of pictures and movies plus subdirectories
     if args.bydir is False:
-        medias_ext = list_of_medias(dirname, args.recursive)
+        medias_ext = list_of_medias(args, dirname, args.recursive)
     else:
-        medias_ext = list_of_medias_ext(dirname)
+        medias_ext = list_of_medias_ext(args, dirname)
+
+    #required_dates = get_required_dates(args, medias_ext, posts=None)
+    #medias_ext_bis = []
+    #for media in medias_ext:
+    #    if complies_with_required_dates(media):
+    #        medias_ext_bis.append(media)
 
     # complete posts
     postmedias = list()
@@ -1108,10 +1124,10 @@ def make_posts_from_subdir(args, dirname):
 def make_posts_from_subdir_and_date(args, dirname):
     # list of all pictures and movies
     if args.bydir is False:
-        medias = list_of_medias(dirname, args.recursive)
+        medias = list_of_medias(args, dirname, args.recursive)
         subdirs = []
     else:
-        medias_ext = list_of_medias_ext(dirname)
+        medias_ext = list_of_medias_ext(args, dirname)
         medias = [_ for _ in medias_ext if is_media(_)]
         subdirs = [_ for _ in medias_ext if not is_media(_)]
 
@@ -1156,7 +1172,7 @@ def create_gallery(args):
 
 def create_diary(args):
     # list of all pictures and movies
-    medias = list_of_medias(args.sourcedir, args.recursive)
+    medias = list_of_medias(args, args.sourcedir, args.recursive)
 
     # list of required dates
     if args.dates == 'diary':

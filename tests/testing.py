@@ -54,7 +54,7 @@ def list_compare(tag1, tag2, list1, list2, source1='<list1>', source2='<list2>')
     if diff:
         print(colorama.Fore.RED)
         print(f'Diff: {tag1}-{tag2}:', source1, source2)
-        for line in diff: #[:10]:
+        for line in diff[:10]:
             print(line)
         print(colorama.Style.RESET_ALL)
 
@@ -135,15 +135,6 @@ def populate_tmp():
         shutil.copyfile(basename, os.path.join('tmp', basename))
 
 
-def test_00_gallery(mode):
-    return generic_test(
-        mode,
-        False,
-        'test_00_gallery',
-        '--gallery tmp --source . --bydir false --bydate false --recursive false'
-        )
-
-
 def test_18_gallery(mode):
     # create gallery when not existing
     remove_tmp()
@@ -155,12 +146,39 @@ def test_18_gallery(mode):
         )
 
 
+def test_00_gallery(mode):
+    return generic_test(
+        mode,
+        False,
+        'test_00_gallery',
+        '--gallery tmp --source . --bydir false --bydate false --recursive false'
+        )
+
+
+def test_00_gallery_with_dates(mode):
+    return generic_test(
+        mode,
+        False,
+        'test_00_gallery_with_dates',
+        '--gallery tmp --source . --bydir false --bydate false --recursive false --dates 20000105-20000108'
+        )
+
+
 def test_01_gallery(mode):
     return generic_test(
         mode,
         False,
         'test_01_gallery',
         '--gallery tmp --source . --bydir false --bydate false --recursive true'
+        )
+
+
+def test_01_gallery_with_dates(mode):
+    return generic_test(
+        mode,
+        False,
+        'test_01_gallery_with_dates',
+        '--gallery tmp --source . --bydir false --bydate false --recursive true --dates 20000105-20000108'
         )
 
 
@@ -188,6 +206,15 @@ def test_04_gallery(mode):
         False,
         'test_04_gallery',
         '--gallery tmp --source . --bydir true --bydate false'
+        )
+
+
+def test_04_gallery_with_dates(mode):
+    return generic_test(
+        mode,
+        False,
+        'test_04_gallery_with_dates',
+        '--gallery tmp --source . --bydir true --bydate false --dates 20000105-20000108'
         )
 
 
