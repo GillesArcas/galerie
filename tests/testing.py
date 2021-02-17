@@ -327,7 +327,7 @@ def test_14_gallery(mode):
         return exception.args[0] == galerie.errorcode('Directory not found')
 
 
-def test_19_gallery(mode):
+def test_diary_date_missing(mode):
     # test for date missing in diary
     reset_tmp()
     diary = '''\
@@ -344,7 +344,24 @@ ______
         return exception.args[0] == galerie.errorcode('No date in post')
 
 
-def test_20_gallery(mode):
+def test_diary_date_incorrect(mode):
+    # test for incorrect date in diary
+    reset_tmp()
+    diary = '''\
+[2020/02/30]
+______
+    '''
+    with open('tmp/index.md', 'wt') as f:
+        f.write(diary)
+
+    try:
+        galerie.main('--gallery tmp --diary true')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == galerie.errorcode('Incorrect date value:')
+
+
+def test_diary_dates_not_ordered(mode):
     # test for post not ordered by dates in diary
     reset_tmp()
     diary = '''\

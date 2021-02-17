@@ -178,9 +178,11 @@ class Post:
 
     @classmethod
     def from_markdown(cls, post):
-        m = re.match(r'\[([0-9/]{10})\]\n*', post[0])
+        m = re.match(r'\[(\d\d\d\d/\d\d/\d\d)\]\n*', post[0])
         if m:
             date = m.group(1).replace('/', '')
+            if not validate_date(date):
+                error('Incorrect date value:', date)
             del post[0]
         else:
             error('No date in post', ' '.join(post))
@@ -1543,6 +1545,7 @@ ERRORS = '''\
 File not found
 Directory not found
 No date in post
+Incorrect date value:
 Posts are not ordered
 Unable to read url
 No image source (--sourcedir)
