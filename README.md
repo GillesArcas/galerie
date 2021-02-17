@@ -66,7 +66,7 @@ There are three ways to organize the medias from a source directory:
 * it is possible to organize the medias by dates, by creating a section for each date with the command `--bydate`,
 * it is possible to include the content of a diary file with the `--diary` option. A diary file is a text file with a very simple syntax (Markdown) organized by dates, associating to each date some text and medias. A page can be extended by adding also the medias from some directory. 
 
-The options `--bydir` and `--bydates` can be combined. Two additional options enable to give more information about the data used with the options `--bydir`, `--bydates`  et `--diary`:
+The options `--bydir` and `--bydate` can be combined. Two additional options enable to give more information about the data used with the options `--bydir`, `--bydate`  et `--diary`:
 
 * the `--dates` option gives a range limiting the dates of the medias,
 * the `--recursive` option specifies if the sub-directories must be included or not.
@@ -81,11 +81,11 @@ Creation of a gallery organized by directories:
 
 Creation of a gallery organized by dates, limiting the dates to a given rank, and including sub-directories:
 
-`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydates true --dates 20200701-20200731 --recursive`
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydate true --dates 20200701-20200731 --recursive true`
 
 Creation of a gallery organized by dates and directories:
 
-`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydates true --bydir true`
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydate true --bydir true`
 
 Update of gallery with the creation options:
 
@@ -93,7 +93,7 @@ Update of gallery with the creation options:
 
 ## Complete description of gallery creation options
 
-The option `--gallery` enables to create and update galleries. A gallery is defined by the options `--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` and `--recursive`. The option `--update` enables to replace the six previous options.
+The option `--gallery` enables to create and update galleries. A gallery is defined by the options `--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates` and `--recursive`. The option `--update` enables to replace the six previous options.
 
 `--gallery <directory path>`
 
@@ -105,9 +105,9 @@ specifies the directory where to find the medias to include in the gallery. This
 
 `--bydir true|false` (default `false`)
 
-specifies whether the gallery is organized by directories, one HTML page for each directory. Can be combined with `--bydates`.
+specifies whether the gallery is organized by directories, one HTML page for each directory. Can be combined with `--bydate`.
 
-`--bydates true|false` (default `false`)
+`--bydate true|false` (default `false`)
 
 specifies whether the gallery is organized by dates. Can be combined with `--bydir`.
 
@@ -117,7 +117,7 @@ specifies whether he gallery is organized using a diary file.
 
 `--dates diary|source|yyyymmdd-yyyymmdd` (default `source`)
 
-specifies the dates to considered when adding medias to a diary. If the value of the option is `diary`, only the medias at the dates of the diary are added. If the value is  `source`, all the medias from the source directory are added. Otherwise the value must have the format `yyyymmdd-yyyymmdd` and the added medias must be included in this range.
+specifies the dates to considered when adding medias to a diary. If the value of the option is `diary`, only the medias at the dates of the diary are added. If the value is  `source`, all the medias from the source directory are added. Otherwise the value must have the format `yyyymmdd-yyyymmdd` and the added medias must be included in this range.
 
 `--recursive true|false` (default `false`)
 
@@ -137,7 +137,7 @@ The utility proposes also the following commands.
 
 `--create <directory path> --sourcedir <directory path> --dates <spec_date> --recursive true|false`
 
-creates a diary file by considering the medias specified by the options `--sourcedir`, `--dates` and `--recursive` with the same behavior as for the command `--gallery`. The diary is initialized with a text limited to the dates of the considered medias.
+creates a diary file by considering the medias specified by the options `--sourcedir`, `--dates` and `--recursive` with the same behavior as for the command `--gallery`. The diary is initialized with a text limited to the dates of the considered medias.
 
 `--blogger <directory path> --url <url> [--check] [--full]`
 
@@ -202,7 +202,7 @@ A record separator is a horizontal rule made of three underscores ("_", ASCII 95
 
 A configuration file enable to set some properties of the gallery. This file is named `.config.ini` and is located in the root directory of the gallery. This file is organized in three sections:
 
-* the `[source]` section which memorizes the creation options given in the command line (`--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` and `--recursive`) . These values are used when using `--update`.
+* the `[source]` section which memorizes the creation options given in the command line (`--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates` and `--recursive`) . These values are used when using `--update`.
 
   **Note**:  The values of the `[source]` section are used only when using the `--update` option. They are not used as default of a missing parameter if `--update` is not used.
 

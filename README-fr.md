@@ -65,7 +65,7 @@ Il y a trois façons d'organiser une galerie à partir des médias contenus dans
 * on peut regrouper les médias par dates, en créant une section par date ayant la date pour titre, avec l'option `--bydate`,
 * on peut utiliser un ficher journal avec l'option `--diary`. Un fichier journal est un fichier de syntaxe simple, organisé par date et associant à chaque date un texte et des images ou des vidéos. Une page peut être créée avec seulement ces données ou complétée avec les médias d'un répertoire source.
 
-Les options `--bydir` et `--bydates` peuvent être combinées. Deux options supplémentaires permettent de préciser les données utilisées avec les options `--bydir`, `--bydates`  et `--diary`:
+Les options `--bydir` et `--bydate` peuvent être combinées. Deux options supplémentaires permettent de préciser les données utilisées avec les options `--bydir`, `--bydate`  et `--diary`:
 
 * l'option `--dates` qui limite les médias utilisés dans une galerie à une sélection de dates,
 * l'option `--recursive` qui indique si il faut considérer les sous-répertoires du répertoires source.
@@ -80,11 +80,11 @@ Création d'une galerie organisée par sous-répertoires :
 
 Création d'une galerie organisée par date, en limitant les dates à une plage et en incluant les sous-répertoires :
 
-`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydates true --dates 20200701-20200731 --recursive`
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydate true --dates 20200701-20200731 --recursive true`
 
 Création d'une galerie organisée par dates et sous-répertoires :
 
-`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydates true --bydir true`
+`$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydate true --bydir true`
 
 Mise à jour d'une galerie en utilisant les options qui ont permis de la créer :
 
@@ -92,7 +92,7 @@ Mise à jour d'une galerie en utilisant les options qui ont permis de la créer 
 
 ## Description complète des options de création de galeries
 
-L'option `--gallery` permet de créer et mettre à jour une galerie. La galerie est définie par les options `--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` et `--recursive`. L'option `--update` permet de remplacer les six options précédentes.
+L'option `--gallery` permet de créer et mettre à jour une galerie. La galerie est définie par les options `--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates` et `--recursive`. L'option `--update` permet de remplacer les six options précédentes.
 
 `--gallery <chemin de répertoire>`
 
@@ -104,9 +104,9 @@ spécifie le répertoire où se trouve les médias à inclure dans la galerie. C
 
 `--bydir true|false` (défaut `false`)
 
-détermine si la galerie est organisée par répertoire et sous-répertoire, une page HTML par répertoire. Peut-être combiné avec `--bydates`.
+détermine si la galerie est organisée par répertoire et sous-répertoire, une page HTML par répertoire. Peut-être combiné avec `--bydate`.
 
-`--bydates true|false` (défaut `false`)
+`--bydate true|false` (défaut `false`)
 
 détermine si la galerie est organisée par dates. Peut-être combiné avec `--bydir`.
 
@@ -124,7 +124,7 @@ Quand on crée une galerie à partir d'in fichier journal et d'un répertoire de
 
 `--update`
 
-met à jour la galerie en utilisant les valeurs des options `--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` et `--recursive` utilisées pour sa création.
+met à jour la galerie en utilisant les valeurs des options `--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates` et `--recursive` utilisées pour sa création.
 
 `--dest <chemin de répertoire>`
 
@@ -205,7 +205,7 @@ Un séparateur d'enregistrement est une barre de séparation de trois caractère
 
 Un fichier de configuration permet de configurer certaines propriétés d'une galerie. Ce fichier se nomme `.config.ini` et se situe dans le répertoire racine de la galerie. Ce fichier est organisé en trois sections :
 
-- la section `[source]` qui reprend les options de création données en ligne de commande (`--sourcedir`, `--bydir`, `--bydates`, `--diary`, `--dates` et `--recursive`). Cette section contient les valeurs utilisées quand on utilise l'option `--update`.
+- la section `[source]` qui reprend les options de création données en ligne de commande (`--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates` et `--recursive`). Cette section contient les valeurs utilisées quand on utilise l'option `--update`.
 
   **Note** : Les valeurs des paramètres de configuration de la section `[source]` ne sont utilisés qu'avec l'option `--update`. Ils ne viennent pas en défaut d'un paramètre absent si `--update` n'est pas utilisé.
 
