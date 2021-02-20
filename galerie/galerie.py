@@ -21,6 +21,7 @@ import locale
 import textwrap
 import base64
 import datetime
+import urllib
 
 from configparser import ConfigParser
 from collections import defaultdict
@@ -135,8 +136,8 @@ VIDPOSTCAPTION = '''\
 <p>%s</p>
 </span>
 '''
-IMGDCIM = '<a href="file:///%s"><img src="%s" width="%d" height="%d" title="%s"/></a>'
-VIDDCIM = '<a href="file:///%s" rel="video"><img src="%s" width="%d" height="%d" title="%s"/></a>'
+IMGDCIM = '<a href="%s"><img src="%s" width="%d" height="%d" title="%s"/></a>'
+VIDDCIM = '<a href="%s" rel="video"><img src="%s" width="%d" height="%d" title="%s"/></a>'
 
 # diminution de l'espace entre images, on utilise :
 # "display: block;", "margin-bottom: 0em;" et "font-size: 0;"
@@ -312,7 +313,7 @@ class PostImage(PostItem):
 
     def to_html_dcim(self, args):
         descr = self.descr if args.thumbnails.media_description else ''
-        return IMGDCIM % (self.uri, self.thumb, *self.thumbsize, descr)
+        return IMGDCIM % (relative_url(self.uri, args.root), self.thumb, *self.thumbsize, descr)
 
     def to_html_blogger(self):
         if not self.caption:
@@ -337,7 +338,7 @@ class PostVideo(PostItem):
 
     def to_html_dcim(self, args):
         descr = self.descr if args.thumbnails.media_description else ''
-        return VIDDCIM % (self.uri, self.thumb, *self.thumbsize, descr)
+        return VIDDCIM % (relative_url(self.uri, args.root), self.thumb, *self.thumbsize, descr)
 
     def to_html_blogger(self):
         x = f'<p style="text-align: center;">{self.iframe}</p>'
@@ -358,6 +359,20 @@ class PostSubdir(PostItem):
             return DIRPOST % (basename, self.thumb, *self.thumbsize)
         else:
             return DIRPOSTCAPTION % (basename, self.thumb, *self.thumbsize, self.caption)
+
+
+def relative_url(path, root):
+    """
+    returns a normalized url to path relative from root
+    """
+    try:
+        url = os.path.relpath(path, root)
+    except:
+        error('Unable to make a relative url:', url, root)
+
+    url = url.replace('\\', '/') if os.sep == '\\' else url
+
+    return urllib.parse.quote(url)
 
 
 # -- Markdown parser ----------------------------------------------------------
@@ -940,7 +955,7 @@ def create_item_image(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
         infofmt = media_basename + ': ' + infofmt
         thumbsize = size_thumbnail(info[2], info[3], thumbmax)
         make_thumbnail_image(args, media_fullname, thumb_fullname, thumbsize)
-        return PostImage(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
+        return PostImage(None, media_fullname, '/'.join((args.thumbrep, thumb_basename)),
                          thumbsize, infofmt)
     except PIL.UnidentifiedImageError:
         # corrupted image
@@ -960,7 +975,7 @@ def create_item_video(args, media_fullname, sourcedir, thumbdir, key, thumbmax):
         infofmt = media_basename + ': ' + infofmt
         thumbsize = size_thumbnail(info[2], info[3], thumbmax)
         make_thumbnail_video(args, media_fullname, thumb_fullname, thumbsize, duration=info[5])
-        return PostVideo(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
+        return PostVideo(None, media_fullname, '/'.join((args.thumbrep, thumb_basename)),
                          thumbsize, infofmt)
     except CalledProcessError:
         # corrupted video
@@ -981,9 +996,9 @@ def create_item_subdir(args, media_fullname, sourcedir, thumbdir, key, thumbmax)
     if not medias_ext:
         return None
 
-    item = PostSubdir(None, media_fullname, '/'.join(('.thumbnails', thumb_basename)),
-                    thumbsize, infofmt)
-    item.htmname = os.path.join(os.path.dirname(thumbdir), media_relname + '.htm')
+    item = PostSubdir(None, media_fullname, '/'.join((args.thumbrep, thumb_basename)),
+                      thumbsize, infofmt)
+    item.htmname = os.path.join(os.path.dirname(thumbdir), media_relname + args.html_suffix)
     if args.thumbnails.subdir_caption:
         item.caption = media_basename
     else:
@@ -1359,6 +1374,10 @@ recursive = false
 ; value: yyyymmdd-yyyymmdd or empty
 dates =
 
+; github Pages compatibility (.htlml extension and no dot in directory names)
+; value: true or false
+github_pages = false
+
 [thumbnails]
 
 ; specifies whether or not the gallery displays media description (size, dimension, etc)
@@ -1424,9 +1443,12 @@ class MyConfigParser (ConfigParser):
             print(e)
             self.error(section, entry)
 
-    def getboolean(self, section, entry):
+    def getboolean(self, section, entry, default=None):
         try:
-            return ConfigParser.getboolean(self, section, entry)
+            if default is None:
+                return ConfigParser.getboolean(self, section, entry)
+            else:
+                return ConfigParser.getboolean(self, section, entry, raw=True, vars=None, fallback=default)
         except Exception as e:
             print(e)
             self.error(section, entry)
@@ -1474,6 +1496,7 @@ def getconfig(options, config_filename):
     options.source.diary = config.getboolean('source', 'diary')
     options.source.recursive = config.getboolean('source', 'recursive')
     options.source.dates = config.get('source', 'dates')
+    options.source.github_pages = config.getboolean('source', 'github_pages', default=False)
 
     # [thumbnails]
     options.thumbnails.media_description = config.getboolean('thumbnails', 'media_description')
@@ -1513,6 +1536,7 @@ def update_config(args):
         ('diary', args.diary),
         ('recursive', args.recursive),
         ('dates', args.dates),
+        ('github_pages', args.github_pages),
     )
 
     # manual update to keep comments
@@ -1607,8 +1631,10 @@ def parse_command_line(argstring):
                         action='store', default=None, choices=BOOL)
     agroup.add_argument('--dates', help='dates interval',
                         action='store', default=None)
-    agroup.add_argument('--sourcedir', help='meida directory',
+    agroup.add_argument('--sourcedir', help='media directory',
                         action='store', default=None)
+    agroup.add_argument('--github_pages', help='github Pages compatibility',
+                        action='store', default=None, choices=BOOL)
     agroup.add_argument('--update', help='updates gallery with parameters in config file',
                         action='store_true', default=False)
     agroup.add_argument('--dest', help='output directory',
@@ -1629,15 +1655,17 @@ def parse_command_line(argstring):
         args = parser.parse_args(argstring.split())
 
     if args.gallery:
-        if args.update and (args.bydir or args.bydate or args.diary or args.sourcedir or args.recursive or args.dates):
+        if args.update and (args.bydir or args.bydate or args.diary or args.sourcedir or
+                            args.recursive or args.dates or args.github_pages):
             error('Incorrect parameters:',
-                  '--update cannot be used with --bydir, --bydate, --diary, --sourcedir, --recursive or --dates')
+                  '--update cannot be used with creation parameters, use explicit command')
 
     args.bydir = args.bydir == 'true'
     args.bydate = args.bydate == 'true'
     args.diary = args.diary == 'true'
     args.recursive = args.recursive == 'true'
     args.dates = 'source' if (args.dates is None) else args.dates
+    args.github_pages = args.github_pages == 'true'
 
     args.root = (
         args.create or args.gallery
@@ -1656,12 +1684,12 @@ def setup_part1(args):
     Made before reading config file (config file located in args.root).
     Check and normalize root path.
     """
-    rootext = os.path.splitext(args.root)[1]
-    if rootext.lower() in ('.htm', '.html'):
-        args.rootname = os.path.basename(args.root)
-        args.root = os.path.dirname(args.root)
+    args.rootarg = args.root
+    rootext = os.path.splitext(args.rootarg)[1]
+    if rootext == '':
+        pass
     else:
-        args.rootname = 'index.htm'
+        args.root = os.path.dirname(args.root)
 
     if args.root:
         args.root = os.path.abspath(args.root)
@@ -1680,6 +1708,35 @@ def setup_part2(args):
     Copy photobox file to destination dir.
     Handle priority between command line and config file.
     """
+    if args.update:
+        args.sourcedir = args.source.sourcedir
+        args.bydir = args.source.bydir
+        args.bydate = args.source.bydate
+        args.diary = args.source.diary
+        args.recursive = args.source.recursive
+        args.dates = args.source.dates
+        args.github_pages = args.source.github_pages
+    elif args.gallery:
+        args.source.sourcedir = args.sourcedir
+        args.source.bydir = args.bydir
+        args.source.bydate = args.bydate
+        args.source.diary = args.diary
+        args.source.recursive = args.recursive
+        args.source.dates = args.dates
+        args.source.github_pages = args.github_pages
+        update_config(args)
+
+    if args.github_pages:
+        args.html_suffix = '.html'
+    else:
+        args.html_suffix = '.htm'
+
+    rootext = os.path.splitext(args.rootarg)[1]
+    if rootext:
+        args.rootname = os.path.basename(args.rootarg)
+    else:
+        args.rootname = 'index' + args.html_suffix
+
     if args.sourcedir:
         args.sourcedir = os.path.abspath(args.sourcedir)
         if os.path.splitdrive(args.sourcedir)[0]:
@@ -1690,22 +1747,6 @@ def setup_part2(args):
     else:
         if args.gallery and args.update is None:
             error('Directory not found', 'Use --sourcedir')
-
-    if args.update:
-        args.sourcedir = args.source.sourcedir
-        args.bydir = args.source.bydir
-        args.bydate = args.source.bydate
-        args.diary = args.source.diary
-        args.recursive = args.source.recursive
-        args.dates = args.source.dates
-    elif args.gallery:
-        args.source.sourcedir = args.sourcedir
-        args.source.bydir = args.bydir
-        args.source.bydate = args.bydate
-        args.source.diary = args.diary
-        args.source.recursive = args.recursive
-        args.source.dates = args.dates
-        update_config(args)
 
     if args.dest:
         args.dest = os.path.abspath(args.dest)
@@ -1724,7 +1765,12 @@ def setup_part2(args):
             except FileNotFoundError:
                 error('File not found', exe)
 
-        args.thumbdir = os.path.join(args.dest, '.thumbnails')
+        if args.github_pages:
+            args.thumbrep = 'thumbnails'
+        else:
+            args.thumbrep = '.thumbnails'
+
+        args.thumbdir = os.path.join(args.dest, args.thumbrep)
         if not os.path.exists(args.thumbdir):
             os.mkdir(args.thumbdir)
             open(os.path.join(args.thumbdir, '.nomedia'), 'a').close()
