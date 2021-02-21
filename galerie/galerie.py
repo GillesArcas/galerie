@@ -296,9 +296,6 @@ class PostItem:
         self.descr = descr
         self.resized_url = None
 
-    def __lt__(self, other):
-        return self.uri < other.uri
-
 
 class PostImage(PostItem):
     def to_markdown(self):
@@ -1534,12 +1531,12 @@ def update_config(args):
     # update only entries which can be modified from the command line (source section)
     updates = (
         ('sourcedir', args.sourcedir),
-        ('bydir', args.bydir),
-        ('bydate', args.bydate),
-        ('diary', args.diary),
-        ('recursive', args.recursive),
+        ('bydir', BOOL[args.bydir]),
+        ('bydate', BOOL[args.bydate]),
+        ('diary', BOOL[args.diary]),
+        ('recursive', BOOL[args.recursive]),
         ('dates', args.dates),
-        ('github_pages', args.github_pages),
+        ('github_pages', BOOL[args.github_pages]),
     )
 
     # manual update to keep comments
@@ -1599,7 +1596,7 @@ def error(*msg):
 # -- Main ---------------------------------------------------------------------
 
 
-BOOL = ('true', 'false')
+BOOL = ('false', 'true')
 
 
 def parse_command_line(argstring):
