@@ -474,10 +474,10 @@ def compose_html_full(args, posts, title, target):
 
     html.append('<script>')
     for post in posts:
-        if sorted(post.medias):
+        if post.medias:
             gallery_id = f'gallery-blog-{post.date}-{post.daterank}'
             html.append(gallery_call(args, gallery_id))
-        if sorted(post.dcim):
+        if post.dcim:
             gallery_id = f'gallery-dcim-{post.date}-{post.daterank}'
             html.append(gallery_call(args, gallery_id))
     html.append('</script>')
@@ -882,7 +882,7 @@ def list_of_files(sourcedir, recursive):
     if recursive is False:
         listdir = sorted(os.listdir(sourcedir), key=str.lower)
         if '.nomedia' not in listdir:
-            for basename in os.listdir(sourcedir):
+            for basename in listdir: ## os.listdir(sourcedir):
                 result.append(os.path.join(sourcedir, basename))
     else:
         for root, dirs, files in os.walk(sourcedir):
