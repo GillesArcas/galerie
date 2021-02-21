@@ -882,7 +882,7 @@ def list_of_files(sourcedir, recursive):
     if recursive is False:
         listdir = sorted(os.listdir(sourcedir), key=str.lower)
         if '.nomedia' not in listdir:
-            for basename in listdir: ## os.listdir(sourcedir):
+            for basename in listdir:
                 result.append(os.path.join(sourcedir, basename))
     else:
         for root, dirs, files in os.walk(sourcedir):
