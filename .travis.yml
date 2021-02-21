@@ -16,7 +16,7 @@ before_script:
 
 script:
   # - python tests/testing.py
-  - coverage run tests/testing.py
+  - coverage run tests/testing.py abort
 
 after_success:
   - coveralls
