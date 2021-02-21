@@ -296,6 +296,9 @@ class PostItem:
         self.descr = descr
         self.resized_url = None
 
+    def __lt__(self, other):
+        return self.uri < other.uri
+
 
 class PostImage(PostItem):
     def to_markdown(self):
@@ -471,10 +474,10 @@ def compose_html_full(args, posts, title, target):
 
     html.append('<script>')
     for post in posts:
-        if post.medias:
+        if sorted(post.medias):
             gallery_id = f'gallery-blog-{post.date}-{post.daterank}'
             html.append(gallery_call(args, gallery_id))
-        if post.dcim:
+        if sorted(post.dcim):
             gallery_id = f'gallery-dcim-{post.date}-{post.daterank}'
             html.append(gallery_call(args, gallery_id))
     html.append('</script>')
