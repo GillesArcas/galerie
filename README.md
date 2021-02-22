@@ -28,6 +28,8 @@ dates, each day being described by a text and some medias (photos and movies). A
 
    `pip install .`
 
+Note that  [ffmeg](https://ffmpeg.org/) must be installed and in the path.
+
 # Usage
 
 ## Making a gallery
@@ -82,6 +84,8 @@ Creation of a gallery organized by directories:
 Creation of a gallery organized by dates, limiting the dates to a given rank, and including sub-directories:
 
 `$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydate true --dates 20200701-20200731 --recursive true`
+
+[Example] (gillesarcas/github.io/galerie/bydates/index.htm)
 
 Creation of a gallery organized by dates and directories:
 

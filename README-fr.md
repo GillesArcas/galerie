@@ -27,6 +27,8 @@ https://github.com/GillesArcas/galerie/archive/master.zip
 pip install .
 ```
 
+Noter que [ffmeg](https://ffmpeg.org/) doit être installé et dans le chemin.
+
 # Utilisation
 
 ## Génération d'une galerie
