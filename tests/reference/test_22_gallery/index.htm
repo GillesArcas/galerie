@@ -1,0 +1,33 @@
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>tests</title>
+    <link rel="icon" href="favicon.ico" />
+    <meta name="viewport" content="width=device-width">
+    <link rel="stylesheet" href="photobox/photobox.css">
+    <script src="photobox/jquery.min.js"></script>
+    <script src="photobox/jquery.photobox.js"></script>
+<style type="text/css">
+    span { display:inline-table; }
+ </style>
+<style type="text/css">
+    p { margin-top:0px; margin-bottom:0px; }
+    h3 { font-size: 100%; font-weight: bold; margin-top:0px; margin-bottom:0px; }
+ </style>
+
+</head>
+
+<body>
+<p>Samedi 01 janvier 2000</p>
+<hr color="#C0C0C0" size="1" />
+<div id="gallery-dcim-20000101-1">
+<a href="../OCT_20000101_000000.jpg"><img src=".thumbnails/dcim-OCT_20000101_000000.jpg.jpg" width="300" height="199" title="OCT_20000101_000000.jpg: 20000101 000000, dim=640x424, 0.1 MB"/></a>
+</div>
+<hr color="#C0C0C0" size="1" />
+
+<script>
+$('#gallery-dcim-20000101-1').photobox('a', {loop:false,thumbs:true,autoplay:false,time:3000,zoomable:true ,rotatable:true,wheelNextPrev:true});
+</script>
+</body>
+</html>
