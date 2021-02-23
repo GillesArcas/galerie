@@ -76,8 +76,11 @@ def directory_compare(dir1, dir2):
 
 
 def testfunctions(pref_testfunctions):
-    return [(name, obj) for name, obj in inspect.getmembers(sys.modules[__name__])
-                if (inspect.isfunction(obj) and name.startswith(pref_testfunctions))]
+    """
+    return all test functions in definition order
+    """
+    return [(name, obj) for name, obj in globals().items()
+            if inspect.isfunction(obj) and name.startswith(pref_testfunctions)]
 
 
 # -- Tests --------------------------------------------------------------------
@@ -466,6 +469,7 @@ def test_13_gallery(mode):
 
 def test_gitpages(mode):
     # create gallery compatible with github pages
+    reset_tmp()
     return generic_test(
         mode,
         True,
