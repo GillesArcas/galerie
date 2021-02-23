@@ -93,12 +93,13 @@ def generic_test(mode, keeptmp, refdir, *options):
     for option in options:
         galerie.main(option)
 
+    thumbdir = '.thumbnails' if os.path.isdir('tmp/.thumbnails') else 'thumbnails'
     with open('tmp/files.txt', 'wt') as f:
-        for fn in sorted(glob.glob('tmp/*.htm')):
+        for fn in sorted(glob.glob('tmp/*.htm*')):
             print(os.path.basename(fn), file=f)
-        for fn in sorted(glob.glob('tmp/.thumbnails/*.jpg')):
+        for fn in sorted(glob.glob(f'tmp/{thumbdir}/*.jpg')):
             print(os.path.basename(fn), file=f)
-        for fn in sorted(glob.glob('tmp/.thumbnails/*.info')):
+        for fn in sorted(glob.glob(f'tmp/{thumbdir}/*.info')):
             print(os.path.basename(fn), file=f)
 
     if mode == 'ref':
@@ -106,7 +107,7 @@ def generic_test(mode, keeptmp, refdir, *options):
             shutil.rmtree(refdir)
         os.makedirs(refdir)
         shutil.copy('tmp/files.txt', refdir)
-        for fn in glob.glob('tmp/*.htm'):
+        for fn in glob.glob('tmp/*.htm*'):
             shutil.copy(fn, refdir)
     else:
         for fn in glob.glob(os.path.join(refdir, '*.*')):
@@ -460,6 +461,16 @@ def test_13_gallery(mode):
         True,
         'test_13_gallery',
         '--gallery tmp --diary true --source subdir --dates source  --recursive true'
+    )
+
+
+def test_gitpages(mode):
+    # create gallery compatible with github pages
+    return generic_test(
+        mode,
+        True,
+        'test_gitpages',
+        '--gallery tmp --source . --bydir true --github_pages true'
     )
 
 
