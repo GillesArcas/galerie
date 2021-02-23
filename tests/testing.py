@@ -322,7 +322,16 @@ def test_07_gallery(mode):
         return exception.args[0] == galerie.errorcode('File not found')
 
 
-def test_14_gallery(mode):
+def test_sourcedir_not_given(mode):
+    # test image source not given
+    try:
+        galerie.main('--gallery tmp')
+        return False
+    except SystemExit as exception:
+        return exception.args[0] == galerie.errorcode('Directory not found')
+
+
+def test_sourcedir_not_found(mode):
     # test image source not found
     try:
         galerie.main('--gallery tmp --source foobar')
@@ -529,7 +538,7 @@ def test_create_date(mode):
 
 def test_dates_1(mode):
     try:
-        galerie.main('--gallery tmp --dates 20200230-20201231')
+        galerie.main('--gallery tmp --source . --dates 20200230-20201231')
         return False
     except SystemExit as exception:
         return exception.args[0] == galerie.errorcode('Incorrect date format')
@@ -537,7 +546,7 @@ def test_dates_1(mode):
 
 def test_dates_2(mode):
     try:
-        galerie.main('--gallery tmp --dates foobar')
+        galerie.main('--gallery tmp --source . --dates foobar')
         return False
     except SystemExit as exception:
         return exception.args[0] == galerie.errorcode('Incorrect date format')

@@ -43,6 +43,7 @@ galerie --gallery <root-dir> [--sourcedir <media-dir>]
                              [--diary true|false*]
                              [--recursive true|false*]
                              [--dates source*|diary|<yyyymmdd-yyyymmdd>]
+                             [--github_pages true|false]
                              [--dest <directory>]
                              [--forcethumb]
 galerie --gallery <root-dir> [--update]
@@ -1745,7 +1746,7 @@ def setup_part2(args):
         if not os.path.isdir(args.sourcedir):
             error('Directory not found', args.sourcedir)
     else:
-        if args.gallery and args.update is None:
+        if args.gallery and args.diary is False and args.update is False:
             error('Directory not found', 'Use --sourcedir')
 
     if args.dest:
