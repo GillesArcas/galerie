@@ -27,7 +27,7 @@ https://github.com/GillesArcas/galerie/archive/master.zip
 pip install .
 ```
 
-Noter que [ffmeg](https://ffmpeg.org/) doit être installé et dans le chemin.
+Noter que [ffmeg](https://ffmpeg.org/) doit être installé et dans le chemin.
 
 # Utilisation
 
@@ -72,6 +72,8 @@ Les options `--bydir` et `--bydate` peuvent être combinées. Deux options suppl
 * l'option `--dates` qui limite les médias utilisés dans une galerie à une sélection de dates,
 * l'option `--recursive` qui indique si il faut considérer les sous-répertoires du répertoires source.
 
+L'option `--github_pages` permet de générer une galerie compatible avec l'hébergement github Pages.
+
 Finalement, une fois la galerie créée, il suffit d'utiliser l'option `--update` pour mettre à jour une galerie avec les options qui ont permis de la créer.
 
 ## Quelques exemples
@@ -92,9 +94,11 @@ Mise à jour d'une galerie en utilisant les options qui ont permis de la créer 
 
 `$ galerie --gallery /foo/mygallery --update`
 
+Des exemples de galeries créées à partir des données utilisées pour les tests d'intégration continue sont données [ici](file:///D:/Gilles/github.io/galerie/examples.html).
+
 ## Description complète des options de création de galeries
 
-L'option `--gallery` permet de créer et mettre à jour une galerie. La galerie est définie par les options `--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates` et `--recursive`. L'option `--update` permet de remplacer les six options précédentes.
+L'option `--gallery` permet de créer et mettre à jour une galerie. La galerie est définie par les options `--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates`, `--recursive` et `--github_pages`. L'option `--update` permet de remplacer les sept options précédentes.
 
 `--gallery <chemin de répertoire>`
 
@@ -124,9 +128,13 @@ spécifie les dates à considérer pour ajouter les médias d'un répertoire sou
 
 Quand on crée une galerie à partir d'in fichier journal et d'un répertoire de médias, il est peur être envisagé d'utiliser également les médias contenus dans les sous-répertoires. Ceci se fait en donnant la valeur `true` à l'option `--recursive`.
 
-`--update`
+`--github_pages true|false` (défaut `false`)
 
-met à jour la galerie en utilisant les valeurs des options `--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates` et `--recursive` utilisées pour sa création.
+permet de générer une galerie compatible avec github Pages.
+
+  `--update`
+
+met à jour la galerie en utilisant les valeurs des options `--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates`, `--recursive`  et `--github_pages` utilisées pour sa création.
 
 `--dest <chemin de répertoire>`
 
@@ -207,7 +215,7 @@ Un séparateur d'enregistrement est une barre de séparation de trois caractère
 
 Un fichier de configuration permet de configurer certaines propriétés d'une galerie. Ce fichier se nomme `.config.ini` et se situe dans le répertoire racine de la galerie. Ce fichier est organisé en trois sections :
 
-- la section `[source]` qui reprend les options de création données en ligne de commande (`--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates` et `--recursive`). Cette section contient les valeurs utilisées quand on utilise l'option `--update`.
+- la section `[source]` qui reprend les options de création données en ligne de commande (`--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates`, `--recursive` et `--github_pages`). Cette section contient les valeurs utilisées quand on utilise l'option `--update`.
 
   **Note** : Les valeurs des paramètres de configuration de la section `[source]` ne sont utilisés qu'avec l'option `--update`. Ils ne viennent pas en défaut d'un paramètre absent si `--update` n'est pas utilisé.
 
