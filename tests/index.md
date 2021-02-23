@@ -38,7 +38,7 @@ enregistrement avec la même date sera associé aux médias de cette date.
 ______
 [2000/01/07]
 
-Plusieurs images et une vidéo.
+Plusieurs images et deux vidéos.
 
 ![](OCT_20000107_000000.jpg)
 Une pieuvre
