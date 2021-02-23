@@ -1371,7 +1371,7 @@ diary = false
 recursive = false
 
 ; interval of dates to include
-; value: yyyymmdd-yyyymmdd or empty
+; value: source|diary|yyyymmdd-yyyymmdd or empty (= source)
 dates =
 
 ; github Pages compatibility (.htlml extension and no dot in directory names)
