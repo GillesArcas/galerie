@@ -495,14 +495,21 @@ def print_html_to_stream(args, posts, title, stream, target):
 
 def print_html(args, posts, title, html_name, target='regular'):
     assert target in ('regular', 'blogger')
+    with io.StringIO() as f:
+        print_html_to_stream(args, posts, title, f, target)
+        html = f.getvalue()
+
     if html_name:
+        if os.path.exists(html_name):
+            with open(html_name, 'rt', encoding='utf-8') as f:
+                html0 = f.read()
+            if html == html0:
+                return None
         with open(html_name, 'wt', encoding='utf-8') as f:
-            print_html_to_stream(args, posts, title, f, target)
-            return None
+            f.write(html)
+        return None
     else:
-        with io.StringIO() as f:
-            print_html_to_stream(args, posts, title, f, target)
-            return f.getvalue()
+        return html
 
 
 GALLERYCALL = """
@@ -774,6 +781,21 @@ def create_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir):
         img2 = img2.resize((w, h), Image.LANCZOS)
         img2 = img2.crop(cropdim)
         img.paste(img2, (offsetx[col], offsety[row]))
+
+    if os.path.exists(thumb_name):
+        # test if the generated thumbnail to the one already on disk
+        imgref = Image.open(thumb_name)
+
+        # must save and reload before comparing
+        byteio = io.BytesIO()
+        img.save(byteio, "JPEG")
+        byteio.seek(0)
+        imgnew = Image.open(byteio)
+
+        diff = ImageChops.difference(imgnew, imgref)
+        if diff.getbbox() is None:
+            return
+
     img.save(thumb_name)
 
 
@@ -1245,6 +1267,9 @@ def online_images_url(args):
 
 
 def compare_image_buffers(imgbuf1, imgbuf2):
+    """
+    return True if images read on file are identical, False otherwise
+    """
     with io.BytesIO(imgbuf1) as imgio1, io.BytesIO(imgbuf2) as imgio2:
         img1 = Image.open(imgio1)
         img2 = Image.open(imgio2)
