@@ -87,8 +87,6 @@ Creation of a gallery organized by dates, limiting the dates to a given rank, an
 
 `$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydate true --dates 20200701-20200731 --recursive true`
 
-[Example] (gillesarcas/github.io/galerie/bydates/index.htm)
-
 Creation of a gallery organized by dates and directories:
 
 `$ galerie --gallery /foo/mygallery --sourcedir /bar/mypictures --bydate true --bydir true`
@@ -97,7 +95,7 @@ Update of gallery with the creation options:
 
 `$ galerie --update/foo/mygallery`
 
-Some exemples of galeries created with the test data used for continuous integration are given [here](file:///D:/Gilles/github.io/galerie/examples.html).
+Some exemples of galeries created with the test data used for continuous integration are given [here](https://gillesarcas.github.io/galerie/examples.html).
 
 ## Complete description of gallery creation options
 

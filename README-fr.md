@@ -94,7 +94,7 @@ Mise à jour d'une galerie en utilisant les options qui ont permis de la créer 
 
 `$ galerie --update /foo/mygallery`
 
-Des exemples de galeries créées à partir des données utilisées pour les tests d'intégration continue sont données [ici](file:///D:/Gilles/github.io/galerie/examples.html).
+Des exemples de galeries créées à partir des données utilisées pour les tests d'intégration continue sont données [ici](https://gillesarcas.github.io/galerie/examples.html).
 
 ## Description complète des options de création de galeries
 
