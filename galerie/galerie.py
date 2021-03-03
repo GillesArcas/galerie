@@ -46,7 +46,7 @@ galerie --gallery <root-dir> [--sourcedir <media-dir>]
                              [--github_pages true|false]
                              [--dest <directory>]
                              [--forcethumb]
-galerie --gallery <root-dir> [--update]
+galerie --update  <root-dir>
 galerie --create  <root-dir> --sourcedir <media-dir>
                              [--recursive true|false*]
                              [--dates source*|<yyyymmdd-yyyymmdd>]
@@ -501,6 +501,7 @@ def print_html(args, posts, title, html_name, target='regular'):
 
     if html_name:
         if os.path.exists(html_name):
+            # test if the generated html is identical to the one already on disk
             with open(html_name, 'rt', encoding='utf-8') as f:
                 html0 = f.read()
             if html == html0:
@@ -783,7 +784,7 @@ def create_thumbnail_subdir(subdir_name, thumb_name, size, items, thumbdir):
         img.paste(img2, (offsetx[col], offsety[row]))
 
     if os.path.exists(thumb_name):
-        # test if the generated thumbnail to the one already on disk
+        # test if the generated thumbnail is identical to the one already on disk
         imgref = Image.open(thumb_name)
 
         # must save and reload before comparing
@@ -1632,6 +1633,8 @@ def parse_command_line(argstring):
     xgroup = agroup.add_mutually_exclusive_group()
     xgroup.add_argument('--gallery', help='source in --sourcedir',
                         action='store', metavar='<root-dir>')
+    agroup.add_argument('--update', help='updates gallery with parameters in config file',
+                        action='store', metavar='<root-dir>')
     xgroup.add_argument('--create', help='create journal from medias in --sourcedir',
                         action='store', metavar='<root-dir>')
     # testing
@@ -1661,8 +1664,6 @@ def parse_command_line(argstring):
                         action='store', default=None)
     agroup.add_argument('--github_pages', help='github Pages compatibility',
                         action='store', default=None, choices=BOOL)
-    agroup.add_argument('--update', help='updates gallery with parameters in config file',
-                        action='store_true', default=False)
     agroup.add_argument('--dest', help='output directory',
                         action='store')
     agroup.add_argument('--forcethumb', help='force calculation of thumbnails',
@@ -1680,11 +1681,10 @@ def parse_command_line(argstring):
     else:
         args = parser.parse_args(argstring.split())
 
-    if args.gallery:
-        if args.update and (args.bydir or args.bydate or args.diary or args.sourcedir or
-                            args.recursive or args.dates or args.github_pages):
-            error('Incorrect parameters:',
-                  '--update cannot be used with creation parameters, use explicit command')
+    if args.update and (args.bydir or args.bydate or args.diary or args.sourcedir or
+                        args.recursive or args.dates or args.github_pages):
+        error('Incorrect parameters:',
+              '--update cannot be used with creation parameters, use explicit command')
 
     args.bydir = args.bydir == 'true'
     args.bydate = args.bydate == 'true'
@@ -1694,7 +1694,7 @@ def parse_command_line(argstring):
     args.github_pages = args.github_pages == 'true'
 
     args.root = (
-        args.create or args.gallery
+        args.create or args.gallery or args.update
         or args.blogger or args.idem or args.resetcfg
     )
 
@@ -1771,7 +1771,7 @@ def setup_part2(args):
         if not os.path.isdir(args.sourcedir):
             error('Directory not found', args.sourcedir)
     else:
-        if args.gallery and args.diary is False and args.update is False:
+        if args.gallery and args.diary is False and args.update is None:
             error('Directory not found', 'Use --sourcedir')
 
     if args.dest:
@@ -1783,7 +1783,7 @@ def setup_part2(args):
     if args.blogger and args.urlblogger is None:
         error('No blogger url (--url)')
 
-    if args.gallery:
+    if args.gallery or args.update:
         # check for ffmpeg and ffprobe in path
         for exe in ('ffmpeg', 'ffprobe'):
             try:
@@ -1839,11 +1839,11 @@ def main(argstring=None):
     read_config(args)
     setup_part2(args)
     try:
-        if args.create:
-            create_diary(args)
-
-        elif args.gallery:
+        if args.gallery or args.update:
             create_gallery(args)
+
+        elif args.create:
+            create_diary(args)
 
         elif args.blogger:
             prepare_for_blogger(args)

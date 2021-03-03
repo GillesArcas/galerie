@@ -57,7 +57,7 @@ Après avoir ouvert le fichier index.htm dans un navigateur, une page de vignett
 
 ## Présentation
 
-Une galerie est créée (ou mise à jour) avec la commande `--gallery`. Cette commande, suivie du nom du répertoire racine de la galerie, peut nécessiter de donner le nom du répertoire source des médias avec l'option `--sourcedir`.
+Une galerie est créée avec la commande `--gallery`. Cette commande, suivie du nom du répertoire racine de la galerie, peut nécessiter de donner le nom du répertoire source des médias avec l'option `--sourcedir`.
 
 `$ galerie --gallery /foo/bar/mygallery --sourcedir /spam/egg/mypictures`
 
@@ -74,7 +74,7 @@ Les options `--bydir` et `--bydate` peuvent être combinées. Deux options suppl
 
 L'option `--github_pages` permet de générer une galerie compatible avec l'hébergement github Pages.
 
-Finalement, une fois la galerie créée, il suffit d'utiliser l'option `--update` pour mettre à jour une galerie avec les options qui ont permis de la créer.
+Finalement, une fois la galerie créée, il suffit d'utiliser la commande `--update` pour mettre à jour une galerie avec les options qui ont permis de la créer.
 
 ## Quelques exemples
 
@@ -92,13 +92,13 @@ Création d'une galerie organisée par dates et sous-répertoires :
 
 Mise à jour d'une galerie en utilisant les options qui ont permis de la créer :
 
-`$ galerie --gallery /foo/mygallery --update`
+`$ galerie --update /foo/mygallery`
 
 Des exemples de galeries créées à partir des données utilisées pour les tests d'intégration continue sont données [ici](file:///D:/Gilles/github.io/galerie/examples.html).
 
 ## Description complète des options de création de galeries
 
-L'option `--gallery` permet de créer et mettre à jour une galerie. La galerie est définie par les options `--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates`, `--recursive` et `--github_pages`. L'option `--update` permet de remplacer les sept options précédentes.
+L'option `--gallery` permet de créer et mettre à jour une galerie. La galerie est définie par les options `--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates`, `--recursive` et `--github_pages`. La commande `--update` permet de remplacer les sept options précédentes.
 
 `--gallery <chemin de répertoire>`
 
@@ -131,10 +131,6 @@ Quand on crée une galerie à partir d'in fichier journal et d'un répertoire de
 `--github_pages true|false` (défaut `false`)
 
 permet de générer une galerie compatible avec github Pages.
-
-  `--update`
-
-met à jour la galerie en utilisant les valeurs des options `--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates`, `--recursive`  et `--github_pages` utilisées pour sa création.
 
 `--dest <chemin de répertoire>`
 
@@ -215,9 +211,9 @@ Un séparateur d'enregistrement est une barre de séparation de trois caractère
 
 Un fichier de configuration permet de configurer certaines propriétés d'une galerie. Ce fichier se nomme `.config.ini` et se situe dans le répertoire racine de la galerie. Ce fichier est organisé en trois sections :
 
-- la section `[source]` qui reprend les options de création données en ligne de commande (`--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates`, `--recursive` et `--github_pages`). Cette section contient les valeurs utilisées quand on utilise l'option `--update`.
+- la section `[source]` qui reprend les options de création données en ligne de commande (`--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates`, `--recursive` et `--github_pages`). Cette section contient les valeurs utilisées quand on utilise la commande `--update`.
 
-  **Note** : Les valeurs des paramètres de configuration de la section `[source]` ne sont utilisés qu'avec l'option `--update`. Ils ne viennent pas en défaut d'un paramètre absent si `--update` n'est pas utilisé.
+  **Note** : Les valeurs des paramètres de configuration de la section `[source]` ne sont utilisés qu'avec la commande `--update`. Ils ne viennent pas en défaut d'un paramètre absent si `--update` n'est pas utilisé.
 
 - la section `[thumbnails]` qui permet de spécifier quelques paramètres d'affichage et de création des vignettes (affichage des méta-données, affichage des noms de répertoire, instant de capture des vignettes pour les vidéos, nombre maximum de vignettes à supprimer sans confirmation de l'utilisateur),
 

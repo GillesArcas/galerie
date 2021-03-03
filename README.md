@@ -58,7 +58,7 @@ Wen browsing the gallery, a page of thumbnails is displayed. When clicking on a 
 
 ## Presentation
 
-A gallery is created (or updated)  with the `--gallery` command. This command, followed by the name of the root directory of the gallery, requires to give the name of the media directory with the option `--sourcedir`.
+A gallery is created with the `--gallery` command. This command, followed by the name of the root directory of the gallery, requires to give the name of the media directory with the option `--sourcedir`.
 
 `$ galerie --gallery /foo/bar/mygallery --sourcedir /spam/egg/mypictures`
 
@@ -75,7 +75,7 @@ The options `--bydir` and `--bydate` can be combined. Two additional options ena
 
 The option `--github_pages` enables to create a gallery compatible with github Pages.
 
-Finally, after creating a gallery, it is sufficient to use the `--update` option to update a gallery with the options given to specify it.
+Finally, after creating a gallery, it is sufficient to use the `--update` command to update a gallery with the options given to specify it.
 
 ## Some examples
 
@@ -95,13 +95,13 @@ Creation of a gallery organized by dates and directories:
 
 Update of gallery with the creation options:
 
-`$ galerie --gallery /foo/mygallery --update`
+`$ galerie --update/foo/mygallery`
 
 Some exemples of galeries created with the test data used for continuous integration are given [here](file:///D:/Gilles/github.io/galerie/examples.html).
 
 ## Complete description of gallery creation options
 
-The option `--gallery` enables to create and update galleries. A gallery is defined by the options `--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates`, `--recursive` and `--github_pages`. The option `--update` enables to replace the seven  previous options.
+The option `--gallery` enables to create galleries. A gallery is defined by the options `--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates`, `--recursive` and `--github_pages`. The `--update` command enables to replace the seven  previous options.
 
 `--gallery <directory path>`
 
@@ -134,10 +134,6 @@ When creating a gallery from a diary and a media directory, it may be required t
 `--github_pages true|false` (default `false`)
 
 enables to generate a gallery compatible with github Pages.
-
-`--update`
-
-updates the gallery using the values of options `--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates`, `--recursive` and `--github_pages` used for its creation.
 
 `--dest <directory path>`
 
@@ -220,7 +216,7 @@ A configuration file enable to set some properties of the gallery. This file is 
 
 * the `[source]` section which memorizes the creation options given in the command line (`--sourcedir`, `--bydir`, `--bydate`, `--diary`, `--dates`, `--recursive` and `--github_pages`) . These values are used when using `--update`.
 
-  **Note**:  The values of the `[source]` section are used only when using the `--update` option. They are not used as default of a missing parameter if `--update` is not used.
+  **Note**:  The values of the `[source]` section are used only when using the `--update` command. They are not used as default of a missing parameter if `--update` is not used.
 
 * the `[thumbnails]` section which enables to specify some thumbnails display or creation parameters (display of meta-data, display of directory names, time offset of video thumbnails, maximum number of thumbnails to remove without user confirmation).
 

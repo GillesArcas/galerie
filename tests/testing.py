@@ -241,7 +241,7 @@ def test_16_gallery(mode):
             mode,
             True,
             'test_16_gallery',
-            '--gallery tmp --update'
+            '--update tmp'
             )
     finally:
         os.rename('TOC_20000101_000000.jpg', 'OCT_20000101_000000.jpg')
@@ -251,7 +251,7 @@ def test_update_incorrect_parameter(mode):
     # test --update with incorrect parameter
     reset_tmp()
     try:
-        galerie.main('--gallery tmp --update --bydir true')
+        galerie.main('--update tmp --bydir true')
         return False
     except SystemExit as exception:
         return exception.args[0] == galerie.errorcode('Incorrect parameters:')
