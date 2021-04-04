@@ -895,20 +895,34 @@ def is_media_within_dates(fullname, dates):
         return False
 
 
+def sorted_listdir(filelist):
+    like_windows_explorer = True
+
+    if like_windows_explorer:
+        maxlen = max(len(os.path.splitext(name)[0]) for name in filelist)
+        def keyfunc(name):
+            root, ext = os.path.splitext(name.lower())
+            return root.ljust(maxlen, ' ') + ext
+    else:
+        keyfunc = str.lower
+
+    return sorted(filelist, key=keyfunc)
+
+
 def list_of_files(sourcedir, recursive):
     """
     Return the list of full paths for files in source directory
     """
     result = list()
     if recursive is False:
-        listdir = sorted(os.listdir(sourcedir), key=str.lower)
+        listdir = sorted_listdir(os.listdir(sourcedir))
         if '.nomedia' not in listdir:
             for basename in listdir:
                 result.append(os.path.join(sourcedir, basename))
     else:
         for root, dirs, files in os.walk(sourcedir):
             if '.nomedia' not in files:
-                for basename in sorted(files, key=str.lower):
+                for basename in sorted_listdir(files):
                     result.append(os.path.join(root, basename))
     return result
 
@@ -927,7 +941,7 @@ def list_of_medias_ext(args, sourcedir):
     plus subdirectories containing media
     """
     result = list()
-    listdir = sorted(os.listdir(sourcedir), key=str.lower)
+    listdir = sorted_listdir(os.listdir(sourcedir))
     if '.nomedia' not in listdir:
         for basename in listdir:
             fullname = os.path.join(sourcedir, basename)
