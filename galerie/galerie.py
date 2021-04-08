@@ -898,6 +898,9 @@ def is_media_within_dates(fullname, dates):
 def sorted_listdir(filelist):
     like_windows_explorer = True
 
+    if not filelist:
+        return filelist
+
     if like_windows_explorer:
         maxlen = max(len(os.path.splitext(name)[0]) for name in filelist)
         def keyfunc(name):
