@@ -9,6 +9,12 @@ The diary file can be exported to:
 * an html file ready to import into Blogger.
 """
 
+# TODO: galerie tout seul ne devrait pas planter
+# TODO: purge html en cours
+# TODO: purge html seuil html à supprimer
+# TODO: purge html gestion extension html/html
+# TODO: purge html jeu de test
+
 import sys
 import os
 import argparse
@@ -837,6 +843,23 @@ def mosaic_geometry(size, thumblist):
     return widthnum, heightnum, width, height, offsetx, offsety
 
 
+def list_of_htmlfiles(args, posts):
+    htmlist = list()
+    htmlist.append(os.path.join(args.dest, args.rootname))
+    for post in posts:
+        htmlist.extend(list_of_htmlfiles_in_items(post.dcim))
+    return htmlist
+
+
+def list_of_htmlfiles_in_items(itemlist):
+    htmlist = list()
+    for item in itemlist:
+        if type(item) == PostSubdir:
+            htmlist.append(item.htmname)
+            htmlist.extend(list_of_htmlfiles_in_items(item.sublist))
+    return htmlist
+
+
 def list_of_thumbnails(posts, diary=False):
     thumblist = list()
     for post in posts:
@@ -857,9 +880,31 @@ def list_of_thumbnails_in_items(itemlist):
     return thumblist
 
 
+def purge_htmlfiles(args, posts):
+    """
+    Purge root dir from irrelevant html files
+    """
+    htmlist = list_of_htmlfiles(args, posts)
+    html_to_remove = list()
+    for fullname in glob.glob(os.path.join(args.root, '*.htm')):
+        if fullname not in htmlist:
+            html_to_remove.append(fullname)
+
+    if len(html_to_remove) > 3 * 0*int('MAGIC_TO_REMOVE', 36):
+        inpt = 'x'
+        while inpt not in 'yn':
+            inpt = input(f'{len(html_to_remove)} html files to remove. Continue [y|n]? ').lower()
+        if inpt == 'n':
+            return
+
+    for name in html_to_remove:
+        print('Removing html files', name)
+        os.remove(name)
+
+
 def purge_thumbnails(args, thumbdir, posts, diary=False):
     """
-    Purge thumbnail dir from irrelevant thumbnails (e.g. after renaming images)
+    Purge thumbnail dir from irrelevant thumbnails
     """
     thumblist = list_of_thumbnails(posts, diary)
     thumbs_to_remove = list()
@@ -1219,6 +1264,7 @@ def make_posts_from_subdir_and_date(args, dirname):
 def create_gallery(args):
     title, posts = make_posts(args, args.sourcedir)
     print_html(args, posts, title, os.path.join(args.dest, args.rootname), 'regular')
+    purge_htmlfiles(args, posts)
     if args.diary and not args.sourcedir:
         purge_thumbnails(args, args.thumbdir, posts, diary=True)
     else:
