@@ -1897,6 +1897,7 @@ def setup_part2(args):
 
 
 def main(argstring=None):
+    locale.setlocale(locale.LC_TIME, '')
     colorama.init()
     args = parse_command_line(argstring)
     setup_part1(args)
@@ -1923,5 +1924,4 @@ def main(argstring=None):
 
 
 if __name__ == '__main__':
-    locale.setlocale(locale.LC_TIME, '')
     main()
