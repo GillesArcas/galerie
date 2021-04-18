@@ -257,19 +257,19 @@ def test_update_incorrect_parameter(mode):
         return exception.args[0] == galerie.errorcode('Incorrect parameters:')
 
 
-def test_21_gallery(mode):
+def test_purge_thumb_1(mode):
     # test thumbnail purge below threshold
     reset_tmp()
     galerie.main('--gallery tmp --source . --bydate true --dates source')
     return generic_test(
         mode,
         True,
-        'test_21_gallery',
+        'test_purge_thumb_1',
         '--gallery tmp --source . --bydate true --dates 20000101-20000107'
         )
 
 
-def test_22_gallery(mode):
+def test_purge_thumb_2(mode):
     # test thumbnail purge above threshold and accept removing
     reset_tmp()
     galerie.main('--gallery tmp --source . --bydate true --dates source')
@@ -279,14 +279,14 @@ def test_22_gallery(mode):
         return generic_test(
             mode,
             True,
-            'test_22_gallery',
+            'test_purge_thumb_2',
             '--gallery tmp --source . --bydate true --dates 20000101-20000102'
             )
     finally:
         sys.stdin = stdin
 
 
-def test_23_gallery(mode):
+def test_purge_thumb_3(mode):
     # test thumbnail purge above threshold and deny removing
     reset_tmp()
     galerie.main('--gallery tmp --source . --bydate true --dates source')
@@ -296,8 +296,25 @@ def test_23_gallery(mode):
         return generic_test(
             mode,
             True,
-            'test_23_gallery',
+            'test_purge_thumb_3',
             '--gallery tmp --source . --bydate true --dates 20000101-20000102'
+            )
+    finally:
+        sys.stdin = stdin
+
+
+def test_purge_html(mode):
+    # test html purge (accept thumb purge and html purge above thresholds)
+    reset_tmp()
+    galerie.main('--gallery tmp --source . --bydir true')
+    try:
+        stdin = sys.stdin
+        sys.stdin = io.StringIO('x\ny\ny')
+        return generic_test(
+            mode,
+            True,
+            'test_purge_html',
+            '--gallery tmp --source . --bydir false'
             )
     finally:
         sys.stdin = stdin

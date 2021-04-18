@@ -11,9 +11,7 @@ The diary file can be exported to:
 
 # TODO: galerie tout seul ne devrait pas planter
 # TODO: purge html en cours
-# TODO: purge html seuil html à supprimer
 # TODO: purge html gestion extension html/html
-# TODO: purge html jeu de test
 
 import sys
 import os
@@ -890,7 +888,7 @@ def purge_htmlfiles(args, posts):
         if fullname not in htmlist:
             html_to_remove.append(fullname)
 
-    if len(html_to_remove) > 3 * 0*int('MAGIC_TO_REMOVE', 36):
+    if len(html_to_remove) > args.thumbnails.threshold_htmlfiles:
         inpt = 'x'
         while inpt not in 'yn':
             inpt = input(f'{len(html_to_remove)} html files to remove. Continue [y|n]? ').lower()
@@ -1526,9 +1524,12 @@ class MyConfigParser (ConfigParser):
     def error(self, section, entry):
         error('Missing or incorrect config value:', '[%s]%s' % (section, entry))
 
-    def getint(self, section, entry):
+    def getint(self, section, entry, default=None):
         try:
-            return ConfigParser.getint(self, section, entry)
+            if default is None:
+                return ConfigParser.getint(self, section, entry)
+            else:
+                return ConfigParser.getint(self, section, entry, raw=True, vars=None, fallback=default)
         except Exception as e:
             print(e)
             self.error(section, entry)
@@ -1593,6 +1594,7 @@ def getconfig(options, config_filename):
     options.thumbnails.subdir_caption = config.getboolean('thumbnails', 'subdir_caption')
     options.thumbnails.thumbdelay = config.getint('thumbnails', 'thumbdelay')
     options.thumbnails.threshold_thumbs = config.getint('thumbnails', 'threshold_thumbs')
+    options.thumbnails.threshold_htmlfiles = config.getint('thumbnails', 'threshold_htmlfiles', default=3)
 
     # [photobox]
     options.photobox.loop = config.getboolean('photobox', 'loop')
