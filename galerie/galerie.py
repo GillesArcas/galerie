@@ -10,8 +10,7 @@ The diary file can be exported to:
 """
 
 # TODO: galerie tout seul ne devrait pas planter
-# TODO: purge html en cours
-# TODO: purge html gestion extension html/html
+
 
 import sys
 import os
@@ -884,7 +883,7 @@ def purge_htmlfiles(args, posts):
     """
     htmlist = list_of_htmlfiles(args, posts)
     html_to_remove = list()
-    for fullname in glob.glob(os.path.join(args.root, '*.htm')):
+    for fullname in glob.glob(os.path.join(args.root, '*.htm*')):
         if fullname not in htmlist:
             html_to_remove.append(fullname)
 
