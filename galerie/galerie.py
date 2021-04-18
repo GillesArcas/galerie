@@ -9,8 +9,6 @@ The diary file can be exported to:
 * an html file ready to import into Blogger.
 """
 
-# TODO: galerie tout seul ne devrait pas planter
-
 
 import sys
 import os
@@ -1741,7 +1739,8 @@ def parse_command_line(argstring):
                         action='store')
 
     if argstring is None:
-        args = parser.parse_args()
+       print('Type "galerie -h" for help')
+       sys.exit(1)
     else:
         args = parser.parse_args(argstring.split())
 
@@ -1923,4 +1922,4 @@ def main(argstring=None):
 
 
 if __name__ == '__main__':
-    main()
+    main(' '.join(sys.argv[1:]))
