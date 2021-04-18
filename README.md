@@ -24,7 +24,7 @@ dates, each day being described by a text and some medias (photos and movies). A
 
 2. Unzip in some directory.
 
-3. Open a console window in this directory and launch he following command:
+3. Open a console window in this directory and launch the following command:
 
    `pip install .`
 
