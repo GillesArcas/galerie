@@ -1738,8 +1738,8 @@ def parse_command_line(argstring):
     agroup.add_argument('--url', dest='urlblogger', help='blogger post url',
                         action='store')
 
-    if argstring is None:
-       print('Type "galerie -h" for help')
+    if not argstring:
+       parser.print_help()
        sys.exit(1)
     else:
         args = parser.parse_args(argstring.split())
@@ -1877,7 +1877,7 @@ def setup_part2(args):
     if args.dates:
         if not(args.gallery or args.create):
             # silently ignored for the moment, otherwise all other commands will
-            # launch a wanrning or an error on the default --dates value
+            # launch a warning or an error on the default --dates value
             pass
 
         if args.dates == 'source':
@@ -1896,6 +1896,7 @@ def setup_part2(args):
 
 
 def main(argstring=None):
+    locale.setlocale(locale.LC_ALL, '')
     colorama.init()
     args = parse_command_line(argstring)
     setup_part1(args)
@@ -1919,6 +1920,10 @@ def main(argstring=None):
 
     except KeyboardInterrupt:
         warning('Interrupted by user.')
+
+
+def main_entry_point():
+    main(' '.join(sys.argv[1:]))
 
 
 if __name__ == '__main__':

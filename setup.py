@@ -20,7 +20,7 @@ setup(
     author = 'Gilles Arcas',
     author_email = 'gilles.arcas@gmail.com',
     entry_points = {
-        'console_scripts': ['galerie=galerie.galerie:main'],
+        'console_scripts': ['galerie=galerie.galerie:main_entry_point'],
     },
     zip_safe=False,
     include_package_data=True,
