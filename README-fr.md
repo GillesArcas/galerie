@@ -1,6 +1,6 @@
 # galerie
 
-# ![python-3.8|3.9](https://img.shields.io/badge/python-3.8%20|%203.9-blue) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Build Status](https://travis-ci.org/GillesArcas/galerie.svg?branch=master)](https://travis-ci.org/GillesArcas/galerie) [![Coverage Status](https://coveralls.io/repos/github/GillesArcas/galerie/badge.svg?branch=master)](https://coveralls.io/github/GillesArcas/galerie?branch=master)
+# ![python-3.8|3.9](https://img.shields.io/badge/python-3.8%20|%203.9-blue) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Build Status](https://travis-ci.com/GillesArcas/galerie.svg?branch=master)](https://travis-ci.org/GillesArcas/galerie) [![Coverage Status](https://coveralls.io/repos/github/GillesArcas/galerie/badge.svg?branch=master)](https://coveralls.io/github/GillesArcas/galerie?branch=master)
 
 # Description
 
@@ -164,7 +164,7 @@ Le nom d'un fichier journal doit être `index.md` et il doit être situé dans l
 
 ### Structure d'un fichier journal
 
-La première ligne d'un fichier journal est considérée comme son titre si elle commence par un caractère dièse "#". Un fichier journal est ensuite constitué d'enregistrements. 
+La première ligne d'un fichier journal est considérée comme son titre si elle commence par un caractère dièse "#". Un fichier journal est ensuite constitué d'enregistrements.
 
 ### Structure d'enregistrement
 
@@ -195,7 +195,7 @@ Deux types de média sont pris en compte : les images et les vidéos. Les images
 
  `![](une_image.jpg)`
 
- Les vidéos (au format MP4) sont spécifiées avec la syntaxe des liens Markdonwn : 
+ Les vidéos (au format MP4) sont spécifiées avec la syntaxe des liens Markdonwn :
 
 `[](une_video.mp4)`
 

@@ -1,6 +1,6 @@
 # galerie
 
-# ![python-3.8|3.9](https://img.shields.io/badge/python-3.8%20|%203.9-blue) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Build Status](https://travis-ci.org/GillesArcas/galerie.svg?branch=master)](https://travis-ci.org/GillesArcas/galerie) [![Coverage Status](https://coveralls.io/repos/github/GillesArcas/galerie/badge.svg?branch=master)](https://coveralls.io/github/GillesArcas/galerie?branch=master)
+# ![python-3.8|3.9](https://img.shields.io/badge/python-3.8%20|%203.9-blue) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Build Status](https://travis-ci.com/GillesArcas/galerie.svg?branch=master)](https://travis-ci.org/GillesArcas/galerie) [![Coverage Status](https://coveralls.io/repos/github/GillesArcas/galerie/badge.svg?branch=master)](https://coveralls.io/github/GillesArcas/galerie?branch=master)
 
 # Description
 
@@ -66,7 +66,7 @@ There are three ways to organize the medias from a source directory:
 
 * it is possible to copy the sub-directory structure by creating a web page for each sub-directory with the option `--bydir`,
 * it is possible to organize the medias by dates, by creating a section for each date with the command `--bydate`,
-* it is possible to include the content of a diary file with the `--diary` option. A diary file is a text file with a very simple syntax (Markdown) organized by dates, associating to each date some text and medias. A page can be extended by adding also the medias from some directory. 
+* it is possible to include the content of a diary file with the `--diary` option. A diary file is a text file with a very simple syntax (Markdown) organized by dates, associating to each date some text and medias. A page can be extended by adding also the medias from some directory.
 
 The options `--bydir` and `--bydate` can be combined. Two additional options enable to give more information about the data used with the options `--bydir`, `--bydate`  et `--diary`:
 
@@ -107,7 +107,7 @@ specifies the root directory of the gallery. All the files created for the galle
 
 `--sourcedir <directory path>`
 
-specifies the directory where to find the medias to include in the gallery. This option is not mandatory when using the `--diary` option. In this case, it is possible to include only the medias specified in the diary file. 
+specifies the directory where to find the medias to include in the gallery. This option is not mandatory when using the `--diary` option. In this case, it is possible to include only the medias specified in the diary file.
 
 `--bydir true|false` (default `false`)
 
@@ -155,7 +155,7 @@ exports the diary file in a format ready for Blogger. The url must linked to a p
 
 `--resetcfg`
 
-resets the configuration file to the factory content. 
+resets the configuration file to the factory content.
 
 # Format of a diary file
 
@@ -174,7 +174,7 @@ A record is made of:
 * a mandatory date field,
 * a text field,
 * a media field,
-* a record separator. 
+* a record separator.
 
 ## Date field
 
