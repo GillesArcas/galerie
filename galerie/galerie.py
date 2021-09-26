@@ -1896,7 +1896,6 @@ def setup_part2(args):
 
 
 def main(argstring=None):
-    locale.setlocale(locale.LC_ALL, '')
     colorama.init()
     args = parse_command_line(argstring)
     setup_part1(args)
@@ -1923,8 +1922,10 @@ def main(argstring=None):
 
 
 def main_entry_point():
+    locale.setlocale(locale.LC_ALL, '')
     main(' '.join(sys.argv[1:]))
 
 
 if __name__ == '__main__':
+    locale.setlocale(locale.LC_ALL, '')
     main(' '.join(sys.argv[1:]))
