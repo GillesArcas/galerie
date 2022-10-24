@@ -97,11 +97,18 @@ START = f'''\
 <body>\
 '''
 
-BUTTONS = '''\
+BUTTONS_FULL = '''\
 <button id="btn_full" type="button" style="position: fixed; width: 50px; top: 20px; right: 20px; background-color:white">Full</button>
 <button id="btn_blog" type="button" style="position: fixed; width: 50px; top: 40px; right: 20px; background-color:white">Diary</button>
 <button id="btn_text" type="button" style="position: fixed; width: 50px; top: 60px; right: 20px; background-color:white">Text</button>
+'''
 
+BUTTONS_DIARY = '''\
+<button id="btn_full" type="button" style="position: fixed; width: 50px; top: 20px; right: 20px; background-color:white">Full</button>
+<button id="btn_text" type="button" style="position: fixed; width: 50px; top: 40px; right: 20px; background-color:white">Text</button>
+'''
+
+BUTTONS_SCRIPTS = '''\
 <script>
 $('#btn_full').click(function() {
     $("[id^=gallery-blog]").show();
@@ -464,7 +471,13 @@ def compose_html_full(args, posts, title, target):
     html.append(START % title)
 
     if args.diary:
-        html.append(BUTTONS)
+        if args.sourcedir:
+            html.append(BUTTONS_FULL)
+            html.append(BUTTONS_SCRIPTS)
+        # not necessary
+        # else:
+            # html.append(BUTTONS_DIARY)
+            # html.append(BUTTONS_SCRIPTS)
 
     for post in posts:
         for line in post.to_html(args, target):
@@ -1421,7 +1434,7 @@ def prepare_for_blogger(args):
 
 def idempotence(args):
     """
-    For testing identity between a diary file and the fle obtained after reading
+    For testing identity between a diary file and the file obtained after reading
     and printing it. See testing.
     """
     title, posts = parse_markdown(os.path.join(args.root, 'index.md'))
