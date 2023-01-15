@@ -32,7 +32,7 @@ from urllib.request import urlopen
 import colorama
 import clipboard
 import PIL
-from PIL import Image, ImageChops
+from PIL import Image, ImageDraw, ImageChops
 from lxml import objectify
 import markdown
 
@@ -751,17 +751,32 @@ def create_thumbnail_video(args, filename, thumbname, size, duration):
     command = command % (delay, filename, sizearg, thumbname)
     result = os.system(command)
 
-    # add a movie icon to the thumbnail to identify videos
+    # test if newly created thumbnail open, otherwise something wrong with video
+    # and replace thumbnail with invalid icon
     try:
         img1 = Image.open(thumbname)
     except:
         # ffmpeg was unable to save thumbnail
         warning('Unable to save thumbnail for', filename)
-        return
+        img1 = create_thumbnail_invalid()
+
+    # add a movie icon to the thumbnail to identify videos
     img2 = Image.open(io.BytesIO(base64.b64decode(VIDEO_ICON)))
     width, height = img1.size
     img1.paste(img2, (6, height - 20 - 6), None)
     img1.save(thumbname)
+
+
+def create_thumbnail_invalid():
+    WHITE = (255, 255, 255)
+    RED = "#ff0000"
+    myImage = Image.new('RGB', (300, 200), WHITE)
+    myDraw = ImageDraw.Draw(myImage)
+
+    myDraw.line([(100, 50), (200, 150)], width=40, fill=RED)
+    myDraw.line([(100, 150), (200, 50)], width=40, fill=RED)
+
+    return myImage
 
 
 def make_thumbnail_subdir(args, subdir_name, thumb_name, size, items, thumbdir):
