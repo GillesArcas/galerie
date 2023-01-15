@@ -19,28 +19,6 @@
 </head>
 
 <body>
-<button id="btn_full" type="button" style="position: fixed; width: 50px; top: 20px; right: 20px; background-color:white">Full</button>
-<button id="btn_blog" type="button" style="position: fixed; width: 50px; top: 40px; right: 20px; background-color:white">Diary</button>
-<button id="btn_text" type="button" style="position: fixed; width: 50px; top: 60px; right: 20px; background-color:white">Text</button>
-
-<script>
-$('#btn_full').click(function() {
-    $("[id^=gallery-blog]").show();
-    $("[id^=gallery-dcim]").show();
-    $("div.extra").show();
-});
-$('#btn_text').click(function() {
-    $("[id^=gallery-blog]").hide();
-    $("[id^=gallery-dcim]").hide();
-    $("div.extra").hide();
-});
-$('#btn_blog').click(function() {
-    $("[id^=gallery-blog]").show();
-    $("[id^=gallery-dcim]").hide();
-    $("div.extra").hide();
-});
-</script>
-
 <h3>Un titre</h3>
 <p>Du texte. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
 eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
