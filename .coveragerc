@@ -6,13 +6,12 @@
 #    */lib/*
 
 [paths]
-source =
-    */site-packages/galerie/
+source = */site-packages/galerie/
 
 [report]
 # omit =
 
-include = */galerie.py
+include = */site-packages/galerie/galerie.py
 
 exclude_lines =
     not used
