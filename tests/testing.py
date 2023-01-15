@@ -1,3 +1,18 @@
+"""
+Test script for galerie.py
+
+testing.py ref prefix
+    makes a file reference for test functions starting with prefix*
+
+testing.py prefix
+    runs test functions starting with prefix
+
+testing.py abort
+    runs test functions starting with 'test_' (currently all test functions in
+    this file) and stops at first difference
+"""
+
+
 import os
 import sys
 import re
