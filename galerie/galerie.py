@@ -97,6 +97,24 @@ START = f'''\
 <body>\
 '''
 
+GOOGLE_TRANSLATE = '''\
+<div id="google_translate_element"></div>
+<script>
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({
+    pageLanguage: 'fr'
+  }, 'google_translate_element');
+}
+</script>
+<script src="http://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+ <style>
+ body > .skiptranslate {
+    display: none;
+}
+</style>
+<hr color="#C0C0C0" size="1" />
+'''
+
 BUTTONS_FULL = '''\
 <button id="btn_full" type="button" style="position: fixed; width: 50px; top: 20px; right: 20px; background-color:white">Full</button>
 <button id="btn_blog" type="button" style="position: fixed; width: 50px; top: 40px; right: 20px; background-color:white">Diary</button>
@@ -182,6 +200,7 @@ class Post:
         self.dcim = []
         self.daterank = 0
         self.extra = False
+        self.parent = None
 
     def __lt__(self, other):
         return self.date < other.date
@@ -264,8 +283,14 @@ class Post:
         if self.extra:
             html.append('<div class="extra">')
 
+        if args.daily_anchors:
+            html.append(f'<a name="{self.date}"></a>')
+
         if self.text:
-            html.append(markdown.markdown(self.text))
+            text = self.text
+            if args.daily_anchors:
+                text = text.replace('{LASTDATE}', self.parent[-1].date.replace('/', ''))
+            html.append(markdown.markdown(text))
 
         if self.medias:
             html.append(f'<div id="gallery-blog-{self.date}-{self.daterank}">')
@@ -412,6 +437,10 @@ def parse_markdown(filename):
                 posts.append(Post.from_markdown(record))
                 record = []
 
+    # set parent
+    for post in posts:
+        post.parent = posts
+
     # set rank of posts in date
     daterank = defaultdict(int)
     for post in posts:
@@ -456,6 +485,8 @@ def print_markdown(posts, title, fullname):
 def compose_html_reduced(args, posts, title, target):
     html = list()
     html.append(START % title)
+    if args.google_translate:
+        html.append(GOOGLE_TRANSLATE)
 
     for post in posts:
         for line in post.to_html(args, target):
@@ -469,6 +500,8 @@ def compose_html_reduced(args, posts, title, target):
 def compose_html_full(args, posts, title, target):
     html = list()
     html.append(START % title)
+    if args.google_translate:
+        html.append(GOOGLE_TRANSLATE)
 
     if args.diary:
         if args.sourcedir:
@@ -1287,6 +1320,10 @@ def make_posts_from_subdir_and_date(args, dirname):
 def create_gallery(args):
     title, posts = make_posts(args, args.sourcedir)
     print_html(args, posts, title, os.path.join(args.dest, args.rootname), 'regular')
+    ### TODO: something
+    ### PATCH : pas de purge avec postit
+    return
+    ### END PATCH
     purge_htmlfiles(args, posts)
     if args.diary and not args.sourcedir:
         purge_thumbnails(args, args.thumbdir, posts, diary=True)
@@ -1491,6 +1528,14 @@ dates =
 ; value: true or false
 github_pages = false
 
+; google translate
+; value: true or false
+google_translate = false
+
+; daily anchors
+; value: true or false
+daily_anchors = false
+
 [thumbnails]
 
 ; specifies whether or not the gallery displays media description (size, dimension, etc)
@@ -1613,6 +1658,8 @@ def getconfig(options, config_filename):
     options.source.recursive = config.getboolean('source', 'recursive')
     options.source.dates = config.get('source', 'dates')
     options.source.github_pages = config.getboolean('source', 'github_pages', default=False)
+    options.source.google_translate = config.getboolean('source', 'google_translate', default=False)
+    options.source.daily_anchors = config.getboolean('source', 'daily_anchors', default=False)
 
     # [thumbnails]
     options.thumbnails.media_description = config.getboolean('thumbnails', 'media_description')
@@ -1654,6 +1701,8 @@ def update_config(args):
         ('recursive', BOOL[args.recursive]),
         ('dates', args.dates),
         ('github_pages', BOOL[args.github_pages]),
+        ('google_translate', BOOL[args.google_translate]),
+        ('daily_anchors', BOOL[args.daily_anchors]),
     )
 
     # manual update to keep comments
@@ -1754,6 +1803,10 @@ def parse_command_line(argstring):
                         action='store', default=None)
     agroup.add_argument('--github_pages', help='github Pages compatibility',
                         action='store', default=None, choices=BOOL)
+    agroup.add_argument('--google_translate', help='google translate',
+                        action='store', default=None, choices=BOOL)
+    agroup.add_argument('--daily_anchors', help='daily anchors',
+                        action='store', default=None, choices=BOOL)
     agroup.add_argument('--dest', help='output directory',
                         action='store')
     agroup.add_argument('--forcethumb', help='force calculation of thumbnails',
@@ -1773,7 +1826,8 @@ def parse_command_line(argstring):
         args = parser.parse_args(argstring.split())
 
     if args.update and (args.bydir or args.bydate or args.diary or args.sourcedir or
-                        args.recursive or args.dates or args.github_pages):
+                        args.recursive or args.dates or args.github_pages or
+                        args.google_translate or args.daily_anchors):
         error('Incorrect parameters:',
               '--update cannot be used with creation parameters, use explicit command')
 
@@ -1783,6 +1837,8 @@ def parse_command_line(argstring):
     args.recursive = args.recursive == 'true'
     args.dates = 'source' if (args.dates is None) else args.dates
     args.github_pages = args.github_pages == 'true'
+    args.google_translate = args.google_translate == 'true'
+    args.daily_anchors = args.daily_anchors == 'true'
 
     args.root = (
         args.create or args.gallery or args.update
@@ -1833,6 +1889,8 @@ def setup_part2(args):
         args.recursive = args.source.recursive
         args.dates = args.source.dates
         args.github_pages = args.source.github_pages
+        args.google_translate = args.source.google_translate
+        args.daily_anchors = args.source.daily_anchors
     elif args.gallery:
         args.source.sourcedir = args.sourcedir
         args.source.bydir = args.bydir
@@ -1841,6 +1899,8 @@ def setup_part2(args):
         args.source.recursive = args.recursive
         args.source.dates = args.dates
         args.source.github_pages = args.github_pages
+        args.source.google_translate = args.google_translate
+        args.source.daily_anchors = args.daily_anchors
         update_config(args)
 
     if args.github_pages:
