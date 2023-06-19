@@ -94,7 +94,8 @@ START = f'''\
 {STYLE}
 </head>
 
-<body>\
+<body>
+<div style="width: 95%%; margin-left: auto; margin-right: auto">\
 '''
 
 GOOGLE_TRANSLATE = '''\
@@ -112,6 +113,20 @@ function googleTranslateElementInit() {
     display: none;
 }
 </style>
+<hr color="#C0C0C0" size="1" />
+'''
+
+GOOGLE_TRANSLATE = '''\
+<div id="google_translate_element"></div>
+<script>
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({
+    pageLanguage: 'fr'
+  }, 'google_translate_element');
+}
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
 <hr color="#C0C0C0" size="1" />
 '''
 
@@ -147,9 +162,9 @@ $('#btn_blog').click(function() {
 '''
 
 SUBDIR_BACKCOL = '#eee'
-END = '</body>\n</html>'
+END = '</div>\n</body>\n</html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
-IMGPOST = '<a href="%s"><img src="%s" width="%d" height="%d" title="%s"/></a>'
+IMGPOST = '<a href="%s"><img src="%s" width="%d" height="%d" title="%s" loading="lazy"/></a>'
 VIDPOST = '<a href="%s" rel="video"><img src="%s" width="%d" height="%d" title="%s"/></a>'
 IMGPOSTCAPTION = '''\
 <span>
@@ -189,6 +204,8 @@ CAPTION_PAT = '''\
 %s
 </div>
 '''
+
+MAPFRAME = '<iframe src="%s" title="Carte" width="100%%" height="300"></iframe>'
 
 
 class Post:
@@ -288,6 +305,16 @@ class Post:
 
         if self.text:
             text = self.text
+            if match := re.search('{MAPPOST ([^}]+)}', text):
+                if args.sourcedir:
+                    text = re.sub('{MAPPOST [^}]+}', '', text)
+                else:
+                    text = re.sub('{MAPPOST [^}]+}', MAPFRAME % match.group(1), text)
+            if match := re.search('{MAPFULL ([^}]+)}', text):
+                if args.sourcedir:
+                    text = re.sub('{MAPFULL [^}]+}', MAPFRAME % match.group(1), text)
+                else:
+                    text = re.sub('{MAPFULL [^}]+}', '', text)
             if args.daily_anchors:
                 text = text.replace('{LASTDATE}', self.parent[-1].date.replace('/', ''))
             html.append(markdown.markdown(text))
