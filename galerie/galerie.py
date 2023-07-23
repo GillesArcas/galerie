@@ -209,7 +209,7 @@ MAPFRAME = '<iframe src="%s" title="Carte" width="100%%" height="300"></iframe>'
 
 
 class Post:
-    def __init__(self, date, text, medias):
+    def __init__(self, date, text, medias, ignore=True):
         # date: yyyymmdd
         self.date = date
         self.text = text
@@ -218,17 +218,19 @@ class Post:
         self.daterank = 0
         self.extra = False
         self.parent = None
+        self.ignore = ignore
 
     def __lt__(self, other):
         return self.date < other.date
 
     @classmethod
     def from_markdown(cls, post):
-        m = re.match(r'\[(\d\d\d\d/\d\d/\d\d)\]\n*', post[0])
+        m = re.match(r'\[(\d\d\d\d/\d\d/\d\d)\]\s*(\[ignore\])?\n*', post[0])
         if m:
             date = m.group(1).replace('/', '')
             if not validate_date(date):
                 error('Incorrect date value:', date)
+            ignore = True if m.group(2) else False
             del post[0]
         else:
             error('No date in post', ' '.join(post))
@@ -257,7 +259,7 @@ class Post:
             else:
                 medias.append(PostVideo(caption, media))
 
-        return cls(date, text, medias)
+        return cls(date, text, medias, ignore)
 
     @classmethod
     def from_date(cls, date):
@@ -296,6 +298,9 @@ class Post:
         return html
 
     def to_html_diary(self, args):
+        if self.ignore and not args.sourcedir:
+            return []
+
         html = list()
         if self.extra:
             html.append('<div class="extra">')
@@ -316,6 +321,7 @@ class Post:
                 else:
                     text = re.sub('{MAPFULL [^}]+}', '', text)
             if args.daily_anchors:
+                # print('[[[\n', text, '\n]]]')
                 text = text.replace('{LASTDATE}', self.parent[-1].date.replace('/', ''))
             html.append(markdown.markdown(text))
 
