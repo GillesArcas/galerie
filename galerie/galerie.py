@@ -311,12 +311,12 @@ class Post:
         if self.text:
             text = self.text
             if match := re.search('{MAPPOST ([^}]+)}', text):
-                if args.sourcedir:
+                if args.local_map:
                     text = re.sub('{MAPPOST [^}]+}', '', text)
                 else:
                     text = re.sub('{MAPPOST [^}]+}', MAPFRAME % match.group(1), text)
             if match := re.search('{MAPFULL ([^}]+)}', text):
-                if args.sourcedir:
+                if args.local_map:
                     text = re.sub('{MAPFULL [^}]+}', MAPFRAME % match.group(1), text)
                 else:
                     text = re.sub('{MAPFULL [^}]+}', '', text)
@@ -1840,6 +1840,8 @@ def parse_command_line(argstring):
                         action='store', default=None, choices=BOOL)
     agroup.add_argument('--daily_anchors', help='daily anchors',
                         action='store', default=None, choices=BOOL)
+    agroup.add_argument('--local_map', help='local map',
+                        action='store', default=None, choices=BOOL)
     agroup.add_argument('--dest', help='output directory',
                         action='store')
     agroup.add_argument('--forcethumb', help='force calculation of thumbnails',
@@ -1872,6 +1874,7 @@ def parse_command_line(argstring):
     args.github_pages = args.github_pages == 'true'
     args.google_translate = args.google_translate == 'true'
     args.daily_anchors = args.daily_anchors == 'true'
+    args.local_map = args.local_map == 'true'
 
     args.root = (
         args.create or args.gallery or args.update
@@ -1924,6 +1927,7 @@ def setup_part2(args):
         args.github_pages = args.source.github_pages
         args.google_translate = args.source.google_translate
         args.daily_anchors = args.source.daily_anchors
+        args.local_map = args.source.local_map
     elif args.gallery:
         args.source.sourcedir = args.sourcedir
         args.source.bydir = args.bydir
@@ -1934,6 +1938,7 @@ def setup_part2(args):
         args.source.github_pages = args.github_pages
         args.source.google_translate = args.google_translate
         args.source.daily_anchors = args.daily_anchors
+        args.source.local_map = args.local_map
         update_config(args)
 
     if args.github_pages:
@@ -1954,6 +1959,7 @@ def setup_part2(args):
             args.sourcedir = drive.upper() + rest
         if not os.path.isdir(args.sourcedir):
             error('Directory not found', args.sourcedir)
+        args.local_map = True
     else:
         if args.gallery and args.diary is False and args.update is None:
             error('Directory not found', 'Use --sourcedir')
