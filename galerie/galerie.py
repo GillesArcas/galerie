@@ -31,10 +31,10 @@ from urllib.request import urlopen
 
 import colorama
 import clipboard
+import markdown
 import PIL
 from PIL import Image, ImageDraw, ImageChops
 from lxml import objectify
-import markdown
 
 
 USAGE = """
@@ -74,9 +74,35 @@ CAPTION_IMAGE_STYLE = '''\
 
 STYLE = '''\
 <style type="text/css">
-    p { margin-top:0px; margin-bottom:0px; }
-    h3 { font-size: 100%%; font-weight: bold; margin-top:0px; margin-bottom:0px; }
- </style>
+body {
+  font: normal 14px Verdana, Arial, sans-serif;
+  background-color: #eeeeee;
+}
+div.main {
+  width: 90%%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 10px;
+  padding-right: 10px;
+  box-shadow: 1px 1px 3px 3px #d0d0d0;
+  background-color: white;
+}
+p { margin-top:0px; margin-bottom:0px; }
+p.text { margin-top:0px; margin-bottom:0px; padding-bottom: 5px }
+h3 { font-size: 100%%; font-weight: bold; margin-top:0px; margin-bottom:0px; }
+a:link, a:visited {
+  color:#0B5394;
+  text-decoration:none;
+}
+a:hover {
+  color:#000000;
+  text-decoration:none;
+}
+ul {
+  margin: 10px;
+  padding: 0;
+}
+</style>
 '''
 
 START = f'''\
@@ -94,7 +120,40 @@ START = f'''\
 {STYLE}
 </head>
 
-<body>\
+<body>
+<div class="main">\
+'''
+
+GOOGLE_TRANSLATE = '''\
+<div id="google_translate_element"></div>
+<script>
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({
+    pageLanguage: 'fr'
+  }, 'google_translate_element');
+}
+</script>
+<script src="http://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+<style>
+body > .skiptranslate {
+    display: none;
+}
+</style>
+<hr color="#C0C0C0" size="1" />
+'''
+
+GOOGLE_TRANSLATE = '''\
+<div id="google_translate_element"></div>
+<script>
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({
+    pageLanguage: 'fr'
+  }, 'google_translate_element');
+}
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+<hr color="#C0C0C0" size="1" />
 '''
 
 BUTTONS_FULL = '''\
@@ -129,9 +188,9 @@ $('#btn_blog').click(function() {
 '''
 
 SUBDIR_BACKCOL = '#eee'
-END = '</body>\n</html>'
+END = '</div>\n</body>\n</html>'
 SEP = '<hr color="#C0C0C0" size="1" />'
-IMGPOST = '<a href="%s"><img src="%s" width="%d" height="%d" title="%s"/></a>'
+IMGPOST = '<a href="%s"><img src="%s" width="%d" height="%d" title="%s" loading="lazy"/></a>'
 VIDPOST = '<a href="%s" rel="video"><img src="%s" width="%d" height="%d" title="%s"/></a>'
 IMGPOSTCAPTION = '''\
 <span>
@@ -172,9 +231,11 @@ CAPTION_PAT = '''\
 </div>
 '''
 
+MAPFRAME = '<iframe src="%s" title="Carte" width="100%%" height="300"></iframe>'
+
 
 class Post:
-    def __init__(self, date, text, medias):
+    def __init__(self, date, text, medias, ignore=True):
         # date: yyyymmdd
         self.date = date
         self.text = text
@@ -182,17 +243,20 @@ class Post:
         self.dcim = []
         self.daterank = 0
         self.extra = False
+        self.parent = None
+        self.ignore = ignore
 
     def __lt__(self, other):
         return self.date < other.date
 
     @classmethod
     def from_markdown(cls, post):
-        m = re.match(r'\[(\d\d\d\d/\d\d/\d\d)\]\n*', post[0])
+        m = re.match(r'\[(\d\d\d\d/\d\d/\d\d)\]\s*(\[ignore\])?\n*', post[0])
         if m:
             date = m.group(1).replace('/', '')
             if not validate_date(date):
                 error('Incorrect date value:', date)
+            ignore = True if m.group(2) else False
             del post[0]
         else:
             error('No date in post', ' '.join(post))
@@ -221,7 +285,7 @@ class Post:
             else:
                 medias.append(PostVideo(caption, media))
 
-        return cls(date, text, medias)
+        return cls(date, text, medias, ignore)
 
     @classmethod
     def from_date(cls, date):
@@ -260,12 +324,35 @@ class Post:
         return html
 
     def to_html_diary(self, args):
+        if self.ignore and not args.sourcedir:
+            return []
+
         html = list()
         if self.extra:
             html.append('<div class="extra">')
 
+        if args.daily_anchors:
+            html.append(f'<a name="{self.date}"></a>')
+
         if self.text:
-            html.append(markdown.markdown(self.text))
+            text = self.text
+            if match := re.search('{MAPPOST ([^}]+)}', text):
+                if args.local_map:
+                    text = re.sub('{MAPPOST [^}]+}', '', text)
+                else:
+                    text = re.sub('{MAPPOST [^}]+}', MAPFRAME % match.group(1), text)
+            if match := re.search('{MAPFULL ([^}]+)}', text):
+                if args.local_map:
+                    text = re.sub('{MAPFULL [^}]+}', MAPFRAME % match.group(1), text)
+                else:
+                    text = re.sub('{MAPFULL [^}]+}', '', text)
+            if args.daily_anchors:
+                # print('[[[\n', text, '\n]]]')
+                text = text.replace('{LASTDATE}', self.parent[-1].date.replace('/', ''))
+
+            html_text = markdown.markdown(text)
+            html_text = html_text.replace('<p>', '<p class="text">')
+            html.append(html_text)
 
         if self.medias:
             html.append(f'<div id="gallery-blog-{self.date}-{self.daterank}">')
@@ -412,6 +499,10 @@ def parse_markdown(filename):
                 posts.append(Post.from_markdown(record))
                 record = []
 
+    # set parent
+    for post in posts:
+        post.parent = posts
+
     # set rank of posts in date
     daterank = defaultdict(int)
     for post in posts:
@@ -456,6 +547,8 @@ def print_markdown(posts, title, fullname):
 def compose_html_reduced(args, posts, title, target):
     html = list()
     html.append(START % title)
+    if args.google_translate:
+        html.append(GOOGLE_TRANSLATE)
 
     for post in posts:
         for line in post.to_html(args, target):
@@ -469,6 +562,8 @@ def compose_html_reduced(args, posts, title, target):
 def compose_html_full(args, posts, title, target):
     html = list()
     html.append(START % title)
+    if args.google_translate:
+        html.append(GOOGLE_TRANSLATE)
 
     if args.diary:
         if args.sourcedir:
@@ -746,7 +841,7 @@ TkSuQmCC'''
 def create_thumbnail_video(args, filename, thumbname, size, duration):
     # ffmpeg must be in path
     delay = min(duration - 1, args.thumbnails.thumbdelay)
-    sizearg = '%dx%d' % size
+    sizearg = '%dx%d' % size  # (size, size)
     command = 'ffmpeg -y -v error -itsoffset -%d -i "%s" -vcodec mjpeg -vframes 1 -an -f rawvideo -s %s "%s"'
     command = command % (delay, filename, sizearg, thumbname)
     result = os.system(command)
@@ -1197,7 +1292,7 @@ def create_items_by_date(args, medias, posts):
 def make_posts_from_diary_and_dir(args):
     title, posts = make_posts_from_diary(args)
 
-    # list of all pictures and movies
+    # list of all pictures and movies in source
     medias = list_of_medias(args, args.sourcedir, args.recursive)
 
     bydate = create_items_by_date(args, medias, posts)
@@ -1209,6 +1304,7 @@ def make_posts_from_diary_and_dir(args):
     for date in extradates:
         post = Post.from_date(date)
         post.extra = True
+        post.parent = posts
         bisect.insort(posts, post)
 
     # several posts can have the same date, only the first one is completed with dcim medias
@@ -1287,6 +1383,10 @@ def make_posts_from_subdir_and_date(args, dirname):
 def create_gallery(args):
     title, posts = make_posts(args, args.sourcedir)
     print_html(args, posts, title, os.path.join(args.dest, args.rootname), 'regular')
+    ### TODO: something
+    ### PATCH : pas de purge avec postit
+    return
+    ### END PATCH
     purge_htmlfiles(args, posts)
     if args.diary and not args.sourcedir:
         purge_thumbnails(args, args.thumbdir, posts, diary=True)
@@ -1491,6 +1591,14 @@ dates =
 ; value: true or false
 github_pages = false
 
+; google translate
+; value: true or false
+google_translate = false
+
+; daily anchors
+; value: true or false
+daily_anchors = false
+
 [thumbnails]
 
 ; specifies whether or not the gallery displays media description (size, dimension, etc)
@@ -1613,6 +1721,9 @@ def getconfig(options, config_filename):
     options.source.recursive = config.getboolean('source', 'recursive')
     options.source.dates = config.get('source', 'dates')
     options.source.github_pages = config.getboolean('source', 'github_pages', default=False)
+    options.source.google_translate = config.getboolean('source', 'google_translate', default=False)
+    options.source.daily_anchors = config.getboolean('source', 'daily_anchors', default=False)
+    options.source.local_map = config.getboolean('source', 'local_map', default=False)
 
     # [thumbnails]
     options.thumbnails.media_description = config.getboolean('thumbnails', 'media_description')
@@ -1654,6 +1765,8 @@ def update_config(args):
         ('recursive', BOOL[args.recursive]),
         ('dates', args.dates),
         ('github_pages', BOOL[args.github_pages]),
+        ('google_translate', BOOL[args.google_translate]),
+        ('daily_anchors', BOOL[args.daily_anchors]),
     )
 
     # manual update to keep comments
@@ -1754,6 +1867,12 @@ def parse_command_line(argstring):
                         action='store', default=None)
     agroup.add_argument('--github_pages', help='github Pages compatibility',
                         action='store', default=None, choices=BOOL)
+    agroup.add_argument('--google_translate', help='google translate',
+                        action='store', default=None, choices=BOOL)
+    agroup.add_argument('--daily_anchors', help='daily anchors',
+                        action='store', default=None, choices=BOOL)
+    agroup.add_argument('--local_map', help='local map',
+                        action='store', default=None, choices=BOOL)
     agroup.add_argument('--dest', help='output directory',
                         action='store')
     agroup.add_argument('--forcethumb', help='force calculation of thumbnails',
@@ -1773,7 +1892,8 @@ def parse_command_line(argstring):
         args = parser.parse_args(argstring.split())
 
     if args.update and (args.bydir or args.bydate or args.diary or args.sourcedir or
-                        args.recursive or args.dates or args.github_pages):
+                        args.recursive or args.dates or args.github_pages or
+                        args.google_translate or args.daily_anchors):
         error('Incorrect parameters:',
               '--update cannot be used with creation parameters, use explicit command')
 
@@ -1783,6 +1903,9 @@ def parse_command_line(argstring):
     args.recursive = args.recursive == 'true'
     args.dates = 'source' if (args.dates is None) else args.dates
     args.github_pages = args.github_pages == 'true'
+    args.google_translate = args.google_translate == 'true'
+    args.daily_anchors = args.daily_anchors == 'true'
+    args.local_map = args.local_map == 'true'
 
     args.root = (
         args.create or args.gallery or args.update
@@ -1833,6 +1956,9 @@ def setup_part2(args):
         args.recursive = args.source.recursive
         args.dates = args.source.dates
         args.github_pages = args.source.github_pages
+        args.google_translate = args.source.google_translate
+        args.daily_anchors = args.source.daily_anchors
+        args.local_map = args.source.local_map
     elif args.gallery:
         args.source.sourcedir = args.sourcedir
         args.source.bydir = args.bydir
@@ -1841,6 +1967,9 @@ def setup_part2(args):
         args.source.recursive = args.recursive
         args.source.dates = args.dates
         args.source.github_pages = args.github_pages
+        args.source.google_translate = args.google_translate
+        args.source.daily_anchors = args.daily_anchors
+        args.source.local_map = args.local_map
         update_config(args)
 
     if args.github_pages:
@@ -1861,6 +1990,7 @@ def setup_part2(args):
             args.sourcedir = drive.upper() + rest
         if not os.path.isdir(args.sourcedir):
             error('Directory not found', args.sourcedir)
+        args.local_map = True
     else:
         if args.gallery and args.diary is False and args.update is None:
             error('Directory not found', 'Use --sourcedir')
