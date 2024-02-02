@@ -35,6 +35,7 @@ import markdown
 import PIL
 from PIL import Image, ImageDraw, ImageChops
 from lxml import objectify
+from colorama import Fore, Style
 
 
 USAGE = """
@@ -259,7 +260,7 @@ class Post:
             ignore = True if m.group(2) else False
             del post[0]
         else:
-            error('No date in post', ' '.join(post))
+            error('No date in post:', '\n' + ' '.join(post))
 
         while post and not post[0].strip():
             del post[0]
@@ -488,7 +489,10 @@ def parse_markdown(filename):
         if line.startswith('# '):
             title = line[2:].strip()
             record = []
-            next(f)
+            try:
+                next(f)
+            except StopIteration:
+                warning('Only title in diary.')
         else:
             title = None
             record = [line]
@@ -1383,15 +1387,12 @@ def make_posts_from_subdir_and_date(args, dirname):
 def create_gallery(args):
     title, posts = make_posts(args, args.sourcedir)
     print_html(args, posts, title, os.path.join(args.dest, args.rootname), 'regular')
-    ### TODO: something
-    ### PATCH : pas de purge avec postit
-    return
-    ### END PATCH
-    purge_htmlfiles(args, posts)
-    if args.diary and not args.sourcedir:
-        purge_thumbnails(args, args.thumbdir, posts, diary=True)
-    else:
-        purge_thumbnails(args, args.thumbdir, posts)
+    if args.thumbnails.enable_purge:
+        purge_htmlfiles(args, posts)
+        if args.diary and not args.sourcedir:
+            purge_thumbnails(args, args.thumbdir, posts, diary=True)
+        else:
+            purge_thumbnails(args, args.thumbdir, posts)
 
 
 # -- Creation of diary from medias --------------------------------------------
@@ -1617,6 +1618,10 @@ thumbdelay = 5
 ; value: integer
 threshold_thumbs = 10
 
+; enable purge (thumbnails and html files)
+; value: true or false
+enable_purge = true
+
 [photobox]
 
 ; Allows to navigate between first and last images
@@ -1731,6 +1736,7 @@ def getconfig(options, config_filename):
     options.thumbnails.thumbdelay = config.getint('thumbnails', 'thumbdelay')
     options.thumbnails.threshold_thumbs = config.getint('thumbnails', 'threshold_thumbs')
     options.thumbnails.threshold_htmlfiles = config.getint('thumbnails', 'threshold_htmlfiles', default=3)
+    options.thumbnails.enable_purge = config.getboolean('thumbnails', 'enable_purge', default=True)
 
     # [photobox]
     options.photobox.loop = config.getboolean('photobox', 'loop')
@@ -1789,16 +1795,14 @@ def update_config(args):
 
 
 def warning(*msg):
-    print(colorama.Fore.YELLOW + colorama.Style.BRIGHT +
-          ' '.join(msg),
-          colorama.Style.RESET_ALL)
+    print(Fore.YELLOW + Style.BRIGHT + ' '.join(msg) + Style.RESET_ALL)
 
 
 # Every error message error must be declared here to give a return code to the error
 ERRORS = '''\
 File not found
 Directory not found
-No date in post
+No date in post:
 Incorrect date value:
 Posts are not ordered
 Unable to read url
@@ -1817,9 +1821,7 @@ def errorcode(msg):
 
 
 def error(*msg):
-    print(colorama.Fore.RED + colorama.Style.BRIGHT +
-          ' '.join(msg),
-          colorama.Style.RESET_ALL)
+    print(Fore.RED + Style.BRIGHT + ' '.join(msg) + Style.RESET_ALL)
     sys.exit(errorcode(msg[0]))
 
 
