@@ -1762,7 +1762,8 @@ def setconfig_cmd(args):
 
 
 def update_config(args):
-    # update only entries which can be modified from the command line (source section)
+    # update only entries which can be modified from the command line
+    # (any source section, assume there is no conflict between sections)
     updates = (
         ('sourcedir', args.sourcedir),
         ('bydir', BOOL[args.bydir]),
@@ -1773,6 +1774,7 @@ def update_config(args):
         ('github_pages', BOOL[args.github_pages]),
         ('google_translate', BOOL[args.google_translate]),
         ('daily_anchors', BOOL[args.daily_anchors]),
+        ('enable_purge', BOOL[args.enable_purge]),
     )
 
     # manual update to keep comments
@@ -1879,6 +1881,8 @@ def parse_command_line(argstring):
                         action='store')
     agroup.add_argument('--forcethumb', help='force calculation of thumbnails',
                         action='store_true', default=False)
+    agroup.add_argument('--enable_purge', help='enable purge of thumbnails and html files',
+                        action='store', default='true', choices=BOOL)
 
     agroup.add_argument('--full', help='full html (versus blogger ready html)',
                         action='store_true', default=False)
@@ -1908,6 +1912,7 @@ def parse_command_line(argstring):
     args.google_translate = args.google_translate == 'true'
     args.daily_anchors = args.daily_anchors == 'true'
     args.local_map = args.local_map == 'true'
+    args.enable_purge = args.enable_purge == 'true'
 
     args.root = (
         args.create or args.gallery or args.update
@@ -1950,18 +1955,8 @@ def setup_part2(args):
     Copy photobox file to destination dir.
     Handle priority between command line and config file.
     """
-    if args.update:
-        args.sourcedir = args.source.sourcedir
-        args.bydir = args.source.bydir
-        args.bydate = args.source.bydate
-        args.diary = args.source.diary
-        args.recursive = args.source.recursive
-        args.dates = args.source.dates
-        args.github_pages = args.source.github_pages
-        args.google_translate = args.source.google_translate
-        args.daily_anchors = args.source.daily_anchors
-        args.local_map = args.source.local_map
-    elif args.gallery:
+    # with --gallery, update config parameters with command line parameters
+    if args.gallery:
         args.source.sourcedir = args.sourcedir
         args.source.bydir = args.bydir
         args.source.bydate = args.bydate
@@ -1972,7 +1967,21 @@ def setup_part2(args):
         args.source.google_translate = args.google_translate
         args.source.daily_anchors = args.daily_anchors
         args.source.local_map = args.local_map
+        args.thumbnails.enable_purge = args.enable_purge
         update_config(args)
+    # with --update, use config parameters for command line parameters
+    elif args.update:
+        args.sourcedir = args.source.sourcedir
+        args.bydir = args.source.bydir
+        args.bydate = args.source.bydate
+        args.diary = args.source.diary
+        args.recursive = args.source.recursive
+        args.dates = args.source.dates
+        args.github_pages = args.source.github_pages
+        args.google_translate = args.source.google_translate
+        args.daily_anchors = args.source.daily_anchors
+        args.local_map = args.source.local_map
+        args.enable_purge = args.thumbnails.enable_purge
 
     if args.github_pages:
         args.html_suffix = '.html'
