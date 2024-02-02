@@ -2088,6 +2088,7 @@ def main(argstring=None):
 
     except KeyboardInterrupt:
         warning('Interrupted by user.')
+    return 0
 
 
 def main_entry_point():
