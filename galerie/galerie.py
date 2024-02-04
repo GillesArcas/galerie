@@ -52,10 +52,6 @@ galerie --update  <root-dir>
 galerie --create  <root-dir> --sourcedir <media-dir>
                              [--recursive true|false*]
                              [--dates source*|<yyyymmdd-yyyymmdd>]
-galerie --blogger <root-dir> --url <url>
-                             [--check]
-                             [--full]
-                             [--dest <filename>]
 
 Notes:
     - * gives default
@@ -307,8 +303,6 @@ class Post:
                 return self.to_html_diary(args)
             else:
                 return self.to_html_regular(args)
-        if target == 'blogger':
-            return self.to_html_blogger()
 
     def to_html_regular(self, args):
         html = list()
@@ -614,7 +608,7 @@ def print_html_to_stream(args, posts, title, stream, target):
 
 
 def print_html(args, posts, title, html_name, target='regular'):
-    assert target in ('regular', 'blogger')
+    assert target in == 'regular'
     with io.StringIO() as f:
         print_html_to_stream(args, posts, title, f, target)
         html = f.getvalue()
@@ -1427,131 +1421,6 @@ def create_diary(args):
     print_markdown(posts, title, os.path.join(args.root, 'index.md'))
 
 
-# -- Export to blogger---------------------------------------------------------
-
-
-def online_images_url(args):
-    try:
-        if args.urlblogger.startswith('http:') or args.urlblogger.startswith('https:'):
-            with urlopen(args.urlblogger) as u:
-                buffer = u.read()
-        else:
-            with open(args.urlblogger, 'rb') as f:
-                buffer = f.read()
-    except:
-        error('Unable to read url', args.urlblogger)
-    buffer = buffer.decode('utf-8')
-
-    online_images = dict()
-    for match in re.finditer('<div class="separator"((?!<div).)*?</div>', buffer, flags=re.DOTALL):
-        div_separator = match.group(0)
-        div_separator = div_separator.replace('&nbsp;', '')
-        elem_div = objectify.fromstring(div_separator)
-        for elem_a in elem_div.iterchildren(tag='a'):
-            href = elem_a.get("href")
-            thumb = elem_a.img.get("src")
-            online_images[os.path.basename(href)] = (href, thumb)
-
-    # video insertion relies only on video order
-    online_videos = list()
-    for match in re.finditer('<iframe allowfullscreen="allowfullscreen".*?</iframe>', buffer, flags=re.DOTALL):
-        iframe = match.group(0)
-        online_videos.append(iframe)
-
-    return online_images, online_videos
-
-
-def compare_image_buffers(imgbuf1, imgbuf2):
-    """
-    return True if images read on file are identical, False otherwise
-    """
-    with io.BytesIO(imgbuf1) as imgio1, io.BytesIO(imgbuf2) as imgio2:
-        img1 = Image.open(imgio1)
-        img2 = Image.open(imgio2)
-        diff = ImageChops.difference(img1, img2)
-        return not diff.getbbox()
-
-
-def check_images(args, posts, online_images):
-    result = True
-    for post in posts:
-        for media in post.medias:
-            if type(media) is PostImage:
-                if media.basename in online_images:
-                    with open(os.path.join(args.root, media.uri), 'rb') as f:
-                        imgbuf1 = f.read()
-                    try:
-                        with urlopen(online_images[media.basename][0]) as u:
-                            imgbuf2 = u.read()
-                    except FileNotFoundError:
-                        print('File not found', online_images[media.basename][0])
-                        next
-                    if compare_image_buffers(imgbuf1, imgbuf2) is False:
-                        print('Files are different, upload', media.basename)
-                    else:
-                        if 1:
-                            print('File already online', media.basename)
-                else:
-                    print('File is absent, upload', media.basename)
-                    result = False
-            elif type(media) is PostVideo:
-                # no check for the moment
-                print('Video not checked', media.basename)
-            else:
-                assert False
-    return result
-
-
-def compose_blogger_html(args, title, posts, imgdata, online_videos):
-    """ Compose html with blogger image urls
-    """
-    for post in posts:
-        for media in post.medias:
-            if type(media) is PostImage:
-                if media.uri not in imgdata:
-                    print('Image missing: ', media.uri)
-                else:
-                    img_url, resized_url = imgdata[media.uri]
-                    media.uri = img_url
-                    media.resized_url = resized_url
-            elif type(media) is PostVideo:
-                if not online_videos:
-                    print('Video missing: ', media.uri)
-                else:
-                    media.iframe = online_videos[0]
-                    del online_videos[0]
-            else:
-                assert False
-
-    return print_html(args, posts, title, '', target='blogger')
-
-
-def prepare_for_blogger(args):
-    """
-    Export blogger html to clipboard.
-    If --full, export complete html, otherwise export html extract ready to
-    paste into blogger edit mode.
-    """
-    title, posts = parse_markdown(os.path.join(args.root, 'index.md'))
-    online_images, online_videos = online_images_url(args)
-
-    if args.check_images and check_images(args, posts, online_images) is False:
-        pass
-
-    html = compose_blogger_html(args, title, posts, online_images, online_videos)
-
-    if args.full is False:
-        html = re.search('<body>(.*)?</body>', html, flags=re.DOTALL).group(1)
-        html = re.sub('<script>.*?</script>', '', html, flags=re.DOTALL)
-        html = STYLE.replace('%%', '%') + html
-
-    if args.dest:
-        with open(args.dest, 'wt', encoding='utf-8') as f:
-            f.write(html)
-    else:
-        clipboard.copy(html)
-
-
 # -- Other commands -----------------------------------------------------------
 
 
@@ -1815,7 +1684,6 @@ Incorrect date value:
 Posts are not ordered
 Unable to read url
 No image source (--sourcedir)
-No blogger url (--url)
 Missing or incorrect config value:
 Error creating configuration file
 Error reading configuration file.
@@ -1857,10 +1725,6 @@ def parse_command_line(argstring):
                         action='store', nargs=4, metavar='<root-dir>')
     xgroup.add_argument('--idem', help=argparse.SUPPRESS,
                         action='store', metavar='<root-dir>')
-    # blogger
-    xgroup.add_argument('--blogger',
-                        help='input md, html blogger ready in clipboard',
-                        action='store', metavar='<root-dir>')
 
     agroup = parser.add_argument_group('Parameters')
     agroup.add_argument('--bydir', help='organize gallery by subdirectory',
@@ -1889,13 +1753,8 @@ def parse_command_line(argstring):
                         action='store_true', default=False)
     agroup.add_argument('--enable_purge', help='enable purge of thumbnails and html files',
                         action='store', default='true', choices=BOOL)
-
-    agroup.add_argument('--full', help='full html (versus blogger ready html)',
-                        action='store_true', default=False)
-    agroup.add_argument('--check', dest='check_images', help='check availability of medias on blogger',
-                        action='store_true')
-    agroup.add_argument('--url', dest='urlblogger', help='blogger post url',
-                        action='store')
+    #agroup.add_argument('--full', help='full html with source images',
+    #                    action='store_true', default=False)
 
     if not argstring:
        parser.print_help()
@@ -1921,8 +1780,7 @@ def parse_command_line(argstring):
     args.enable_purge = args.enable_purge == 'true'
 
     args.root = (
-        args.create or args.gallery or args.update
-        or args.blogger or args.idem or args.resetcfg
+        args.create or args.gallery or args.update or args.idem or args.resetcfg
     )
 
     if args.setcfg:
@@ -2018,9 +1876,6 @@ def setup_part2(args):
     if args.dest is None:
         args.dest = args.root
 
-    if args.blogger and args.urlblogger is None:
-        error('No blogger url (--url)')
-
     if args.gallery or args.update:
         # check for ffmpeg and ffprobe in path
         for exe in ('ffmpeg', 'ffprobe'):
@@ -2082,9 +1937,6 @@ def main(argstring=None):
 
         elif args.create:
             create_diary(args)
-
-        elif args.blogger:
-            prepare_for_blogger(args)
 
         elif args.idem:
             idempotence(args)
