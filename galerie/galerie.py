@@ -248,7 +248,11 @@ class Post:
         self.ignore = ignore
 
     def __lt__(self, other):
-        return self.date < other.date
+        # defined for merging diary and source (bisect.insort)
+       return self.date is None or other.date is None or self.date < other.date
+
+    def __le__(self, other):
+        return self.date == other.date or self.__lt__(other)
 
     @classmethod
     def from_markdown(cls, post):
@@ -260,7 +264,8 @@ class Post:
             ignore = True if m.group(2) else False
             del post[0]
         else:
-            error('No date in post:', '\n' + ' '.join(post))
+            date = None
+            ignore = False
 
         while post and not post[0].strip():
             del post[0]
@@ -348,8 +353,10 @@ class Post:
                 else:
                     text = re.sub('{MAPFULL [^}]+}', '', text)
             if args.daily_anchors:
-                # print('[[[\n', text, '\n]]]')
-                text = text.replace('{LASTDATE}', self.parent[-1].date.replace('/', ''))
+                for post in self.parent[::-1]:
+                    if post.date is not None and post.ignore is False:
+                        text = text.replace('{LASTDATE}', post.date.replace('/', ''))
+                        break
 
             html_text = markdown.markdown(text)
             html_text = html_text.replace('<p>', '<p class="text">')
@@ -515,7 +522,7 @@ def parse_markdown(filename):
 
     # check post order
     for post1, post2 in zip(posts[:-1], posts[1:]):
-        if post1.date > post2.date:
+        if not (post1 <= post2):
             error('Posts are not ordered', f'{post1.date} > {post2.date}')
 
     return title, posts
@@ -1630,7 +1637,7 @@ loop = false
 
 ; Show gallery thumbnails below the presented photo
 ; value: true or false
-thumbs = true
+thumbs = false
 
 ; Should autoplay on first time or not
 ; value: true or false
@@ -1804,7 +1811,6 @@ def warning(*msg):
 ERRORS = '''\
 File not found
 Directory not found
-No date in post:
 Incorrect date value:
 Posts are not ordered
 Unable to read url
