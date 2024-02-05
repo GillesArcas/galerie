@@ -608,7 +608,7 @@ def print_html_to_stream(args, posts, title, stream, target):
 
 
 def print_html(args, posts, title, html_name, target='regular'):
-    assert target in == 'regular'
+    assert target == 'regular'
     with io.StringIO() as f:
         print_html_to_stream(args, posts, title, f, target)
         html = f.getvalue()
