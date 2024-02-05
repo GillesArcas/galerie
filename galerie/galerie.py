@@ -1037,8 +1037,12 @@ def purge_thumbnails(args, thumbdir, posts, diary=False):
 
     if len(thumbs_to_remove) > args.thumbnails.threshold_thumbs:
         inpt = 'x'
-        while inpt not in 'yn':
-            inpt = input(f'{len(thumbs_to_remove)} thumbnails to remove. Continue [y|n]? ').lower()
+        while inpt not in 'ynshow':
+            inpt = input(f'{len(thumbs_to_remove)} thumbnails to remove. Continue [y|n|show]? ').lower()
+            if inpt == 'show':
+                inpt = 'x'
+                for fn in thumbs_to_remove:
+                    print(fn)
         if inpt == 'n':
             return
 
