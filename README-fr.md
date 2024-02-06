@@ -4,7 +4,7 @@
 
 # Description
 
-*galerie* est un utilitaire en ligne de commande permettant de créer des galeries d'images et de vidéos sous la forme de pages HTML. Les images et vidéos peuvent être organisées par répertoires, par dates ou les deux. De plus, les galeries créées peuvent inclure le contenu d'un fichier journal. Un fichier journal est un fichier texte, respectant une syntaxe très simple (le format Markdown), organisé par dates et incluant du texte et des médias. Additionnellement, une galerie peut être exportée au format de la plate-forme Blogger.
+*galerie* est un utilitaire en ligne de commande permettant de créer des galeries d'images et de vidéos sous la forme de pages HTML. Les images et vidéos peuvent être organisées par répertoires, par dates ou les deux. De plus, les galeries créées peuvent inclure le contenu d'un fichier journal. Un fichier journal est un fichier texte, respectant une syntaxe très simple (le format Markdown), organisé par dates et incluant du texte et des médias. 
 
 - [Installation](#installation)
 - [Utilisation](#utilisation)
@@ -148,10 +148,6 @@ L'utilitaire propose également les commandes suivantes :
 
 crée un fichier journal en considérant les médias spécifiés par les options `--sourcedir`, `--dates` et `--recursive` avec un comportement identique à celui rencontré pour la commande `--gallery`. Le fichier journal est initialisé avec un texte réduit aux dates des médias considérés.
 
-`--blogger <chemin de répertoire> --url <url> [--check] [--full]`
-
-exporte le journal contenu dans le répertoire au format Blogger. L'url doit pointer sur une page affichant les mêmes images que le fichier journal. Ceci est imposé par le fait qu'il n'est pas possible d'uploader des images sur Blogger par programme. La page Blogger est générée dans le presse-papier. L'option `--check` force une comparaison des images locales et sur Blogger (utile dans le cas où des images de même nom auraient pu changer de contenu). L'option `--full` copie dans le presse-papier une page HTML complète ce qui permet de la sauver et de la tester localement.
-
 `--resetcfg`
 
 remet le fichier de configuration dans sa configuration par défaut.
@@ -170,20 +166,20 @@ La première ligne d'un fichier journal est considérée comme son titre si elle
 
 Un enregistrement est constitué dans cet ordre de :
 
-* un champ date obligatoire,
+* un champ date optionnel,
 * un champ texte,
 * un champ médias,
 * un séparateur d'enregistrement.
 
 ### Le champ date
 
-Le champ date doit apparaitre seul en première ligne de l'enregistrement avec le format suivant :
+Quand le champ date est présent, il date doit apparaitre seul en première ligne de l'enregistrement avec le format suivant :
 
 [2020/11/06]
 
-Si la date est absente, la lecture du fichier journal déclenche une erreur. Une erreur est également déclenchée si les dates ne sont pas en ordre croissant. Des enregistrements différents peuvent avoir la même date.
+Une erreur est déclenchée si les dates ne sont pas en ordre croissant. Des enregistrements différents peuvent avoir la même date.
 
-Le champ date est ignoré par les fonctions d'exportation. Il est par contre nécessaire pour associer les médias d'un répertoire à chaque enregistrement.
+Le champ date est ignoré par les fonctions d'exportation. Il est par contre nécessaire pour associer les médias d'un répertoire à chaque enregistrement. Les médias sont associés au premier enregistrement avec une date donnée.
 
 ### Le champ texte
 

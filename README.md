@@ -6,7 +6,7 @@
 
 *galerie* is a command line utility generating HTML galleries from media directories. Images and videos can be organized by dates, by directories, by both or by
 the content of a diary file. A diary file is a markdown file organized by
-dates, each day being described by a text and some medias (photos and movies). Additionally, a gallery can be exported to Blogger platform.
+dates, each day being described by a text and some medias (photos and movies). 
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -149,10 +149,6 @@ The utility proposes also the following commands.
 
 creates a diary file by considering the medias specified by the options `--sourcedir`, `--dates` and `--recursive` with the same behavior as for the command `--gallery`. The diary is initialized with a text limited to the dates of the considered medias.
 
-`--blogger <directory path> --url <url> [--check] [--full]`
-
-exports the diary file in a format ready for Blogger. The url must linked to a page containing the same images as in the diary. This is mandatory because it is not possible to upload image by program to Blogger. The command exports the diary into the clipboard. The `--check` option forces the comparison between local images and Blogger images in case some images could have bee renamed. The `--full` option copies a full HTML page to the clipboard. This enables to test it locally.
-
 `--resetcfg`
 
 resets the configuration file to the factory content.
@@ -171,20 +167,20 @@ The name of a diary file must be `index.md` and it must be located in the root d
 
 A record is made of:
 
-* a mandatory date field,
+* an optional date field,
 * a text field,
 * a media field,
 * a record separator.
 
 ## Date field
 
-The date field is mandatory and must appear alone in the first line of the record. It mus respect the following format:
+The date field is optional. When present, it must appear alone in the first line of the record. It must respect the following format:
 
 [yyyy/mm/dd] (for instance [2020/02/07])
 
-If the date is absent, a reading error is launched. An error is also launched if the dates are not ordered. Two different records may have the same date.
+An error is launched if the dates are not ordered. Two different records may have the same date.
 
-The date field is ignored by the export functions. However, it is required to associate the medias from some directory to each record.
+The date field is ignored by the export functions. However, it is required to associate the medias from the `--sourcedir` directory to each record. Images are associated to the first record with a given date.
 
 ## Text field
 
