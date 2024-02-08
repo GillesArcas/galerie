@@ -476,15 +476,15 @@ def relative_url(path, root):
 # -- Markdown parser ----------------------------------------------------------
 
 
-def parse_markdown(filename):
+def parse_markdown_records(filename):
     """
-    Generate Post objects from markdown. Date must be present in each post and
-    posts must be ordrered by date.
+    Records are separated by '___'. Return list of records (without '___') as
+    lists of lines. First line of first record is possibly a title.
     """
     if not os.path.exists(filename):
         error('File not found', filename)
 
-    posts = list()
+    records = []
     with open(filename, encoding='utf-8') as f:
         line = next(f)
         if line.startswith('# '):
@@ -501,8 +501,18 @@ def parse_markdown(filename):
             if not line.startswith('___'):
                 record.append(line)
             else:
-                posts.append(Post.from_markdown(record))
+                records.append(record)
                 record = []
+
+    return title, records
+
+
+def parse_markdown(filename):
+    """
+    Generate Post objects from markdown. Posts must be ordered by date.
+    """
+    title, records = parse_markdown_records(filename)
+    posts = [Post.from_markdown(record) for record in records]
 
     # set parent
     for post in posts:
