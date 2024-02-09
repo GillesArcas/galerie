@@ -1402,8 +1402,9 @@ def make_posts_from_subdir_and_date(args, dirname):
 def create_gallery(args):
     title, posts = make_posts(args, args.sourcedir)
     print_html(args, posts, title, os.path.join(args.dest, args.rootname), 'regular')
-    if args.thumbnails.enable_purge:
+    if args.thumbnails.enable_purge in ('all', 'html'):
         purge_htmlfiles(args, posts)
+    if args.thumbnails.enable_purge in ('all', 'thumb'):
         if args.diary and not args.sourcedir:
             purge_thumbnails(args, args.thumbdir, posts, diary=True)
         else:
@@ -1509,8 +1510,8 @@ thumbdelay = 5
 threshold_thumbs = 10
 
 ; enable purge (thumbnails and html files)
-; value: true or false
-enable_purge = true
+; value: none|thumb|html|all
+enable_purge = all
 
 [photobox]
 
@@ -1626,7 +1627,7 @@ def getconfig(options, config_filename):
     options.thumbnails.thumbdelay = config.getint('thumbnails', 'thumbdelay')
     options.thumbnails.threshold_thumbs = config.getint('thumbnails', 'threshold_thumbs')
     options.thumbnails.threshold_htmlfiles = config.getint('thumbnails', 'threshold_htmlfiles', default=3)
-    options.thumbnails.enable_purge = config.getboolean('thumbnails', 'enable_purge', default=True)
+    options.thumbnails.enable_purge = config.get('thumbnails', 'enable_purge', fallback='all')
 
     # [photobox]
     options.photobox.loop = config.getboolean('photobox', 'loop')
@@ -1664,7 +1665,7 @@ def update_config(args):
         ('github_pages', BOOL[args.github_pages]),
         ('google_translate', BOOL[args.google_translate]),
         ('daily_anchors', BOOL[args.daily_anchors]),
-        ('enable_purge', BOOL[args.enable_purge]),
+        ('enable_purge', args.enable_purge),
     )
 
     # manual update to keep comments
@@ -1766,9 +1767,7 @@ def parse_command_line(argstring):
     agroup.add_argument('--forcethumb', help='force calculation of thumbnails',
                         action='store_true', default=False)
     agroup.add_argument('--enable_purge', help='enable purge of thumbnails and html files',
-                        action='store', default='true', choices=BOOL)
-    #agroup.add_argument('--full', help='full html with source images',
-    #                    action='store_true', default=False)
+                        action='store', default='all', choices=('none', 'thumb', 'html', 'all'))
 
     if not argstring:
        parser.print_help()
@@ -1791,7 +1790,7 @@ def parse_command_line(argstring):
     args.google_translate = args.google_translate == 'true'
     args.daily_anchors = args.daily_anchors == 'true'
     args.local_map = args.local_map == 'true'
-    args.enable_purge = args.enable_purge == 'true'
+    args.enable_purge = None if (args.enable_purge == 'none') else args.enable_purge
 
     args.root = (
         args.create or args.gallery or args.update or args.idem or args.resetcfg
@@ -1879,7 +1878,7 @@ def setup_part2(args):
             args.sourcedir = drive.upper() + rest
         if not os.path.isdir(args.sourcedir):
             error('Directory not found', args.sourcedir)
-        args.local_map = True
+        # args.local_map = True
     else:
         if args.gallery and args.diary is False and args.update is None:
             error('Directory not found', 'Use --sourcedir')
