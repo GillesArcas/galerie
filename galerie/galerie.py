@@ -48,6 +48,7 @@ galerie --gallery <root-dir> [--sourcedir <media-dir>]
                              [--github_pages true|false]
                              [--dest <directory>]
                              [--forcethumb]
+                             [--enable_purge none|thumb|html|all]
 galerie --update  <root-dir>
 galerie --create  <root-dir> --sourcedir <media-dir>
                              [--recursive true|false*]
