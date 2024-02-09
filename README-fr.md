@@ -140,6 +140,10 @@ spécifie le répertoire de destination des fichiers générés (fichiers HTML e
 
 force le calcul des vignettes (ce qui est évité par défaut pour gagner en efficacité). Ceci est par exemple nécessaire si on modifie le paramètre `thumbdelay` du fichier de configuration (ce paramètre permet de spécifier l'instant de prise de vue de la vignette d'une vidéo).
 
+`--enable_purge none|thumb|html|all`
+
+purge ou non les vignettes et les fichers HTML présents dans les répertoires de la galerie mais non nécessaires à son affichage.
+
 # Autres commandes
 
 L'utilitaire propose également les commandes suivantes :
