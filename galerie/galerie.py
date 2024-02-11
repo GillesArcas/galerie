@@ -1730,7 +1730,7 @@ def parse_command_line(argstring):
     xgroup = agroup.add_mutually_exclusive_group()
     xgroup.add_argument('--gallery', help='source in --sourcedir',
                         action='store', metavar='<root-dir>')
-    agroup.add_argument('--update', help='updates gallery with parameters in config file',
+    xgroup.add_argument('--update', help='updates gallery with parameters in config file',
                         action='store', metavar='<root-dir>')
     xgroup.add_argument('--create', help='create journal from medias in --sourcedir',
                         action='store', metavar='<root-dir>')
