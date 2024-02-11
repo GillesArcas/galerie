@@ -5,8 +5,7 @@ dates, each day described by a text and some medias (photos and movies).
 
 The diary file can be exported to:
 * an html file with the text and subset of medias associated with each day,
-* the previous html file extended with all medias in the media directory,
-* an html file ready to import into Blogger.
+* the previous html file extended with all medias in the media directory.
 """
 
 
@@ -107,9 +106,9 @@ START = f'''\
 <html>
 
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>%s</title>
-    <link rel="icon" href="favicon.ico" />
+    <link rel="icon" href="favicon.ico">
     <meta name="viewport" content="width=device-width">
     <link rel="stylesheet" href="photobox/photobox.css">
     <script src="photobox/jquery.min.js"></script>
@@ -137,7 +136,7 @@ body > .skiptranslate {
     display: none;
 }
 </style>
-<hr color="#C0C0C0" size="1" />
+<hr color="#C0C0C0" size="1">
 '''
 
 GOOGLE_TRANSLATE = '''\
@@ -151,7 +150,7 @@ function googleTranslateElementInit() {
 </script>
 <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
-<hr color="#C0C0C0" size="1" />
+<hr color="#C0C0C0" size="1">
 '''
 
 BUTTONS_FULL = '''\
@@ -187,40 +186,40 @@ $('#btn_blog').click(function() {
 
 SUBDIR_BACKCOL = '#eee'
 END = '</div>\n</body>\n</html>'
-SEP = '<hr color="#C0C0C0" size="1" />'
-IMGPOST = '<a href="%s"><img src="%s" width="%d" height="%d" title="%s" loading="lazy"/></a>'
-VIDPOST = '<a href="%s" rel="video"><img src="%s" width="%d" height="%d" title="%s"/></a>'
+SEP = '<hr color="#C0C0C0" size="1">'
+IMGPOST = '<a href="%s"><img src="%s" width="%d" height="%d" title="%s" loading="lazy"></a>'
+VIDPOST = '<a href="%s" rel="video"><img src="%s" width="%d" height="%d" title="%s"></a>'
 IMGPOSTCAPTION = '''\
 <span>
-<a href="%s"><img src=%s width="%d" height="%d" title="%s"/></a>
+<a href="%s"><img src=%s width="%d" height="%d" title="%s"></a>
 <p>%s</p>
 </span>
 '''
 VIDPOSTCAPTION = '''\
 <span>
-<a href="%s" rel="video"><img src=%s width="%d" height="%d" title="%s"/></a>
+<a href="%s" rel="video"><img src=%s width="%d" height="%d" title="%s"></a>
 <p>%s</p>
 </span>
 '''
-IMGDCIM = '<a href="%s"><img src="%s" width="%d" height="%d" title="%s"/></a>'
-VIDDCIM = '<a href="%s" rel="video"><img src="%s" width="%d" height="%d" title="%s"/></a>'
+IMGDCIM = '<a href="%s"><img src="%s" width="%d" height="%d" title="%s"></a>'
+VIDDCIM = '<a href="%s" rel="video"><img src="%s" width="%d" height="%d" title="%s"></a>'
 
 # diminution de l'espace entre images, on utilise :
 # "display: block;", "margin-bottom: 0em;" et "font-size: 0;"
 # "display: block;" dans img : espacement correct ordi mais pas centré téléphone
 # "display: block;" dans a   : ok
 
-DIRPOST = '<a href="%s"><img src="%s" width="%d" height="%d" style="border: 1px solid #C0C0C0;" /></a>'
+DIRPOST = '<a href="%s"><img src="%s" width="%d" height="%d" style="border: 1px solid #C0C0C0;"></a>'
 DIRPOSTCAPTION = f'''
 <span style="background-color:{SUBDIR_BACKCOL}; margin-bottom: 8px; border: 1px solid #C0C0C0;">
-<a href="%s"><img src="%s" width="%d" height="%d" style="border: 1px solid #C0C0C0;" /></a>
+<a href="%s"><img src="%s" width="%d" height="%d" style="border: 1px solid #C0C0C0;"></a>
 <p style="margin-left:2px;">%s</p>
 </span>
 '''
 BIMGPAT = '''\
 <div class="separator" style="clear: both; text-align: center;">
 <a href="%s" style="clear: left; margin-bottom: 0em; margin-right: 1em; font-size: 0; display: block;">
-<img border="0" src="%s" width="640" />
+<img border="0" src="%s" width="640">
 </a></div>
 '''
 CAPTION_PAT = '''\
