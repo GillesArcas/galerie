@@ -64,13 +64,13 @@ Notes:
 
 
 CAPTION_IMAGE_STYLE = '''\
-<style type="text/css">
+<style>
     span { display:inline-table; }
  </style>\
 '''
 
 STYLE = '''\
-<style type="text/css">
+<style>
 body {
   font: normal 14px Verdana, Arial, sans-serif;
   background-color: #eeeeee;
@@ -107,6 +107,7 @@ hr.thin {
 '''
 
 START = f'''\
+<!doctype html>
 <html>
 
 <head>
@@ -194,16 +195,16 @@ SEP = '<hr class="thin">'
 IMGPOST = '<a href="%s"><img src="%s" width="%d" height="%d" title="%s" loading="lazy"></a>'
 VIDPOST = '<a href="%s" rel="video"><img src="%s" width="%d" height="%d" title="%s"></a>'
 IMGPOSTCAPTION = '''\
-<span>
+<div style="display:inline-grid; margin-bottom:5px;">
 <a href="%s"><img src=%s width="%d" height="%d" title="%s"></a>
 <p>%s</p>
-</span>
+</div>
 '''
 VIDPOSTCAPTION = '''\
-<span>
+<div style="display:inline-grid; margin-bottom:5px;">
 <a href="%s" rel="video"><img src=%s width="%d" height="%d" title="%s"></a>
 <p>%s</p>
-</span>
+</div>
 '''
 IMGDCIM = '<a href="%s"><img src="%s" width="%d" height="%d" title="%s"></a>'
 VIDDCIM = '<a href="%s" rel="video"><img src="%s" width="%d" height="%d" title="%s"></a>'
@@ -232,7 +233,8 @@ CAPTION_PAT = '''\
 </div>
 '''
 
-MAPFRAME = '<iframe src="%s" title="Carte" width="100%%" height="300"></iframe>'
+MAPFRAME = '<iframe src="%s" title="Carte" style="width:100%%;" height="300"></iframe>'
+FULLSCREEN_ICON = '<img src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/1.4.2/icon-fullscreen.png" style="vertical-align:bottom;"  width="16" height="16" alt="Fullscreen icon">'
 
 
 class Post:
@@ -335,8 +337,8 @@ class Post:
         if self.extra:
             html.append('<div class="extra">')
 
-        if args.daily_anchors:
-            html.append(f'<a name="{self.date}"></a>')
+        if args.daily_anchors and self.date is not None and self.daterank == 1:
+            html.append(f'<a id="{self.date}"></a>')
 
         if self.text:
             text = self.text
@@ -350,6 +352,7 @@ class Post:
                     text = re.sub('{MAPFULL [^}]+}', MAPFRAME % match.group(1), text)
                 else:
                     text = re.sub('{MAPFULL [^}]+}', '', text)
+            text = text.replace('{FULLSCREEN_ICON}', FULLSCREEN_ICON)
             if args.daily_anchors:
                 for post in self.parent[::-1]:
                     if post.date is not None and post.ignore is False:
