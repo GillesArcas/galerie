@@ -860,10 +860,10 @@ PxqDcH6p1swXBC4l6yZskACkTN1WrQr2SlIFhTtgqeZa+zsOogLXegvEocZ5c/W5BcoVNNCg3hSudV
 TkSuQmCC'''
 
 
-def create_thumbnail_video(args, filename, thumbname, size, duration):
+def create_thumbnail_video(args, filename, thumbname, size:(int, int), duration):
     # ffmpeg must be in path
     delay = min(duration - 1, args.thumbnails.thumbdelay)
-    sizearg = '%dx%d' % size  # (size, size)
+    sizearg = '%dx%d' % size
     command = 'ffmpeg -y -v error -itsoffset -%d -i "%s" -vcodec mjpeg -vframes 1 -an -f rawvideo -s %s "%s"'
     command = command % (delay, filename, sizearg, thumbname)
     result = os.system(command)
