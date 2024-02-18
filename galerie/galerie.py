@@ -135,27 +135,7 @@ function googleTranslateElementInit() {
   }, 'google_translate_element');
 }
 </script>
-<script src="http://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-<style>
-body > .skiptranslate {
-    display: none;
-}
-</style>
-<hr class="thin">
-'''
-
-GOOGLE_TRANSLATE = '''\
-<div id="google_translate_element"></div>
-<script>
-function googleTranslateElementInit() {
-  new google.translate.TranslateElement({
-    pageLanguage: 'fr'
-  }, 'google_translate_element');
-}
-</script>
 <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
-<hr class="thin">
 '''
 
 BUTTONS_FULL = '''\
@@ -342,6 +322,7 @@ class Post:
 
         if self.text:
             text = self.text
+            text = text.replace('{GOOGLE_TRANSLATE}', GOOGLE_TRANSLATE)
             if match := re.search('{MAPPOST ([^}]+)}', text):
                 if args.local_map:
                     text = re.sub('{MAPPOST [^}]+}', '', text)
@@ -569,8 +550,6 @@ def print_markdown(posts, title, fullname):
 def compose_html_reduced(args, posts, title, target):
     html = list()
     html.append(START % title)
-    if args.google_translate:
-        html.append(GOOGLE_TRANSLATE)
 
     for post in posts:
         for line in post.to_html(args, target):
@@ -584,8 +563,6 @@ def compose_html_reduced(args, posts, title, target):
 def compose_html_full(args, posts, title, target):
     html = list()
     html.append(START % title)
-    if args.google_translate:
-        html.append(GOOGLE_TRANSLATE)
 
     if args.diary:
         if args.sourcedir:
@@ -1490,10 +1467,6 @@ dates =
 ; value: true or false
 github_pages = false
 
-; google translate
-; value: true or false
-google_translate = false
-
 ; daily anchors
 ; value: true or false
 daily_anchors = false
@@ -1624,7 +1597,6 @@ def getconfig(options, config_filename):
     options.source.recursive = config.getboolean('source', 'recursive')
     options.source.dates = config.get('source', 'dates')
     options.source.github_pages = config.getboolean('source', 'github_pages', default=False)
-    options.source.google_translate = config.getboolean('source', 'google_translate', default=False)
     options.source.daily_anchors = config.getboolean('source', 'daily_anchors', default=False)
     options.source.local_map = config.getboolean('source', 'local_map', default=False)
 
@@ -1670,7 +1642,6 @@ def update_config(args):
         ('recursive', BOOL[args.recursive]),
         ('dates', args.dates),
         ('github_pages', BOOL[args.github_pages]),
-        ('google_translate', BOOL[args.google_translate]),
         ('daily_anchors', BOOL[args.daily_anchors]),
         ('enable_purge', args.enable_purge),
     )
@@ -1763,8 +1734,6 @@ def parse_command_line(argstring):
                         action='store', default=None)
     agroup.add_argument('--github_pages', help='github Pages compatibility',
                         action='store', default=None, choices=BOOL)
-    agroup.add_argument('--google_translate', help='google translate',
-                        action='store', default=None, choices=BOOL)
     agroup.add_argument('--daily_anchors', help='daily anchors',
                         action='store', default=None, choices=BOOL)
     agroup.add_argument('--local_map', help='local map',
@@ -1784,7 +1753,7 @@ def parse_command_line(argstring):
 
     if args.update and (args.bydir or args.bydate or args.diary or args.sourcedir or
                         args.recursive or args.dates or args.github_pages or
-                        args.google_translate or args.daily_anchors):
+                        args.daily_anchors):
         error('Incorrect parameters:',
               '--update cannot be used with creation parameters, use explicit command')
 
@@ -1794,7 +1763,6 @@ def parse_command_line(argstring):
     args.recursive = args.recursive == 'true'
     args.dates = 'source' if (args.dates is None) else args.dates
     args.github_pages = args.github_pages == 'true'
-    args.google_translate = args.google_translate == 'true'
     args.daily_anchors = args.daily_anchors == 'true'
     args.local_map = args.local_map == 'true'
     args.enable_purge = None if (args.enable_purge == 'none') else args.enable_purge
@@ -1848,7 +1816,6 @@ def setup_part2(args):
         args.source.recursive = args.recursive
         args.source.dates = args.dates
         args.source.github_pages = args.github_pages
-        args.source.google_translate = args.google_translate
         args.source.daily_anchors = args.daily_anchors
         args.source.local_map = args.local_map
         args.thumbnails.enable_purge = args.enable_purge
@@ -1862,7 +1829,6 @@ def setup_part2(args):
         args.recursive = args.source.recursive
         args.dates = args.source.dates
         args.github_pages = args.source.github_pages
-        args.google_translate = args.source.google_translate
         args.daily_anchors = args.source.daily_anchors
         args.local_map = args.source.local_map
         args.enable_purge = args.thumbnails.enable_purge
